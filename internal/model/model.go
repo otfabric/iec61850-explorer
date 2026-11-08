@@ -105,6 +105,8 @@ const (
 // Session states.
 const (
 	SessionConnected = "connected"
+	// SessionOffline is a model imported from SCL; nothing to read.
+	SessionOffline = "offline"
 	// SessionLost means the association ended without the user closing it.
 	SessionLost   = "lost"
 	SessionClosed = "closed"
@@ -132,6 +134,77 @@ type SessionInfo struct {
 	Error *OpError `json:"error,omitempty"`
 	// Polling is set while the session polls.
 	Polling *PollState `json:"polling,omitempty"`
+	// SCL is set for an offline session: a model imported from an SCL
+	// file, with no IED behind it.
+	SCL *SCLOrigin `json:"scl,omitempty"`
+}
+
+// SCLOrigin names where an offline session's model came from.
+type SCLOrigin struct {
+	File        string `json:"file"`
+	IED         string `json:"ied"`
+	AccessPoint string `json:"access_point"`
+}
+
+// MaxSCLBytes bounds an SCL file the engine parses.
+const MaxSCLBytes = 64 << 20
+
+// SCLFile is an SCL document handed to the engine. The engine never reads
+// a path: the user interface reads the file the user chose.
+type SCLFile struct {
+	// Name is the file name, for display.
+	Name string `json:"name"`
+	Data []byte `json:"data"`
+}
+
+// SCLInfo describes an SCL document.
+type SCLInfo struct {
+	Name string `json:"name"`
+	// Kind is scd, cid, icd, iid, ssd or unknown.
+	Kind    string `json:"kind"`
+	Version string `json:"version"`
+	IEDs    []SCLIED `json:"ieds"`
+	// Diagnostics are the parser's findings, at most MaxSCLDiagnostics.
+	Diagnostics []SCLDiagnostic `json:"diagnostics"`
+	// DiagnosticsDropped counts findings beyond the ones listed.
+	DiagnosticsDropped int `json:"diagnostics_dropped,omitempty"`
+}
+
+// MaxSCLDiagnostics bounds SCLInfo.Diagnostics.
+const MaxSCLDiagnostics = 100
+
+// SCLIED is an IED of an SCL document.
+type SCLIED struct {
+	Name         string           `json:"name"`
+	Desc         string           `json:"desc,omitempty"`
+	Manufacturer string           `json:"manufacturer,omitempty"`
+	Type         string           `json:"type,omitempty"`
+	AccessPoints []SCLAccessPoint `json:"access_points"`
+}
+
+// SCLAccessPoint is an access point with an MMS server.
+type SCLAccessPoint struct {
+	Name           string `json:"name"`
+	LogicalDevices int    `json:"logical_devices"`
+	// Target is the address the Communication section gives it, ready to
+	// connect with; nil when the SCL has no IP address for it.
+	Target *TargetConfig `json:"target,omitempty"`
+}
+
+// SCLDiagnostic is a finding of the SCL parser.
+type SCLDiagnostic struct {
+	Severity string `json:"severity"`
+	Code     string `json:"code,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Message  string `json:"message"`
+}
+
+// OpenSCLRequest opens an offline session on one IED of an SCL document.
+// IED and AccessPoint may be empty when the document has only one.
+type OpenSCLRequest struct {
+	File        SCLFile `json:"file"`
+	IED         string  `json:"ied,omitempty"`
+	AccessPoint string  `json:"access_point,omitempty"`
 }
 
 // Polling limits.

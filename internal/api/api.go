@@ -91,6 +91,8 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/search", s.search)
 	api.HandleFunc("PUT "+prefix+"/sessions/{id}/polling", s.startPolling)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/polling", s.stopPolling)
+	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
+	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
 	api.HandleFunc("POST "+prefix+"/profiles", s.createProfile)
 	api.HandleFunc("PUT "+prefix+"/profiles/{id}", s.replaceProfile)
@@ -237,6 +239,36 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := s.svc.Search(r.Context(), r.PathValue("id"), q)
 	s.reply(w, r, v, err)
+}
+
+// sclFile reads an SCL document sent as the raw request body; ?name= names
+// it for display.
+func (s *server) sclFile(w http.ResponseWriter, r *http.Request) (model.SCLFile, bool) {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, model.MaxSCLBytes))
+	if err != nil {
+		s.fail(w, r, service.Errorf(service.CodeLimitExceeded, "the SCL file is larger than %d MiB or unreadable", model.MaxSCLBytes>>20))
+		return model.SCLFile{}, false
+	}
+	return model.SCLFile{Name: r.URL.Query().Get("name"), Data: data}, true
+}
+
+func (s *server) inspectSCL(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.sclFile(w, r)
+	if !ok {
+		return
+	}
+	v, err := s.svc.InspectSCL(r.Context(), f)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) openSCL(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.sclFile(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	v, err := s.svc.OpenSCL(r.Context(), model.OpenSCLRequest{File: f, IED: q.Get("ied"), AccessPoint: q.Get("ap")})
+	s.replyStatus(w, r, http.StatusCreated, v, err)
 }
 
 func (s *server) profiles(w http.ResponseWriter, r *http.Request) {

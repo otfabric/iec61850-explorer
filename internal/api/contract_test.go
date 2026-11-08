@@ -236,6 +236,29 @@ func contract(t *testing.T, svc service.Service) {
 		t.Errorf("stop twice = %v", err)
 	}
 
+	// SCL: inspect, open offline, browse; no reads.
+	file := model.SCLFile{Name: "demo.icd", Data: simied.ICD()}
+	sclInfo, err := svc.InspectSCL(ctx, file)
+	if err != nil || len(sclInfo.IEDs) != 1 || sclInfo.IEDs[0].AccessPoints[0].Target == nil {
+		t.Fatalf("InspectSCL = %+v, %v", sclInfo, err)
+	}
+	if _, err := svc.InspectSCL(ctx, model.SCLFile{Name: "x", Data: []byte("<nope/>")}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("InspectSCL of garbage = %v", err)
+	}
+	offline, err := svc.OpenSCL(ctx, model.OpenSCLRequest{File: file, IED: simied.IEDName, AccessPoint: "S1"})
+	if err != nil || offline.State != model.SessionOffline || offline.SCL == nil {
+		t.Fatalf("OpenSCL = %+v, %v", offline, err)
+	}
+	if nodes, err := svc.Browse(ctx, offline.ID, simied.Domain+"/MMXU1"); err != nil || len(nodes) != 3 {
+		t.Errorf("Browse offline = %+v, %v", nodes, err)
+	}
+	if _, err := svc.Read(ctx, offline.ID, model.ReadRequest{Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}}); service.CodeOf(err) != service.CodeNotAllowed {
+		t.Errorf("Read offline = %v", err)
+	}
+	if err := svc.CloseSession(ctx, offline.ID); err != nil {
+		t.Fatal(err)
+	}
+
 	// Close.
 	if err := svc.CloseSession(ctx, info.ID); err != nil {
 		t.Fatal(err)

@@ -34,8 +34,8 @@ func (e *Engine) Read(ctx context.Context, id string, req model.ReadRequest) (mo
 	if err != nil {
 		return model.ReadResult{}, err
 	}
-	if st := s.info().State; st != model.SessionConnected {
-		return model.ReadResult{}, service.Errorf(service.CodeSessionLost, "the session is %s", st)
+	if err := s.liveErr(); err != nil {
+		return model.ReadResult{}, err
 	}
 
 	s.mu.Lock()

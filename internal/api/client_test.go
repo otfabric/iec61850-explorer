@@ -117,6 +117,34 @@ func (c *httpService) Search(ctx context.Context, id string, q model.SearchQuery
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/search", q, &v)
 }
 
+// sclRequest posts an SCL document as the raw body.
+func (c *httpService) sclRequest(ctx context.Context, path string, f model.SCLFile, query url.Values, out any) error {
+	query.Set("name", f.Name)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.base+path+"?"+query.Encode(), bytes.NewReader(f.Data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/xml")
+	res, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode >= 400 {
+		return decodeError(res)
+	}
+	return json.NewDecoder(res.Body).Decode(out)
+}
+
+func (c *httpService) InspectSCL(ctx context.Context, f model.SCLFile) (v model.SCLInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/scl/inspect", f, url.Values{}, &v)
+}
+
+func (c *httpService) OpenSCL(ctx context.Context, r model.OpenSCLRequest) (v model.SessionInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/scl/open", r.File, url.Values{"ied": {r.IED}, "ap": {r.AccessPoint}}, &v)
+}
+
 func (c *httpService) Profiles(ctx context.Context) (v []model.Profile, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/profiles", nil, &v)
 }

@@ -136,6 +136,16 @@ func (a *App) Search(ctx context.Context, id string, q model.SearchQuery) (model
 	return a.svc.Search(ctx, id, q)
 }
 
+// InspectSCL parses an SCL document the user chose in the window.
+func (a *App) InspectSCL(ctx context.Context, f model.SCLFile) (model.SCLInfo, error) {
+	return a.svc.InspectSCL(ctx, f)
+}
+
+// OpenSCL opens an offline session on an IED of an SCL document.
+func (a *App) OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error) {
+	return a.svc.OpenSCL(ctx, req)
+}
+
 // Profiles lists the saved connection profiles.
 func (a *App) Profiles(ctx context.Context) ([]model.Profile, error) { return a.svc.Profiles(ctx) }
 

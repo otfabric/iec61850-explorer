@@ -51,8 +51,8 @@ func (e *Engine) StartPolling(_ context.Context, id string, cfg model.PollConfig
 	if err != nil {
 		return err
 	}
-	if st := s.info().State; st != model.SessionConnected {
-		return service.Errorf(service.CodeSessionLost, "the session is %s", st)
+	if err := s.liveErr(); err != nil {
+		return err
 	}
 	e.stopPoller(s)
 

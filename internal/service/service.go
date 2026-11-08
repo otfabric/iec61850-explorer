@@ -44,6 +44,11 @@ type Service interface {
 	// A failed reference is reported in its ReadValue; the call fails only
 	// when nothing could be attempted.
 	Read(ctx context.Context, id string, req model.ReadRequest) (model.ReadResult, error)
+	// InspectSCL parses an SCL document and describes its IEDs.
+	InspectSCL(ctx context.Context, f model.SCLFile) (model.SCLInfo, error)
+	// OpenSCL opens an offline session on an IED of an SCL document: its
+	// model can be browsed and searched, not read.
+	OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

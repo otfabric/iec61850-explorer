@@ -155,3 +155,6 @@ func (c *serviceCounter) snapshot() map[mms.Service]int {
 	defer c.mu.Unlock()
 	return maps.Clone(c.counts)
 }
+
+// ICD returns the SCL document the simulated IED serves.
+func ICD() []byte { return append([]byte(nil), icd...) }
