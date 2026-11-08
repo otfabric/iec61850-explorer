@@ -288,3 +288,78 @@ export interface ExplorerEvent {
   operation?: Operation;
   sample?: Sample;
 }
+
+export interface DataSetMember {
+  ref: string;
+  mms: MMSName;
+}
+
+export interface DataSet {
+  ref: string;
+  mms: MMSName;
+  deletable: boolean;
+  desc?: string;
+  /** 'ied' or 'scl'. */
+  source: string;
+  members: DataSetMember[];
+}
+
+export interface RCB {
+  ref: string;
+  mms: MMSName;
+  buffered: boolean;
+  source: string;
+  rpt_id: string;
+  dat_set: string;
+  conf_rev: number;
+  opt_flds: string[];
+  trg_ops: string[];
+  buf_tm_ms: number;
+  intg_pd_ms: number;
+  rpt_ena?: boolean;
+  resv?: boolean;
+  resv_tms?: number;
+  sq_num?: number;
+  gi?: boolean;
+  entry_id?: string;
+  owner?: string;
+  error?: OpError;
+}
+
+export interface FileEntry {
+  name: string;
+  size: number;
+  last_modified?: Timestamp;
+}
+
+export interface JournalRequest {
+  ld: string;
+  journal: string;
+  start?: Timestamp;
+  stop?: Timestamp;
+}
+
+export interface JournalVariable {
+  tag: string;
+  value: Value;
+}
+
+export interface JournalEntry {
+  entry_id: string;
+  time: Timestamp;
+  variables: JournalVariable[];
+}
+
+export interface JournalResult {
+  entries: JournalEntry[];
+  more_follows: boolean;
+}
+
+export interface SettingGroups {
+  ld: string;
+  num_of_sgs: number;
+  act_sg: number;
+  edit_sg: number;
+  cnf_edit: boolean;
+  resv_tms: number;
+}

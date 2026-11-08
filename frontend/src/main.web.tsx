@@ -7,13 +7,14 @@ import { takeToken } from './adapters/web/token';
 import { mount } from './app/mount';
 import type { Service } from './app/service/service';
 
-async function createService(): Promise<Service> {
+async function createService(platform: WebPlatform): Promise<Service> {
   // Development only: `?mock` runs against an in-memory IED.
   if (import.meta.env.DEV && new URLSearchParams(location.search).has('mock')) {
     const { MockService } = await import('./app/service/mock');
     return new MockService();
   }
-  return new HttpService(takeToken(window));
+  return new HttpService(takeToken(window), platform);
 }
 
-void createService().then((service) => mount(service, new WebPlatform()));
+const platform = new WebPlatform();
+void createService(platform).then((service) => mount(service, platform));

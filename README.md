@@ -7,7 +7,7 @@
 
 A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec61850](https://github.com/otfabric/go-iec61850) and [go-mms](https://github.com/otfabric/go-mms). MIT licensed.
 
-**Status: M1, the read-only browser.** First release v0.1.0. What comes after it is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
+**Status: M2a, inspection.** Releases: v0.1.0 (the read-only browser), v0.2.0 (inspection). What comes after it is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
 
 ## Two ways to run it
 
@@ -26,11 +26,12 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 - **Read** a node under one of its functional constraints. Structures show their component names; a quality is decoded (`good`, `questionable (old-data)`, ...); a timestamp shows its time quality. Every value shows the MMS domain and item ID it was read from, and the equivalent `iec61850ctl get object` command can be copied.
 - **Watch** points from several IEDs in one table and **poll** them (0.5 s to 1 min); the engine polls, so a daemon keeps polling while the browser is away.
 - **Open an SCL file** (SCD, CID, ICD, IID): browse an IED's data model offline, or fill in the connection with the address the file gives it.
+- **Inspect** what a logical device defines: data sets (read in one request, or pinned to the watch table), report control blocks with their configuration, logs by time range, setting groups; and the IED's **files** (download disturbance records). From an SCL file, data sets and report control blocks are shown as the file defines them.
 - **Export** a snapshot (the model and the watched values, JSON) or the watched values as CSV; **open a snapshot** again later, without the IED.
 - **See what happened on the wire**: every action (connect, discover, read, close) is logged with its duration and the MMS requests it sent. A failed connect says where it stopped (TCP, COTP, session, presentation, ACSE or MMS Initiate) when the error proves it, and what to check.
-- **Observe mode**: the MMS client is built so that it cannot send a Write, a control, a report or dataset change, or a file operation. See [SECURITY.md](SECURITY.md).
+- **Observe mode**: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
 
-Not yet: datasets and reports, controls, setting groups, files and journals, Commission mode, SCL control blocks and comparison with the live model, semantic search, trace analysis.
+Not yet: Commission mode (report subscription, writes, controls, setting group changes), comparison of SCL with the live model, semantic search, trace analysis.
 
 ## Build from source
 

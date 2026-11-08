@@ -12,24 +12,19 @@ import (
 )
 
 // TestNoStateChangingService pins the list: a service that writes, defines,
-// deletes, renames or transfers must never be added to Observe mode. File and
-// journal reads do not change state but are not used yet; adding them is a
-// deliberate change of this test.
+// deletes, renames or transfers must never be added to Observe mode. Adding a
+// read service is a deliberate change of this test.
 func TestNoStateChangingService(t *testing.T) {
 	forbidden := []mms.Service{
-		// State-changing.
 		mms.ServiceWrite, mms.ServiceDefineNamedVariableList, mms.ServiceDeleteNamedVariableList,
 		mms.ServiceFileRename, mms.ServiceFileDelete, mms.ServiceObtainFile, mms.ServiceUnknown,
-		// Read-only, not used in M0.
-		mms.ServiceFileOpen, mms.ServiceFileRead, mms.ServiceFileClose, mms.ServiceFileDirectory,
-		mms.ServiceReadJournal,
 	}
 	for _, s := range forbidden {
 		if Allowed(s) {
 			t.Errorf("%s is allowed in Observe mode", s)
 		}
 	}
-	for _, s := range []mms.Service{mms.ServiceRead, mms.ServiceGetNameList, mms.ServiceIdentify} {
+	for _, s := range []mms.Service{mms.ServiceRead, mms.ServiceGetNameList, mms.ServiceIdentify, mms.ServiceFileRead, mms.ServiceReadJournal} {
 		if !Allowed(s) {
 			t.Errorf("%s is not allowed", s)
 		}

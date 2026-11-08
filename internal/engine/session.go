@@ -43,6 +43,10 @@ type session struct {
 	poller  *poller
 	// scl is set for an offline session from SCL (or a snapshot of one).
 	scl *model.SCLOrigin
+	// sclDataSets and sclReports are the definitions of an SCL session, by
+	// logical device.
+	sclDataSets map[string][]model.DataSet
+	sclReports  map[string][]model.RCB
 	// snapshot, snapValues and snapAt are set for an offline session opened
 	// from a snapshot.
 	snapshot   *model.SnapshotOrigin

@@ -1,14 +1,16 @@
-import { CloseIcon, DisconnectIcon } from '../icons';
+import { CloseIcon, DisconnectIcon, FileIcon } from '../icons';
 import type { SessionInfo } from '../service/types';
 import { Button, Chip } from './ui';
 
 interface SessionBarProps {
   info: SessionInfo;
+  filesOpen: boolean;
+  onToggleFiles: () => void;
   onClose: () => void;
 }
 
 /** What the open tab is: an IED, an SCL model or a snapshot. */
-export function SessionBar({ info, onClose }: SessionBarProps) {
+export function SessionBar({ info, filesOpen, onToggleFiles, onClose }: SessionBarProps) {
   const { identity, discovery } = info;
   const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
   return (
@@ -39,7 +41,12 @@ export function SessionBar({ info, onClose }: SessionBarProps) {
         {info.state === 'connected' && ` · discovered in ${discovery.duration_ms} ms`}
       </span>
       {info.polling && <Chip tone="accent">polling every {info.polling.interval_ms / 1000} s</Chip>}
-      <Button className="ml-auto" icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>
+      {info.state === 'connected' && (
+        <Button className="ml-auto" icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
+          {filesOpen ? 'Model' : 'Files'}
+        </Button>
+      )}
+      <Button className={info.state === 'connected' ? '' : 'ml-auto'} icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>
         {info.state === 'connected' ? 'Disconnect' : 'Close'}
       </Button>
     </div>

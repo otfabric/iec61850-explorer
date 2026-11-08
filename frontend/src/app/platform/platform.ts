@@ -12,6 +12,8 @@ export interface Platform {
   readonly mode: Mode;
   /** Saves text to a file the user chooses. Resolves to false when cancelled. */
   saveFile(name: string, mime: string, text: string): Promise<boolean>;
+  /** Like saveFile, for data that is already a Blob (e.g. a downloaded file). */
+  saveBlob(name: string, blob: Blob): Promise<boolean>;
   openExternal(url: string): void;
   persistTheme(theme: Theme): void;
   /** The theme the user chose earlier, or null on first run. */

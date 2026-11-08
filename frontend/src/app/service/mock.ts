@@ -4,15 +4,20 @@
 
 import { ServiceError, type Service } from './service';
 import type {
+  DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
+  FileEntry,
   Health,
+  JournalRequest,
+  JournalResult,
   ModelNode,
   Operation,
   PollConfig,
   Profile,
+  RCB,
   ReadRequest,
   ReadResult,
   ReadValue,
@@ -20,6 +25,7 @@ import type {
   SearchQuery,
   SearchResult,
   SessionInfo,
+  SettingGroups,
   TargetConfig,
   Value,
 } from './types';
@@ -246,6 +252,79 @@ export class MockService implements Service {
 
   async openSCL(file: FileUpload, ied: string, accessPoint: string): Promise<SessionInfo> {
     return this.add({ target: { host: '', port: 102 }, state: 'offline', scl: { file: file.name, ied, access_point: accessPoint } });
+  }
+
+  async dataSets(id: string, ld: string): Promise<DataSet[]> {
+    const session = this.session(id);
+    return [
+      {
+        ref: `${ld}/LLN0.Meas`,
+        mms: { domain: ld, item_id: 'LLN0$Meas' },
+        deletable: false,
+        source: session.scl ? 'scl' : 'ied',
+        members: [`${LD}/MMXU1.Hz[MX]`, `${LD}/MMXU1.TotW[MX]`].map((ref) => ({ ref, mms: itemID(ref) })),
+      },
+    ];
+  }
+
+  async readDataSet(id: string, ref: string): Promise<ReadResult> {
+    this.session(id);
+    void ref;
+    return { source: 'ied', at: new Date().toISOString(), duration_ms: 1, values: [`${LD}/MMXU1.Hz[MX]`, `${LD}/MMXU1.TotW[MX]`].map((r) => this.value(r)) };
+  }
+
+  async reports(id: string, ld: string): Promise<RCB[]> {
+    const session = this.session(id);
+    const live = !session.scl;
+    return [
+      {
+        ref: `${ld}/LLN0.RP.urcbMeas`,
+        mms: { domain: ld, item_id: 'LLN0$RP$urcbMeas' },
+        buffered: false,
+        source: live ? 'ied' : 'scl',
+        rpt_id: 'Meas',
+        dat_set: `${ld}/LLN0$Meas`,
+        conf_rev: 1,
+        opt_flds: ['seq-num', 'timestamp'],
+        trg_ops: ['data-changed', 'GI'],
+        buf_tm_ms: 0,
+        intg_pd_ms: 0,
+        ...(live ? { rpt_ena: true, resv: false, sq_num: 4 } : {}),
+      },
+    ];
+  }
+
+  async files(id: string, dir: string): Promise<FileEntry[]> {
+    this.session(id);
+    const all = [
+      { name: 'COMTRADE/fault1.cfg', size: 34, last_modified: '2026-11-08T12:00:00Z' },
+      { name: 'COMTRADE/fault1.dat', size: 20, last_modified: '2026-11-08T12:00:00Z' },
+      { name: 'demo.icd', size: 6000, last_modified: '2026-11-08T12:00:00Z' },
+    ];
+    return all.filter((f) => f.name.startsWith(dir));
+  }
+
+  async saveDeviceFile(id: string, _name: string): Promise<boolean> {
+    this.session(id);
+    return true;
+  }
+
+  async journals(id: string, _ld: string): Promise<string[]> {
+    this.session(id);
+    return ['LLN0$EventLog'];
+  }
+
+  async readJournal(id: string, _req: JournalRequest): Promise<JournalResult> {
+    this.session(id);
+    return {
+      entries: [{ entry_id: '0001', time: '2026-11-08T14:30:00Z', variables: [{ tag: `${LD}/MMXU1$MX$Hz`, value: { type: 'float', text: '49.998', json: 49.998 } }] }],
+      more_follows: false,
+    };
+  }
+
+  async settingGroups(id: string, ld: string): Promise<SettingGroups> {
+    this.session(id);
+    return { ld, num_of_sgs: 2, act_sg: 1, edit_sg: 0, cnf_edit: false, resv_tms: 0 };
   }
 
   async profiles(): Promise<Profile[]> {

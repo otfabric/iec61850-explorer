@@ -1,6 +1,6 @@
 # Testing
 
-No hardware: Go tests run against `internal/simied`, a simulated IED that serves `internal/simied/demo.icd` on go-iec61850's server over loopback TCP and counts every MMS service it receives. The frontend tests run against an in-memory mock (`frontend/src/app/service/mock.ts`).
+No hardware: Go tests run against `internal/simied`, a simulated IED that serves `internal/simied/demo.icd` on go-iec61850's server over loopback TCP (with a report control block, a log, two setting groups and a small file store) and counts every MMS service it receives. The frontend tests run against an in-memory mock (`frontend/src/app/service/mock.ts`).
 
 ## Tiers
 
@@ -29,6 +29,8 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `TestPollingLifecycle`, `TestPollingOverruns`: polling replaces, counts failures and missed starts, and stops with a lost session.
 - `TestOpenSCLMatchesDiscovery`: the data model built from the simulated IED's SCL file equals its live discovery, node for node, with the same FCs.
 - `TestSnapshotRoundTrip`, `TestExportCSV`: a snapshot reopens with the same tree and answers reads from its values; CSV has one row per leaf value and no spreadsheet formulas.
+- `TestDataSetsLiveMatchSCL`, `TestReportsLiveMatchSCL`: the data sets and report control blocks the simulated IED reports are those its SCL defines; the SCL ones claim no IED state.
+- `TestFilesJournalsSettingGroups`: file listing and download, log entries in a time range, the setting group control block, and only allowed services on the wire.
 - `TestApplyAddressing`, `TestProfilesStore`, `TestProfileEdges`: ISO addressing is validated before dialling; profiles are stored 0600 and atomically.
 - `TestAuthAndHost`, `TestHostCheck`, `TestEventsResume`, `TestEventsEndWhenTokenRotates`, `FuzzRequest` (`internal/api`): token, Host check, SSE replay and resync, rotation.
 

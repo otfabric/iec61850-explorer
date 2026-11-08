@@ -1,20 +1,27 @@
+import type { Platform } from '../../app/platform/platform';
 import { ServiceError, type ErrorCode, type LinkStatus, type Service } from '../../app/service/service';
 import type {
+  DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
+  FileEntry,
   Health,
+  JournalRequest,
+  JournalResult,
   ModelNode,
   OpError,
   PollConfig,
   Profile,
+  RCB,
   ReadRequest,
   ReadResult,
   SCLInfo,
   SearchQuery,
   SearchResult,
   SessionInfo,
+  SettingGroups,
   TargetConfig,
 } from '../../app/service/types';
 import { createSseParser } from './sse';
@@ -50,10 +57,12 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 /** Service over the daemon's same-origin HTTP API. The token lives only in this object. */
 export class HttpService implements Service {
   private readonly token: string | null;
+  private readonly platform: Pick<Platform, 'saveBlob'>;
   private readonly subscriptions = new Set<Subscription>();
 
-  constructor(token: string | null) {
+  constructor(token: string | null, platform: Pick<Platform, 'saveBlob'>) {
     this.token = token;
+    this.platform = platform;
   }
 
   health = () => this.request<Health>('GET', '/health');
@@ -70,6 +79,29 @@ export class HttpService implements Service {
   openSnapshot = (file: FileUpload) => this.upload<SessionInfo>('/snapshots/open', file, {});
   inspectSCL = (file: FileUpload) => this.upload<SCLInfo>('/scl/inspect', file, {});
   openSCL = (file: FileUpload, ied: string, accessPoint: string) => this.upload<SessionInfo>('/scl/open', file, { ied, ap: accessPoint });
+  dataSets = (id: string, ld: string) => this.request<DataSet[]>('GET', `/sessions/${encodeURIComponent(id)}/datasets?ld=${encodeURIComponent(ld)}`);
+  readDataSet = (id: string, ref: string) => this.request<ReadResult>('POST', `/sessions/${encodeURIComponent(id)}/datasets/read`, { ref });
+  reports = (id: string, ld: string) => this.request<RCB[]>('GET', `/sessions/${encodeURIComponent(id)}/reports?ld=${encodeURIComponent(ld)}`);
+  files = (id: string, dir: string) => this.request<FileEntry[]>('GET', `/sessions/${encodeURIComponent(id)}/files?dir=${encodeURIComponent(dir)}`);
+  journals = (id: string, ld: string) => this.request<string[]>('GET', `/sessions/${encodeURIComponent(id)}/journals?ld=${encodeURIComponent(ld)}`);
+  readJournal = (id: string, req: JournalRequest) => this.request<JournalResult>('POST', `/sessions/${encodeURIComponent(id)}/journals/read`, req);
+  settingGroups = (id: string, ld: string) =>
+    this.request<SettingGroups>('GET', `/sessions/${encodeURIComponent(id)}/setting-groups?ld=${encodeURIComponent(ld)}`);
+
+  /**
+   * Downloads with the token in a header, as every request, and hands the
+   * bytes to the browser as a download: a plain link would need the token in
+   * its URL.
+   */
+  async saveDeviceFile(id: string, name: string): Promise<boolean> {
+    const response = await this.send('GET', `/sessions/${encodeURIComponent(id)}/files/download?name=${encodeURIComponent(name)}`);
+    if (!response.ok) {
+      throw this.failure(response, await response.text());
+    }
+    const saveAs = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ?? 'file';
+    return this.platform.saveBlob(saveAs, await response.blob());
+  }
+
   profiles = () => this.request<Profile[]>('GET', '/profiles');
   saveProfile = (profile: Profile) =>
     profile.id === ''

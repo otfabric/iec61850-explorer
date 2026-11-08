@@ -147,6 +147,66 @@ func (a *App) OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo
 	return a.svc.OpenSnapshot(ctx, f)
 }
 
+// DataSets lists the data sets of a logical device.
+func (a *App) DataSets(ctx context.Context, id, ld string) ([]model.DataSet, error) {
+	return a.svc.DataSets(ctx, id, ld)
+}
+
+// ReadDataSet reads all members of a data set.
+func (a *App) ReadDataSet(ctx context.Context, id, ref string) (model.ReadResult, error) {
+	return a.svc.ReadDataSet(ctx, id, ref)
+}
+
+// Reports lists the report control blocks of a logical device.
+func (a *App) Reports(ctx context.Context, id, ld string) ([]model.RCB, error) {
+	return a.svc.Reports(ctx, id, ld)
+}
+
+// Files lists the IED's files under a directory.
+func (a *App) Files(ctx context.Context, id, dir string) ([]model.FileEntry, error) {
+	return a.svc.Files(ctx, id, dir)
+}
+
+// Journals lists the journals of a logical device.
+func (a *App) Journals(ctx context.Context, id, ld string) ([]string, error) {
+	return a.svc.Journals(ctx, id, ld)
+}
+
+// ReadJournal reads journal entries in a time range.
+func (a *App) ReadJournal(ctx context.Context, id string, req model.JournalRequest) (model.JournalResult, error) {
+	return a.svc.ReadJournal(ctx, id, req)
+}
+
+// SettingGroups reads the setting group control block of a logical device.
+func (a *App) SettingGroups(ctx context.Context, id, ld string) (model.SettingGroups, error) {
+	return a.svc.SettingGroups(ctx, id, ld)
+}
+
+// SaveDeviceFile downloads a file of the IED and asks the user where to save
+// it. It returns the chosen path, or "" when the user cancelled. The frontend
+// names the IED's file; the local path comes from the native dialog.
+func (a *App) SaveDeviceFile(ctx context.Context, id, name string) (string, error) {
+	f, err := a.svc.ReadFile(ctx, id, name)
+	if err != nil {
+		return "", err
+	}
+	app := application.Get()
+	if app == nil {
+		return "", service.Errorf(service.CodeInternal, "no application")
+	}
+	path, err := app.Dialog.SaveFile().SetFilename(filepath.Base(filepath.ToSlash(f.Name))).CanCreateDirectories(true).PromptForSingleSelection()
+	if err != nil {
+		return "", service.Wrap(service.CodeInternal, err, "save dialog")
+	}
+	if path == "" {
+		return "", nil
+	}
+	if err := os.WriteFile(path, f.Data, 0o644); err != nil {
+		return "", service.Wrap(service.CodeInternal, err, "cannot save the file")
+	}
+	return path, nil
+}
+
 // InspectSCL parses an SCL document the user chose in the window.
 func (a *App) InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error) {
 	return a.svc.InspectSCL(ctx, f)
