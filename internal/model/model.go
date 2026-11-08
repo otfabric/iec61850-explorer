@@ -40,8 +40,7 @@ type Health struct {
 	Mode string `json:"mode"`
 	// Time is the engine's clock, for clients to notice a skew.
 	Time time.Time `json:"time"`
-	// Features lists optional capabilities. None exist in M0; the field is
-	// there so that clients need no change when they do.
+	// Features lists optional capabilities, see the Feature constants.
 	Features []string `json:"features"`
 }
 
@@ -54,7 +53,54 @@ type TargetConfig struct {
 	// TimeoutMS bounds connecting and every request. Zero selects the
 	// engine default (10 s); at most 120000.
 	TimeoutMS int `json:"timeout_ms,omitempty"`
+	// Addressing overrides the ISO addressing; nil sends the defaults.
+	Addressing *Addressing `json:"addressing,omitempty"`
 }
+
+// Addressing is the ISO addressing of an association: the values of the
+// IED's SCL Address (OSI-TSEL, OSI-SSEL, OSI-PSEL, OSI-AP-Title,
+// OSI-AE-Qualifier). Each field left out (nil) takes the default go-mms
+// sends, the values libiec61850 sends: selectors 0001 (T, S) and 00000001
+// (P), AP-titles 1.1.1.999 (calling) and 1.1.1.999.1 (called), AE-qualifier
+// 12. A selector or AP-title set to "" is omitted from the request.
+// Selectors are hexadecimal; AP-titles are object identifiers written
+// 1.3.9999.23 or 1,3,9999,23.
+type Addressing struct {
+	LocalTSelector    *string `json:"local_tsel,omitempty"`
+	RemoteTSelector   *string `json:"remote_tsel,omitempty"`
+	LocalSSelector    *string `json:"local_ssel,omitempty"`
+	RemoteSSelector   *string `json:"remote_ssel,omitempty"`
+	LocalPSelector    *string `json:"local_psel,omitempty"`
+	RemotePSelector   *string `json:"remote_psel,omitempty"`
+	LocalAPTitle      *string `json:"local_ap_title,omitempty"`
+	RemoteAPTitle     *string `json:"remote_ap_title,omitempty"`
+	LocalAEQualifier  *int    `json:"local_ae_qualifier,omitempty"`
+	RemoteAEQualifier *int    `json:"remote_ae_qualifier,omitempty"`
+}
+
+// Profile is a saved connection.
+type Profile struct {
+	// ID is assigned by the engine; empty in a request creates a profile.
+	ID     string       `json:"id"`
+	Name   string       `json:"name"`
+	Target TargetConfig `json:"target"`
+	// Notes is free text, for example where the IED is.
+	Notes     string    `json:"notes,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Limits of profiles.
+const (
+	MaxProfiles        = 200
+	MaxProfileNameLen  = 80
+	MaxProfileNotesLen = 1000
+)
+
+// Features of an engine.
+const (
+	// FeatureProfiles: the engine stores connection profiles.
+	FeatureProfiles = "profiles"
+)
 
 // Session states.
 const (

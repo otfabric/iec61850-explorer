@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,6 +54,10 @@ type Options struct {
 	AllowTarget func(ctx context.Context, host string) error
 	// EventBuffer overrides DefaultEventBuffer.
 	EventBuffer int
+	// DataDir, when set, is where the engine keeps its files (profiles). It
+	// must exist; the caller checks its ownership and mode. Empty keeps no
+	// files.
+	DataDir string
 }
 
 // Engine implements service.Service.
@@ -61,6 +66,7 @@ type Engine struct {
 	log     *slog.Logger
 	started time.Time
 	hub     *hub
+	store   *profileStore
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -82,10 +88,14 @@ func New(opts Options) *Engine {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &Engine{
+	e := &Engine{
 		opts: opts, log: log, started: time.Now(), hub: newHub(opts.EventBuffer),
 		sessions: make(map[string]*session),
 	}
+	if opts.DataDir != "" {
+		e.store = &profileStore{path: filepath.Join(opts.DataDir, "profiles.json")}
+	}
+	return e
 }
 
 // Close closes every session. The engine refuses new sessions afterwards.
@@ -111,8 +121,16 @@ func (e *Engine) Health(context.Context) (model.Health, error) {
 		UptimeS:    int64(time.Since(e.started).Seconds()),
 		GoIEC61850: buildinfo.ModuleVersion(buildinfo.GoIEC61850Path),
 		GoMMS:      buildinfo.ModuleVersion(buildinfo.GoMMSPath),
-		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: []string{},
+		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: e.features(),
 	}, nil
+}
+
+func (e *Engine) features() []string {
+	f := []string{}
+	if e.store != nil {
+		f = append(f, model.FeatureProfiles)
+	}
+	return f
 }
 
 // validateTarget fills defaults and checks the target.
@@ -167,6 +185,14 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 		rec: &recorder{}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+	mmsOpts := mms.DialOptions{
+		AllowedServices: readonly.AllowedServices(),
+		RequestTimeout:  timeout,
+		Metrics:         s.rec,
+	}
+	if err := applyAddressing(cfg.Addressing, &mmsOpts); err != nil {
+		return model.SessionInfo{}, err
+	}
 
 	// Connect.
 	s.rec.start()
@@ -175,11 +201,7 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	client, err := iec61850.Dial(dctx, addr, iec61850.DialOptions{
 		Logger: e.log.With("session", s.id),
 		Cache:  iec61850.CacheLazy,
-		MMS: mms.DialOptions{
-			AllowedServices: readonly.AllowedServices(),
-			RequestTimeout:  timeout,
-			Metrics:         s.rec,
-		},
+		MMS:    mmsOpts,
 	})
 	cancel()
 	if err != nil {

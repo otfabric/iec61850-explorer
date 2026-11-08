@@ -35,6 +35,12 @@ type Service interface {
 	// A failed reference is reported in its ReadValue; the call fails only
 	// when nothing could be attempted.
 	Read(ctx context.Context, id string, req model.ReadRequest) (model.ReadResult, error)
+	// Profiles lists the saved connection profiles, by name.
+	Profiles(ctx context.Context) ([]model.Profile, error)
+	// SaveProfile creates a profile (empty ID) or replaces one.
+	SaveProfile(ctx context.Context, p model.Profile) (model.Profile, error)
+	// DeleteProfile removes a profile.
+	DeleteProfile(ctx context.Context, id string) error
 	// Subscribe returns the event stream. Events with a sequence number above
 	// sinceSeq that the engine still holds are replayed first; sinceSeq 0
 	// delivers new events only. The channel is closed when ctx ends.

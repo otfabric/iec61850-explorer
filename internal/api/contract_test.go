@@ -54,12 +54,12 @@ func targetOf(t testing.TB, addr string) model.TargetConfig {
 // behaviour in the desktop and the daemon form).
 func TestContract(t *testing.T) {
 	t.Run("engine", func(t *testing.T) {
-		eng := engine.New(engine.Options{})
+		eng := engine.New(engine.Options{DataDir: t.TempDir()})
 		t.Cleanup(eng.Close)
 		contract(t, eng)
 	})
 	t.Run("http", func(t *testing.T) {
-		contract(t, newDaemon(t, engine.Options{}, api.Options{}).svc)
+		contract(t, newDaemon(t, engine.Options{DataDir: t.TempDir()}, api.Options{}).svc)
 	})
 }
 
@@ -111,8 +111,57 @@ func contract(t *testing.T, svc service.Service) {
 		}
 	}
 
-	// Open and discover.
-	info, err := svc.OpenSession(ctx, targetOf(t, ied.Addr))
+	// Profiles: create, replace, list, delete; the target is validated.
+	if !slices.Contains(h.Features, model.FeatureProfiles) {
+		t.Errorf("features = %v", h.Features)
+	}
+	omit, tsel := "", "0001"
+	saved, err := svc.SaveProfile(ctx, model.Profile{Name: " Feeder 1 ", Target: model.TargetConfig{
+		Host: "10.0.0.5", Addressing: &model.Addressing{RemoteTSelector: &tsel, LocalAPTitle: &omit},
+	}})
+	if err != nil || saved.ID == "" || saved.Name != "Feeder 1" || saved.Target.Port != model.DefaultPort || saved.UpdatedAt.IsZero() {
+		t.Fatalf("SaveProfile = %+v, %v", saved, err)
+	}
+	saved.Notes = "bay 3"
+	if again, err := svc.SaveProfile(ctx, saved); err != nil || again.ID != saved.ID || again.Notes != "bay 3" {
+		t.Errorf("replace = %+v, %v", again, err)
+	}
+	bad := "zz"
+	for name, p := range map[string]model.Profile{
+		"no name":      {Target: model.TargetConfig{Host: "h"}},
+		"no host":      {Name: "x"},
+		"bad selector": {Name: "x", Target: model.TargetConfig{Host: "h", Addressing: &model.Addressing{RemotePSelector: &bad}}},
+	} {
+		if _, err := svc.SaveProfile(ctx, p); service.CodeOf(err) != service.CodeInvalidArgument {
+			t.Errorf("SaveProfile %s = %v", name, err)
+		}
+	}
+	if _, err := svc.SaveProfile(ctx, model.Profile{ID: "nope", Name: "x", Target: model.TargetConfig{Host: "h"}}); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("replace unknown = %v", err)
+	}
+	list, err := svc.Profiles(ctx)
+	if err != nil || len(list) != 1 || list[0].Target.Addressing == nil || *list[0].Target.Addressing.LocalAPTitle != "" {
+		t.Errorf("Profiles = %+v, %v", list, err)
+	}
+	if err := svc.DeleteProfile(ctx, saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteProfile(ctx, saved.ID); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("delete twice = %v", err)
+	}
+
+	// A bad selector is refused before connecting.
+	badTarget := targetOf(t, ied.Addr)
+	badTarget.Addressing = &model.Addressing{RemoteTSelector: &bad}
+	if _, err := svc.OpenSession(ctx, badTarget); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("open with a bad selector = %v", err)
+	}
+
+	// Open and discover, with explicit addressing the simulated IED accepts.
+	target := targetOf(t, ied.Addr)
+	psel, title, aeq := "00000001", "1.1.1.999.1", 12
+	target.Addressing = &model.Addressing{RemotePSelector: &psel, RemoteAPTitle: &title, RemoteAEQualifier: &aeq, LocalAPTitle: &omit}
+	info, err := svc.OpenSession(ctx, target)
 	if err != nil {
 		t.Fatalf("OpenSession: %v", err)
 	}

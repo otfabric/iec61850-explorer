@@ -105,6 +105,21 @@ func (c *httpService) Read(ctx context.Context, id string, req model.ReadRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/read", req, &v)
 }
 
+func (c *httpService) Profiles(ctx context.Context) (v []model.Profile, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/profiles", nil, &v)
+}
+
+func (c *httpService) SaveProfile(ctx context.Context, p model.Profile) (v model.Profile, err error) {
+	if p.ID == "" {
+		return v, c.do(ctx, "POST", "/api/v1/profiles", p, &v)
+	}
+	return v, c.do(ctx, "PUT", "/api/v1/profiles/"+url.PathEscape(p.ID), p, &v)
+}
+
+func (c *httpService) DeleteProfile(ctx context.Context, id string) error {
+	return c.do(ctx, "DELETE", "/api/v1/profiles/"+url.PathEscape(id), nil, nil)
+}
+
 // Subscribe reads the event stream until ctx ends or the server closes it.
 func (c *httpService) Subscribe(ctx context.Context, sinceSeq uint64) (<-chan model.Event, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.base+"/api/v1/events?since="+strconv.FormatUint(sinceSeq, 10), nil)

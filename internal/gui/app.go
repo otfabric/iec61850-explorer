@@ -123,6 +123,17 @@ func (a *App) Read(ctx context.Context, id string, req model.ReadRequest) (model
 	return a.svc.Read(ctx, id, req)
 }
 
+// Profiles lists the saved connection profiles.
+func (a *App) Profiles(ctx context.Context) ([]model.Profile, error) { return a.svc.Profiles(ctx) }
+
+// SaveProfile creates or replaces a connection profile.
+func (a *App) SaveProfile(ctx context.Context, p model.Profile) (model.Profile, error) {
+	return a.svc.SaveProfile(ctx, p)
+}
+
+// DeleteProfile removes a connection profile.
+func (a *App) DeleteProfile(ctx context.Context, id string) error { return a.svc.DeleteProfile(ctx, id) }
+
 // SaveFile asks the user where to save text under the suggested name and
 // writes it there. It returns the chosen path, or "" when the user cancelled.
 // The path comes from the native dialog, never from the frontend.

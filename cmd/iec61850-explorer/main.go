@@ -16,11 +16,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/otfabric/iec61850-explorer/frontend"
 	"github.com/otfabric/iec61850-explorer/internal/buildinfo"
+	"github.com/otfabric/iec61850-explorer/internal/daemon"
 	"github.com/otfabric/iec61850-explorer/internal/engine"
 	"github.com/otfabric/iec61850-explorer/internal/gui"
 )
@@ -46,6 +48,7 @@ func run(args []string) error {
 	flags := flag.NewFlagSet("iec61850-explorer", flag.ContinueOnError)
 	version := flags.Bool("version", false, "print the version and exit")
 	debug := flags.Bool("debug", false, "log at debug level")
+	dataDir := flags.String("data-dir", defaultDataDir(), "directory for the connection profiles")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -68,7 +71,15 @@ func run(args []string) error {
 
 	// The desktop application connects wherever its user can: it has no
 	// target allow-list (that protects a shared gateway, see the daemon).
-	eng := engine.New(engine.Options{Logger: log})
+	opts := engine.Options{Logger: log}
+	// Without a usable data directory the application still explores; it
+	// only cannot keep profiles.
+	if err := ensureDir(*dataDir); err != nil {
+		log.Warn("connection profiles are not available", "error", err)
+	} else {
+		opts.DataDir = *dataDir
+	}
+	eng := engine.New(opts)
 	defer eng.Close()
 
 	app := application.New(application.Options{
@@ -98,4 +109,22 @@ func run(args []string) error {
 		BackgroundColour: application.NewRGB(0x11, 0x18, 0x1f),
 	})
 	return app.Run()
+}
+
+// defaultDataDir is the user's configuration directory: it survives reboots,
+// unlike the daemon's temporary default.
+func defaultDataDir() string {
+	if dir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(dir, "iec61850-explorer")
+	}
+	return daemon.DefaultDataDir()
+}
+
+// ensureDir creates the parent of dir as needed and dir itself with the
+// daemon's checks: mode 0700, owned by this user, not a symbolic link.
+func ensureDir(dir string) error {
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		return err
+	}
+	return daemon.EnsureDataDir(dir)
 }

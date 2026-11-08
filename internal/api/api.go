@@ -88,6 +88,10 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}", s.closeSession)
 	api.HandleFunc("GET "+prefix+"/sessions/{id}/browse", s.browse)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/read", s.read)
+	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
+	api.HandleFunc("POST "+prefix+"/profiles", s.createProfile)
+	api.HandleFunc("PUT "+prefix+"/profiles/{id}", s.replaceProfile)
+	api.HandleFunc("DELETE "+prefix+"/profiles/{id}", s.deleteProfile)
 	api.HandleFunc("GET "+prefix+"/events", s.events)
 	api.HandleFunc(prefix+"/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, service.Errorf(service.CodeNotFound, "no such endpoint: %s %s", r.Method, r.URL.Path))
@@ -209,6 +213,38 @@ func (s *server) read(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := s.svc.Read(r.Context(), r.PathValue("id"), req)
 	s.reply(w, r, v, err)
+}
+
+func (s *server) profiles(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Profiles(r.Context())
+	s.reply(w, r, v, err)
+}
+
+func (s *server) createProfile(w http.ResponseWriter, r *http.Request) {
+	var p model.Profile
+	if !s.decode(w, r, &p) {
+		return
+	}
+	if p.ID != "" {
+		s.fail(w, r, service.Errorf(service.CodeInvalidArgument, "a new profile has no id; use PUT /profiles/{id} to replace one"))
+		return
+	}
+	v, err := s.svc.SaveProfile(r.Context(), p)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) replaceProfile(w http.ResponseWriter, r *http.Request) {
+	var p model.Profile
+	if !s.decode(w, r, &p) {
+		return
+	}
+	p.ID = r.PathValue("id")
+	v, err := s.svc.SaveProfile(r.Context(), p)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) deleteProfile(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.DeleteProfile(r.Context(), r.PathValue("id")))
 }
 
 // events streams the events after ?since= (or Last-Event-ID) as server-sent
