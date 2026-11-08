@@ -123,6 +123,14 @@ func (a *App) Read(ctx context.Context, id string, req model.ReadRequest) (model
 	return a.svc.Read(ctx, id, req)
 }
 
+// StartPolling polls references of a session.
+func (a *App) StartPolling(ctx context.Context, id string, cfg model.PollConfig) error {
+	return a.svc.StartPolling(ctx, id, cfg)
+}
+
+// StopPolling stops polling a session.
+func (a *App) StopPolling(ctx context.Context, id string) error { return a.svc.StopPolling(ctx, id) }
+
 // Search finds nodes of a session's discovered model.
 func (a *App) Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error) {
 	return a.svc.Search(ctx, id, q)

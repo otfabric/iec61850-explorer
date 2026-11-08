@@ -31,6 +31,12 @@ type Service interface {
 	// logical devices for "", the logical nodes of "LD", the data objects of
 	// "LD/LN", and so on. It does not talk to the IED.
 	Browse(ctx context.Context, id, ref string) ([]model.Node, error)
+	// StartPolling polls references of a session, replacing a running
+	// poller. Samples arrive as events.
+	StartPolling(ctx context.Context, id string, cfg model.PollConfig) error
+	// StopPolling stops polling; a session that does not poll is not an
+	// error.
+	StopPolling(ctx context.Context, id string) error
 	// Search finds nodes of the discovered model. It does not talk to the
 	// IED.
 	Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error)

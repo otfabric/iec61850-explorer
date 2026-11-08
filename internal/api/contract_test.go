@@ -207,6 +207,35 @@ func contract(t *testing.T, svc service.Service) {
 		t.Errorf("empty read = %v", err)
 	}
 
+	// Search.
+	found, err := svc.Search(ctx, info.ID, model.SearchQuery{LNClass: "MMXU", Kind: model.NodeDO, FC: "MX"})
+	if err != nil || len(found.Hits) != 2 {
+		t.Errorf("Search = %+v, %v", found, err)
+	}
+
+	// Poll: samples arrive as events; the session shows the poller.
+	if err := svc.StartPolling(ctx, info.ID, model.PollConfig{Refs: []string{simied.Domain + "/MMXU1.Hz.mag.f[MX]"}, IntervalMS: 200}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []uint64{1, 2} {
+		ev := next(t, events, "sample", func(ev model.Event) bool { return ev.Kind == model.EventSample })
+		if ev.Sample == nil || ev.Sample.Seq != want || len(ev.Sample.Values) != 1 || ev.Sample.Values[0].Value == nil {
+			t.Fatalf("sample = %+v", ev.Sample)
+		}
+	}
+	if list, _ := svc.Sessions(ctx); len(list) != 1 || list[0].Polling == nil || list[0].Polling.IntervalMS != 200 {
+		t.Errorf("polling state = %+v", list)
+	}
+	if err := svc.StartPolling(ctx, info.ID, model.PollConfig{Refs: []string{"x"}, IntervalMS: 10}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("fast polling = %v", err)
+	}
+	if err := svc.StopPolling(ctx, info.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.StopPolling(ctx, info.ID); err != nil {
+		t.Errorf("stop twice = %v", err)
+	}
+
 	// Close.
 	if err := svc.CloseSession(ctx, info.ID); err != nil {
 		t.Fatal(err)

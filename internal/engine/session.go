@@ -39,15 +39,20 @@ type session struct {
 	state   string
 	lostErr *model.OpError
 	closing bool
+	poller  *poller
 }
 
 func (s *session) info() model.SessionInfo {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	return model.SessionInfo{
+	info := model.SessionInfo{
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
 		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr,
 	}
+	if s.poller != nil {
+		info.Polling = s.poller.snapshot()
+	}
+	return info
 }
 
 // setTree indexes a discovered tree and counts it.

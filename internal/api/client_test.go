@@ -105,6 +105,14 @@ func (c *httpService) Read(ctx context.Context, id string, req model.ReadRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/read", req, &v)
 }
 
+func (c *httpService) StartPolling(ctx context.Context, id string, cfg model.PollConfig) error {
+	return c.do(ctx, "PUT", "/api/v1/sessions/"+id+"/polling", cfg, nil)
+}
+
+func (c *httpService) StopPolling(ctx context.Context, id string) error {
+	return c.do(ctx, "DELETE", "/api/v1/sessions/"+id+"/polling", nil, nil)
+}
+
 func (c *httpService) Search(ctx context.Context, id string, q model.SearchQuery) (v model.SearchResult, err error) {
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/search", q, &v)
 }

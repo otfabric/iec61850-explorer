@@ -279,6 +279,7 @@ func (e *Engine) watch(s *session) {
 	s.state = model.SessionLost
 	s.lostErr = classify(m.Err(), false)
 	s.stateMu.Unlock()
+	e.stopPoller(s)
 	info := s.info()
 	e.hub.publish(model.Event{Kind: model.EventSession, SessionID: s.id, Session: &info})
 	e.log.Warn("session lost", "session", s.id, "error", m.Err())
@@ -333,6 +334,7 @@ func (e *Engine) CloseSession(ctx context.Context, id string) error {
 }
 
 func (e *Engine) closeSession(ctx context.Context, s *session) error {
+	e.stopPoller(s)
 	s.stateMu.Lock()
 	wasConnected := s.state == model.SessionConnected
 	s.closing, s.state = true, model.SessionClosed

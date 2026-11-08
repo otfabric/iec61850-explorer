@@ -130,6 +130,45 @@ type SessionInfo struct {
 	Discovery DiscoverySummary `json:"discovery"`
 	// Error is set for a lost session.
 	Error *OpError `json:"error,omitempty"`
+	// Polling is set while the session polls.
+	Polling *PollState `json:"polling,omitempty"`
+}
+
+// Polling limits.
+const (
+	MinPollIntervalMS     = 200
+	MaxPollIntervalMS     = 3_600_000
+	DefaultPollIntervalMS = 1000
+)
+
+// PollConfig starts polling: the references are read every interval, start
+// to start. A cycle that is still running when the next is due skips it.
+type PollConfig struct {
+	Refs       []string `json:"refs"`
+	IntervalMS int      `json:"interval_ms,omitempty"`
+}
+
+// PollState describes a running poller.
+type PollState struct {
+	Refs       []string  `json:"refs"`
+	IntervalMS int       `json:"interval_ms"`
+	StartedAt  time.Time `json:"started_at"`
+	Samples    uint64    `json:"samples"`
+	// Failures counts cycles in which at least one reference failed.
+	Failures uint64 `json:"failures"`
+	// Overruns counts skipped cycles.
+	Overruns uint64 `json:"overruns"`
+}
+
+// Sample is one poll cycle.
+type Sample struct {
+	SessionID string `json:"session_id"`
+	// Seq numbers the samples of a poller, from 1.
+	Seq        uint64      `json:"seq"`
+	At         time.Time   `json:"at"`
+	DurationMS int64       `json:"duration_ms"`
+	Values     []ReadValue `json:"values"`
+	Overruns   uint64      `json:"overruns"`
 }
 
 // DiscoverySummary counts the discovered model.
@@ -352,6 +391,8 @@ const (
 	EventSession = "session"
 	// EventOperation carries an Operation.
 	EventOperation = "operation"
+	// EventSample carries a poll Sample.
+	EventSample = "sample"
 	// EventResync tells a subscriber that it missed events.
 	EventResync = "resync"
 )
@@ -365,4 +406,5 @@ type Event struct {
 	At        time.Time    `json:"at"`
 	Session   *SessionInfo `json:"session,omitempty"`
 	Operation *Operation   `json:"operation,omitempty"`
+	Sample    *Sample      `json:"sample,omitempty"`
 }
