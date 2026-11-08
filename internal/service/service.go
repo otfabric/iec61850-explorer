@@ -31,6 +31,9 @@ type Service interface {
 	// logical devices for "", the logical nodes of "LD", the data objects of
 	// "LD/LN", and so on. It does not talk to the IED.
 	Browse(ctx context.Context, id, ref string) ([]model.Node, error)
+	// Search finds nodes of the discovered model. It does not talk to the
+	// IED.
+	Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error)
 	// Read reads values. Each reference carries a functional constraint.
 	// A failed reference is reported in its ReadValue; the call fails only
 	// when nothing could be attempted.

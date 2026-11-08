@@ -88,6 +88,7 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}", s.closeSession)
 	api.HandleFunc("GET "+prefix+"/sessions/{id}/browse", s.browse)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/read", s.read)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/search", s.search)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
 	api.HandleFunc("POST "+prefix+"/profiles", s.createProfile)
 	api.HandleFunc("PUT "+prefix+"/profiles/{id}", s.replaceProfile)
@@ -212,6 +213,15 @@ func (s *server) read(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.svc.Read(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) search(w http.ResponseWriter, r *http.Request) {
+	var q model.SearchQuery
+	if !s.decode(w, r, &q) {
+		return
+	}
+	v, err := s.svc.Search(r.Context(), r.PathValue("id"), q)
 	s.reply(w, r, v, err)
 }
 

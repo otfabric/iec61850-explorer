@@ -178,6 +178,31 @@ type ReadRequest struct {
 // MaxReadRefs bounds the references of one ReadRequest.
 const MaxReadRefs = 200
 
+// SearchQuery searches the discovered model of a session. Every field that
+// is set must match.
+type SearchQuery struct {
+	// Text matches the reference, case-insensitively, as a substring.
+	Text string `json:"text,omitempty"`
+	// LNClass matches the class of the logical node the node is in.
+	LNClass string `json:"ln_class,omitempty"`
+	// FC matches one of the node's functional constraints.
+	FC string `json:"fc,omitempty"`
+	// Kind matches the node kind.
+	Kind string `json:"kind,omitempty"`
+	// Limit bounds the hits; zero is MaxSearchHits.
+	Limit int `json:"limit,omitempty"`
+}
+
+// MaxSearchHits bounds the hits of one search.
+const MaxSearchHits = 500
+
+// SearchResult is the answer to a SearchQuery.
+type SearchResult struct {
+	Hits []Node `json:"hits"`
+	// Truncated says that more nodes matched than Limit.
+	Truncated bool `json:"truncated"`
+}
+
 // ReadResult is the answer to a ReadRequest, one value per reference in the
 // order of the request.
 type ReadResult struct {
@@ -296,7 +321,8 @@ const (
 // Operation records one user action on a session and the MMS requests it
 // caused, in order. It is the Explorer's own activity log.
 type Operation struct {
-	// Action is "connect", "discover", "read" or "close".
+	// Action is "connect", "discover", "read" or "close". A read of several
+	// references is one operation.
 	Action string `json:"action"`
 	// Target is the object reference or address the action was about.
 	Target     string       `json:"target,omitempty"`

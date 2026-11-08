@@ -105,6 +105,10 @@ func (c *httpService) Read(ctx context.Context, id string, req model.ReadRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/read", req, &v)
 }
 
+func (c *httpService) Search(ctx context.Context, id string, q model.SearchQuery) (v model.SearchResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/search", q, &v)
+}
+
 func (c *httpService) Profiles(ctx context.Context) (v []model.Profile, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/profiles", nil, &v)
 }

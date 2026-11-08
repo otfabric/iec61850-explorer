@@ -44,8 +44,16 @@ func classify(err error, connecting bool) *model.OpError {
 		svcErr  *mms.ServiceError
 		rejErr  *mms.RejectError
 		dataErr *mms.DataAccessError
+		iecData *iec61850.DataAccessError
 		refErr  *iec61850.ReferenceError
 	)
+	// go-iec61850 reports a per-item read error with its own type and the
+	// ISO 9506 data-access-error code.
+	if errors.As(err, &iecData) && !errors.As(err, &dataErr) {
+		dataErr = &mms.DataAccessError{Code: mms.DataAccessErrorCode(iecData.ErrorCode)}
+		err = fmt.Errorf("%w: %w", err, dataErr)
+		e.Message = fmt.Sprintf("%s: %s", iecData.Ref, dataErr.Code)
+	}
 	switch {
 	case errors.Is(err, mms.ErrServiceNotAllowed):
 		e.Code, e.Stage = model.ErrCodeNotAllowed, stageRequest

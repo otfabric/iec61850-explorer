@@ -123,6 +123,11 @@ func (a *App) Read(ctx context.Context, id string, req model.ReadRequest) (model
 	return a.svc.Read(ctx, id, req)
 }
 
+// Search finds nodes of a session's discovered model.
+func (a *App) Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error) {
+	return a.svc.Search(ctx, id, q)
+}
+
 // Profiles lists the saved connection profiles.
 func (a *App) Profiles(ctx context.Context) ([]model.Profile, error) { return a.svc.Profiles(ctx) }
 
