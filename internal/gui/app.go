@@ -136,8 +136,19 @@ func (a *App) Search(ctx context.Context, id string, q model.SearchQuery) (model
 	return a.svc.Search(ctx, id, q)
 }
 
+// Export reads references once and renders the session; the frontend saves
+// the text with SaveFile.
+func (a *App) Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error) {
+	return a.svc.Export(ctx, id, req)
+}
+
+// OpenSnapshot opens an offline session from a snapshot the user chose.
+func (a *App) OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo, error) {
+	return a.svc.OpenSnapshot(ctx, f)
+}
+
 // InspectSCL parses an SCL document the user chose in the window.
-func (a *App) InspectSCL(ctx context.Context, f model.SCLFile) (model.SCLInfo, error) {
+func (a *App) InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error) {
 	return a.svc.InspectSCL(ctx, f)
 }
 

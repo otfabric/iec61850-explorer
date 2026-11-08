@@ -15,7 +15,7 @@ import (
 func TestInspectSCL(t *testing.T) {
 	e := newEngine(t)
 	ctx := t.Context()
-	info, err := e.InspectSCL(ctx, model.SCLFile{Name: "demo.icd", Data: simied.ICD()})
+	info, err := e.InspectSCL(ctx, model.File{Name: "demo.icd", Data: simied.ICD()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestInspectSCL(t *testing.T) {
 		ap.Target.Addressing == nil || *ap.Target.Addressing.RemotePSelector != "00000001" {
 		t.Errorf("access point = %+v", ap)
 	}
-	for name, f := range map[string]model.SCLFile{
+	for name, f := range map[string]model.File{
 		"empty":   {},
 		"not xml": {Data: []byte("hello")},
 		"huge":    {Data: make([]byte, model.MaxSCLBytes+1)},
@@ -50,7 +50,7 @@ func TestOpenSCLMatchesDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	offline, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: model.SCLFile{Name: "demo.icd", Data: simied.ICD()}})
+	offline, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: model.File{Name: "demo.icd", Data: simied.ICD()}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestOpenSCLChoice(t *testing.T) {
 	two = bytes.Replace(two, []byte("</IED_PLACEHOLDER>"), nil, 1)
 	two = bytes.Replace(two, []byte("  </IED>"), []byte(`  </IED>
   <IED name="Other"><AccessPoint name="S1"><Server><LDevice inst="X"><LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/></LDevice></Server></AccessPoint></IED>`), 1)
-	f := model.SCLFile{Name: "two.scd", Data: two}
+	f := model.File{Name: "two.scd", Data: two}
 	if _, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: f}); service.CodeOf(err) != service.CodeInvalidArgument {
 		t.Errorf("no IED chosen = %v", err)
 	}

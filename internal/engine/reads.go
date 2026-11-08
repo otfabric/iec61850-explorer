@@ -34,6 +34,9 @@ func (e *Engine) Read(ctx context.Context, id string, req model.ReadRequest) (mo
 	if err != nil {
 		return model.ReadResult{}, err
 	}
+	if s.snapValues != nil {
+		return readSnapshot(s, req.Refs), nil
+	}
 	if err := s.liveErr(); err != nil {
 		return model.ReadResult{}, err
 	}
@@ -54,7 +57,7 @@ func (e *Engine) Read(ctx context.Context, id string, req model.ReadRequest) (mo
 func (e *Engine) readLocked(ctx context.Context, s *session, raw []string) (model.ReadResult, *model.OpError) {
 	start := time.Now()
 	s.rec.start()
-	res := model.ReadResult{At: start.UTC(), Values: make([]model.ReadValue, len(raw))}
+	res := model.ReadResult{Source: model.SourceIED, At: start.UTC(), Values: make([]model.ReadValue, len(raw))}
 
 	// Parse; collect the object references for batched reads.
 	refs := make([]iec61850.Ref, len(raw))

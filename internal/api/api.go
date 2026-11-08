@@ -91,6 +91,8 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/search", s.search)
 	api.HandleFunc("PUT "+prefix+"/sessions/{id}/polling", s.startPolling)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/polling", s.stopPolling)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/export", s.export)
+	api.HandleFunc("POST "+prefix+"/snapshots/open", s.openSnapshot)
 	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
 	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
@@ -241,15 +243,40 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) {
 	s.reply(w, r, v, err)
 }
 
+// export renders a session. The client names a format, never a file: it
+// gets the text back and saves it itself.
+func (s *server) export(w http.ResponseWriter, r *http.Request) {
+	var req model.ExportRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.Export(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) openSnapshot(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.rawFile(w, r, model.MaxSnapshotBytes)
+	if !ok {
+		return
+	}
+	v, err := s.svc.OpenSnapshot(r.Context(), f)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
 // sclFile reads an SCL document sent as the raw request body; ?name= names
 // it for display.
-func (s *server) sclFile(w http.ResponseWriter, r *http.Request) (model.SCLFile, bool) {
-	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, model.MaxSCLBytes))
+func (s *server) sclFile(w http.ResponseWriter, r *http.Request) (model.File, bool) {
+	return s.rawFile(w, r, model.MaxSCLBytes)
+}
+
+// rawFile reads a file sent as the raw request body, up to limit bytes.
+func (s *server) rawFile(w http.ResponseWriter, r *http.Request, limit int64) (model.File, bool) {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
 	if err != nil {
-		s.fail(w, r, service.Errorf(service.CodeLimitExceeded, "the SCL file is larger than %d MiB or unreadable", model.MaxSCLBytes>>20))
-		return model.SCLFile{}, false
+		s.fail(w, r, service.Errorf(service.CodeLimitExceeded, "the file is larger than %d MiB or unreadable", limit>>20))
+		return model.File{}, false
 	}
-	return model.SCLFile{Name: r.URL.Query().Get("name"), Data: data}, true
+	return model.File{Name: r.URL.Query().Get("name"), Data: data}, true
 }
 
 func (s *server) inspectSCL(w http.ResponseWriter, r *http.Request) {

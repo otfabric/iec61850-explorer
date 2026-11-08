@@ -45,10 +45,16 @@ type Service interface {
 	// when nothing could be attempted.
 	Read(ctx context.Context, id string, req model.ReadRequest) (model.ReadResult, error)
 	// InspectSCL parses an SCL document and describes its IEDs.
-	InspectSCL(ctx context.Context, f model.SCLFile) (model.SCLInfo, error)
+	InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error)
 	// OpenSCL opens an offline session on an IED of an SCL document: its
 	// model can be browsed and searched, not read.
 	OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error)
+	// Export reads references once and renders the session as a snapshot
+	// (JSON) or CSV.
+	Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error)
+	// OpenSnapshot opens an offline session from a snapshot; its reads
+	// return the snapshot's values.
+	OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

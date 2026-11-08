@@ -118,7 +118,7 @@ func (c *httpService) Search(ctx context.Context, id string, q model.SearchQuery
 }
 
 // sclRequest posts an SCL document as the raw body.
-func (c *httpService) sclRequest(ctx context.Context, path string, f model.SCLFile, query url.Values, out any) error {
+func (c *httpService) sclRequest(ctx context.Context, path string, f model.File, query url.Values, out any) error {
 	query.Set("name", f.Name)
 	req, err := http.NewRequestWithContext(ctx, "POST", c.base+path+"?"+query.Encode(), bytes.NewReader(f.Data))
 	if err != nil {
@@ -137,7 +137,15 @@ func (c *httpService) sclRequest(ctx context.Context, path string, f model.SCLFi
 	return json.NewDecoder(res.Body).Decode(out)
 }
 
-func (c *httpService) InspectSCL(ctx context.Context, f model.SCLFile) (v model.SCLInfo, err error) {
+func (c *httpService) Export(ctx context.Context, id string, req model.ExportRequest) (v model.ExportFile, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/export", req, &v)
+}
+
+func (c *httpService) OpenSnapshot(ctx context.Context, f model.File) (v model.SessionInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/snapshots/open", f, url.Values{}, &v)
+}
+
+func (c *httpService) InspectSCL(ctx context.Context, f model.File) (v model.SCLInfo, err error) {
 	return v, c.sclRequest(ctx, "/api/v1/scl/inspect", f, url.Values{}, &v)
 }
 

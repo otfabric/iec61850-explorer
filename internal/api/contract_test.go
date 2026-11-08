@@ -8,6 +8,7 @@ import (
 	"net"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -236,13 +237,29 @@ func contract(t *testing.T, svc service.Service) {
 		t.Errorf("stop twice = %v", err)
 	}
 
+	// Export a snapshot and open it again.
+	exp, err := svc.Export(ctx, info.ID, model.ExportRequest{Format: model.ExportSnapshot, Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}})
+	if err != nil || !strings.Contains(exp.Text, model.SnapshotSchema) {
+		t.Fatalf("Export = %v %.100s", err, exp.Text)
+	}
+	snapSession, err := svc.OpenSnapshot(ctx, model.File{Name: exp.Name, Data: []byte(exp.Text)})
+	if err != nil || snapSession.Snapshot == nil {
+		t.Fatalf("OpenSnapshot = %+v, %v", snapSession, err)
+	}
+	if res, err := svc.Read(ctx, snapSession.ID, model.ReadRequest{Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}}); err != nil || res.Source != model.SourceSnapshot || res.Values[0].Value == nil {
+		t.Errorf("Read snapshot = %+v, %v", res, err)
+	}
+	if err := svc.CloseSession(ctx, snapSession.ID); err != nil {
+		t.Fatal(err)
+	}
+
 	// SCL: inspect, open offline, browse; no reads.
-	file := model.SCLFile{Name: "demo.icd", Data: simied.ICD()}
+	file := model.File{Name: "demo.icd", Data: simied.ICD()}
 	sclInfo, err := svc.InspectSCL(ctx, file)
 	if err != nil || len(sclInfo.IEDs) != 1 || sclInfo.IEDs[0].AccessPoints[0].Target == nil {
 		t.Fatalf("InspectSCL = %+v, %v", sclInfo, err)
 	}
-	if _, err := svc.InspectSCL(ctx, model.SCLFile{Name: "x", Data: []byte("<nope/>")}); service.CodeOf(err) != service.CodeInvalidArgument {
+	if _, err := svc.InspectSCL(ctx, model.File{Name: "x", Data: []byte("<nope/>")}); service.CodeOf(err) != service.CodeInvalidArgument {
 		t.Errorf("InspectSCL of garbage = %v", err)
 	}
 	offline, err := svc.OpenSCL(ctx, model.OpenSCLRequest{File: file, IED: simied.IEDName, AccessPoint: "S1"})

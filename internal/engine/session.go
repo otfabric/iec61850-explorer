@@ -41,8 +41,13 @@ type session struct {
 	lostErr *model.OpError
 	closing bool
 	poller  *poller
-	// scl is set for an offline session.
+	// scl is set for an offline session from SCL (or a snapshot of one).
 	scl *model.SCLOrigin
+	// snapshot, snapValues and snapAt are set for an offline session opened
+	// from a snapshot.
+	snapshot   *model.SnapshotOrigin
+	snapValues map[string]model.ReadValue
+	snapAt     time.Time
 }
 
 func (s *session) info() model.SessionInfo {
@@ -51,6 +56,7 @@ func (s *session) info() model.SessionInfo {
 	info := model.SessionInfo{
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
 		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr, SCL: s.scl,
+		Snapshot: s.snapshot,
 	}
 	if s.poller != nil {
 		info.Polling = s.poller.snapshot()

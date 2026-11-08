@@ -137,6 +137,8 @@ type SessionInfo struct {
 	// SCL is set for an offline session: a model imported from an SCL
 	// file, with no IED behind it.
 	SCL *SCLOrigin `json:"scl,omitempty"`
+	// Snapshot is set for an offline session opened from a snapshot.
+	Snapshot *SnapshotOrigin `json:"snapshot,omitempty"`
 }
 
 // SCLOrigin names where an offline session's model came from.
@@ -149,9 +151,10 @@ type SCLOrigin struct {
 // MaxSCLBytes bounds an SCL file the engine parses.
 const MaxSCLBytes = 64 << 20
 
-// SCLFile is an SCL document handed to the engine. The engine never reads
-// a path: the user interface reads the file the user chose.
-type SCLFile struct {
+// File is a document handed to the engine: an SCL file or a snapshot. The
+// engine never reads a path: the user interface reads the file the user
+// chose.
+type File struct {
 	// Name is the file name, for display.
 	Name string `json:"name"`
 	Data []byte `json:"data"`
@@ -202,7 +205,7 @@ type SCLDiagnostic struct {
 // OpenSCLRequest opens an offline session on one IED of an SCL document.
 // IED and AccessPoint may be empty when the document has only one.
 type OpenSCLRequest struct {
-	File        SCLFile `json:"file"`
+	File        File `json:"file"`
 	IED         string  `json:"ied,omitempty"`
 	AccessPoint string  `json:"access_point,omitempty"`
 }
@@ -315,9 +318,74 @@ type SearchResult struct {
 	Truncated bool `json:"truncated"`
 }
 
+// Sources of read values.
+const (
+	SourceIED      = "ied"
+	SourceSnapshot = "snapshot"
+)
+
+// SnapshotSchema identifies the snapshot format.
+const SnapshotSchema = "otfabric.iec61850-explorer.snapshot/1"
+
+// MaxSnapshotBytes bounds a snapshot the engine opens.
+const MaxSnapshotBytes = 64 << 20
+
+// Snapshot is a session's model and values at one moment, as a file.
+type Snapshot struct {
+	Schema     string            `json:"schema"`
+	App        AppInfo           `json:"app"`
+	CapturedAt time.Time         `json:"captured_at"`
+	Target     TargetConfig      `json:"target"`
+	Identity   *Identity         `json:"identity,omitempty"`
+	Discovery  DiscoverySummary  `json:"discovery"`
+	SCL        *SCLOrigin        `json:"scl,omitempty"`
+	// Nodes is the whole model tree, depth first.
+	Nodes []Node `json:"nodes"`
+	// Values were read at ValuesAt; empty for an offline session.
+	Values   []ReadValue `json:"values"`
+	ValuesAt time.Time   `json:"values_at,omitempty"`
+}
+
+// AppInfo names the program and libraries that wrote a file.
+type AppInfo struct {
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	GoIEC61850 string `json:"go_iec61850"`
+	GoMMS      string `json:"go_mms"`
+}
+
+// Export formats.
+const (
+	ExportSnapshot = "snapshot"
+	ExportCSV      = "csv"
+)
+
+// ExportRequest reads the references once (none for an offline session) and
+// renders the session.
+type ExportRequest struct {
+	Format string   `json:"format"`
+	Refs   []string `json:"refs"`
+}
+
+// ExportFile is a rendered export; the user interface saves it.
+type ExportFile struct {
+	Name string `json:"name"`
+	MIME string `json:"mime"`
+	Text string `json:"text"`
+}
+
+// SnapshotOrigin names the snapshot an offline session was opened from.
+type SnapshotOrigin struct {
+	File       string    `json:"file"`
+	CapturedAt time.Time `json:"captured_at"`
+}
+
 // ReadResult is the answer to a ReadRequest, one value per reference in the
 // order of the request.
 type ReadResult struct {
+	// Source is "ied" for values read now, "snapshot" for the values a
+	// snapshot holds.
+	Source     string      `json:"source"`
 	At         time.Time   `json:"at"`
 	DurationMS int64       `json:"duration_ms"`
 	Values     []ReadValue `json:"values"`

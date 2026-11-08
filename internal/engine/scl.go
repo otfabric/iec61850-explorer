@@ -19,7 +19,7 @@ import (
 )
 
 // parseSCL parses an SCL document the user chose.
-func parseSCL(f model.SCLFile) (*scl.Result, error) {
+func parseSCL(f model.File) (*scl.Result, error) {
 	switch {
 	case len(f.Data) == 0:
 		return nil, service.Errorf(service.CodeInvalidArgument, "the SCL file is empty")
@@ -41,7 +41,7 @@ func displayName(name string) string {
 }
 
 // InspectSCL implements service.Service.
-func (e *Engine) InspectSCL(_ context.Context, f model.SCLFile) (model.SCLInfo, error) {
+func (e *Engine) InspectSCL(_ context.Context, f model.File) (model.SCLInfo, error) {
 	res, err := parseSCL(f)
 	if err != nil {
 		return model.SCLInfo{}, err
