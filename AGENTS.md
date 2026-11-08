@@ -1,6 +1,6 @@
 # OT Fabric IEC 61850 Explorer: agent handoff
 
-Status (2026-11-08): **M0 (foundation) is implemented.** One Go engine behind a `Service` interface runs in the desktop application (Wails, in-process) and in the daemon (`iec61850-explorerd`, HTTP/SSE plus the embedded web UI). It connects to an IED over MMS, discovers its model, browses it and reads values, in **Observe mode only**: the MMS client refuses every state-changing service before it is sent. The contract suite proves the same behaviour through the engine and through the HTTP API against a simulated IED. Not released yet. Read this file fully, then `docs/ARCHITECTURE.md`, before writing code.
+Status (2026-11-08): **M1 (the read-only browser) is implemented**, on top of M0 (the foundation). One Go engine behind a `Service` interface runs in the desktop application (Wails, in-process) and in the daemon (`iec61850-explorerd`, HTTP/SSE plus the embedded web UI). It connects with configurable ISO addressing, discovers, browses, searches, reads (batched) and polls IEDs, imports SCL files and snapshots as offline sessions, exports snapshots and CSV, and keeps connection profiles, all in **Observe mode**: the MMS client refuses every state-changing service before it is sent. The contract suite proves the same behaviour through the engine and through the HTTP API against a simulated IED. Read this file fully, then `docs/ARCHITECTURE.md`, before writing code.
 
 ## Organisation standards
 
@@ -8,11 +8,11 @@ This repository follows **otfabric/engineering policy 1.2**, profile **applicati
 
 ## What this is
 
-A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/go-iec61850](https://github.com/otfabric/go-iec61850) and [otfabric/go-mms](https://github.com/otfabric/go-mms). M0 discovers, browses and reads. The milestones after it (`docs/ARCHITECTURE.md` section 9) add polling, SCL, snapshots, datasets and reports, explicit Commission mode, diagnostics, semantics from [go-iec61850-model](https://github.com/otfabric/go-iec61850-model), trace analysis and replay.
+A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/go-iec61850](https://github.com/otfabric/go-iec61850) and [otfabric/go-mms](https://github.com/otfabric/go-mms). The milestones after M1 (`docs/ARCHITECTURE.md` section 9) add datasets and reports, explicit Commission mode, diagnostics, semantics from [go-iec61850-model](https://github.com/otfabric/go-iec61850-model), trace analysis and replay.
 
 ## Read these, in this order
 
-1. `docs/ARCHITECTURE.md`: artifacts, layering, the `Service` interface, the API, Observe mode, security, the M0 capability audit of the libraries, milestones.
+1. `docs/ARCHITECTURE.md`: artifacts, layering, the `Service` interface, the API, Observe mode, security, the capability audit of the libraries, milestones.
 2. `docs/adr/`: the foundational decisions and why.
 3. `TESTING.md`: the test tiers. `SECURITY.md`: what Observe mode guarantees.
 4. `docs/BRANDING.md` of [sunspec-explorer](https://github.com/otfabric/sunspec-explorer): the shared visual identity; the tokens are in `frontend/src/styles/tokens.css`.
@@ -35,6 +35,8 @@ A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/
 - `internal/simied` (the simulated IED) is imported by tests only (`TestSimIEDOnlyInTests`).
 - No cgo in `internal/` except what the Wails GUI strictly needs (`internal/gui`, `cmd/iec61850-explorer`).
 - Never log the bearer token. The web UI receives it only in the URL fragment.
+- The engine never opens a path a client names: SCL files and snapshots arrive as bytes the user interface read.
+- An SCL-derived model claims nothing the SCL does not say: no invented control-block attributes.
 - A diagnosis names a cause only when an error type proves it (`internal/engine/classify.go`); never infer a stage from a message text.
 - Pin the Wails v3 beta version in `go.mod`.
 - Do not commit unless the user asks. When committing, follow the user's commit conventions.

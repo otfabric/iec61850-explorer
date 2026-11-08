@@ -7,7 +7,7 @@
 
 A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec61850](https://github.com/otfabric/go-iec61850) and [go-mms](https://github.com/otfabric/go-mms). MIT licensed.
 
-**Status: M0, the foundation. Not released yet.** What is here works end to end and is tested; most of what an IEC 61850 workbench needs comes in later milestones ([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9).
+**Status: M1, the read-only browser.** First release v0.1.0. What comes after it is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
 
 ## Two ways to run it
 
@@ -19,15 +19,18 @@ A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec
 
 Both run the same engine and show the same interface. There is no "remote mode" in the desktop application.
 
-## What M0 does
+## What it does
 
-- **Connect** to an IED (host, port 102 by default), ask its identity (MMS Identify) and **discover** its model: logical devices, logical nodes, data objects and attributes, with the functional constraints each exists under.
-- **Browse** the model in a tree; logical nodes show their class (`MMXU`, `XCBR`, ...).
+- **Connect** to an IED (host, port 102 by default) with the ISO addressing it expects: T/S/P selectors, AP-title and AE-qualifier, as in its SCL Address. Save connections as **profiles**.
+- **Discover** its model (MMS Identify, then logical devices, logical nodes, data objects and attributes with their functional constraints) and **browse** it in a tree, or **search** it by reference, LN class (`MMXU`, `XCBR`, ...) and FC.
 - **Read** a node under one of its functional constraints. Structures show their component names; a quality is decoded (`good`, `questionable (old-data)`, ...); a timestamp shows its time quality. Every value shows the MMS domain and item ID it was read from, and the equivalent `iec61850ctl get object` command can be copied.
+- **Watch** points from several IEDs in one table and **poll** them (0.5 s to 1 min); the engine polls, so a daemon keeps polling while the browser is away.
+- **Open an SCL file** (SCD, CID, ICD, IID): browse an IED's data model offline, or fill in the connection with the address the file gives it.
+- **Export** a snapshot (the model and the watched values, JSON) or the watched values as CSV; **open a snapshot** again later, without the IED.
 - **See what happened on the wire**: every action (connect, discover, read, close) is logged with its duration and the MMS requests it sent. A failed connect says where it stopped (TCP, COTP, session, presentation, ACSE or MMS Initiate) when the error proves it, and what to check.
 - **Observe mode**: the MMS client is built so that it cannot send a Write, a control, a report or dataset change, or a file operation. See [SECURITY.md](SECURITY.md).
 
-Not in M0: saved connection profiles and selectors, polling, search, SCL import, snapshots and exports, datasets and reports, controls, files and journals, Commission mode, semantic search, trace analysis.
+Not yet: datasets and reports, controls, setting groups, files and journals, Commission mode, SCL control blocks and comparison with the live model, semantic search, trace analysis.
 
 ## Build from source
 

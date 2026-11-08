@@ -54,6 +54,14 @@ IEC 61850 MMS as most IEDs run it carries no authentication and no encryption: a
 - **Use the Explorer only on devices and networks you own or are authorized to access**
 - **Keep the station bus isolated**; never expose port 102 of an IED to the Internet
 
+### Files Are Untrusted Input
+
+SCL files and snapshots come from users and other tools. The engine never opens a path a client names: the user interface reads the file the user chose and hands over its bytes, at most 64 MiB. SCL is parsed by go-iec61850's parser (Go's `encoding/xml`, which resolves no external entities); a snapshot is checked for its schema and for a consistent tree before it is used. Strings from either are rendered as text, never as markup; CSV exports prefix text a spreadsheet would take for a formula.
+
+### Profiles
+
+Connection profiles hold addresses, ISO selectors and notes, no passwords. They are stored in the data directory in a file with mode 0600.
+
 ### Data Read From Devices Is Untrusted Input
 
 Names, types and values come from the IED. The model tree is built from the names the IED lists; a value's nesting is bounded; the user interface renders device strings as text, never as markup.
