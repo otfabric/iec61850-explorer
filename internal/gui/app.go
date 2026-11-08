@@ -166,7 +166,9 @@ func (a *App) SaveProfile(ctx context.Context, p model.Profile) (model.Profile, 
 }
 
 // DeleteProfile removes a connection profile.
-func (a *App) DeleteProfile(ctx context.Context, id string) error { return a.svc.DeleteProfile(ctx, id) }
+func (a *App) DeleteProfile(ctx context.Context, id string) error {
+	return a.svc.DeleteProfile(ctx, id)
+}
 
 // SaveFile asks the user where to save text under the suggested name and
 // writes it there. It returns the chosen path, or "" when the user cancelled.

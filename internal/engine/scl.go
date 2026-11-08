@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,11 +27,29 @@ func parseSCL(f model.File) (*scl.Result, error) {
 	case len(f.Data) > model.MaxSCLBytes:
 		return nil, service.Errorf(service.CodeLimitExceeded, "the SCL file is larger than %d MiB", model.MaxSCLBytes>>20)
 	}
-	res, err := scl.ParseBytes(f.Data, scl.ParseOptions{ValidateSemantic: true})
+	res, err := scl.ParseBytes(f.Data, scl.ParseOptions{ValidateSemantic: true, Kind: kindOf(f.Name)})
 	if err != nil {
 		return nil, &service.Error{Code: service.CodeInvalidArgument, Message: fmt.Sprintf("%s is not an SCL document this version reads: %v", displayName(f.Name), err), Err: err}
 	}
 	return res, nil
+}
+
+// kindOf names the document kind by the file extension (IEC 61850-6
+// clause 7.3); an unknown extension lets the parser decide from the content.
+func kindOf(name string) scl.DocumentKind {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".scd":
+		return scl.KindSCD
+	case ".cid":
+		return scl.KindCID
+	case ".icd":
+		return scl.KindICD
+	case ".iid":
+		return scl.KindIID
+	case ".ssd":
+		return scl.KindSSD
+	}
+	return ""
 }
 
 func displayName(name string) string {

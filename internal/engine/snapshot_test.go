@@ -53,7 +53,9 @@ func TestSnapshotRoundTrip(t *testing.T) {
 	}
 	a, _ := e.Browse(ctx, live.ID, simied.Domain+"/MMXU1.Hz")
 	b, _ := e.Browse(ctx, off.ID, simied.Domain+"/MMXU1.Hz")
-	if !slices.EqualFunc(a, b, func(x, y model.Node) bool { return x.Ref == y.Ref && slices.Equal(x.FCs, y.FCs) && x.Children == y.Children }) {
+	if !slices.EqualFunc(a, b, func(x, y model.Node) bool {
+		return x.Ref == y.Ref && slices.Equal(x.FCs, y.FCs) && x.Children == y.Children
+	}) {
 		t.Errorf("browse live %+v, snapshot %+v", a, b)
 	}
 	res, err := e.Read(ctx, off.ID, model.ReadRequest{Refs: append(refs, simied.Domain+"/XCBR1.Pos[ST]")})

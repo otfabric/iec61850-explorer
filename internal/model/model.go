@@ -164,8 +164,8 @@ type File struct {
 type SCLInfo struct {
 	Name string `json:"name"`
 	// Kind is scd, cid, icd, iid, ssd or unknown.
-	Kind    string `json:"kind"`
-	Version string `json:"version"`
+	Kind    string   `json:"kind"`
+	Version string   `json:"version"`
 	IEDs    []SCLIED `json:"ieds"`
 	// Diagnostics are the parser's findings, at most MaxSCLDiagnostics.
 	Diagnostics []SCLDiagnostic `json:"diagnostics"`
@@ -205,9 +205,9 @@ type SCLDiagnostic struct {
 // OpenSCLRequest opens an offline session on one IED of an SCL document.
 // IED and AccessPoint may be empty when the document has only one.
 type OpenSCLRequest struct {
-	File        File `json:"file"`
-	IED         string  `json:"ied,omitempty"`
-	AccessPoint string  `json:"access_point,omitempty"`
+	File        File   `json:"file"`
+	IED         string `json:"ied,omitempty"`
+	AccessPoint string `json:"access_point,omitempty"`
 }
 
 // Polling limits.
@@ -332,13 +332,13 @@ const MaxSnapshotBytes = 64 << 20
 
 // Snapshot is a session's model and values at one moment, as a file.
 type Snapshot struct {
-	Schema     string            `json:"schema"`
-	App        AppInfo           `json:"app"`
-	CapturedAt time.Time         `json:"captured_at"`
-	Target     TargetConfig      `json:"target"`
-	Identity   *Identity         `json:"identity,omitempty"`
-	Discovery  DiscoverySummary  `json:"discovery"`
-	SCL        *SCLOrigin        `json:"scl,omitempty"`
+	Schema     string           `json:"schema"`
+	App        AppInfo          `json:"app"`
+	CapturedAt time.Time        `json:"captured_at"`
+	Target     TargetConfig     `json:"target"`
+	Identity   *Identity        `json:"identity,omitempty"`
+	Discovery  DiscoverySummary `json:"discovery"`
+	SCL        *SCLOrigin       `json:"scl,omitempty"`
 	// Nodes is the whole model tree, depth first.
 	Nodes []Node `json:"nodes"`
 	// Values were read at ValuesAt; empty for an offline session.

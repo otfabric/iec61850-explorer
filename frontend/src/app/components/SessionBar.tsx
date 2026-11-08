@@ -1,0 +1,47 @@
+import { CloseIcon, DisconnectIcon } from '../icons';
+import type { SessionInfo } from '../service/types';
+import { Button, Chip } from './ui';
+
+interface SessionBarProps {
+  info: SessionInfo;
+  onClose: () => void;
+}
+
+/** What the open tab is: an IED, an SCL model or a snapshot. */
+export function SessionBar({ info, onClose }: SessionBarProps) {
+  const { identity, discovery } = info;
+  const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-2">
+      {info.target.host && (
+        <span className="font-mono text-fg-strong">
+          {info.target.host}:{info.target.port ?? 102}
+        </span>
+      )}
+      <Chip tone={tone}>{info.state}</Chip>
+      {info.scl && (
+        <span className="text-muted" title="Offline: a model from an SCL file">
+          SCL {info.scl.file} · {info.scl.ied}/{info.scl.access_point}
+        </span>
+      )}
+      {info.snapshot && (
+        <span className="text-muted" title="Offline: a snapshot">
+          Snapshot {info.snapshot.file} · {new Date(info.snapshot.captured_at).toLocaleString()}
+        </span>
+      )}
+      {identity && (
+        <span className="text-muted" title="MMS Identify">
+          {identity.vendor} · {identity.model} · {identity.revision}
+        </span>
+      )}
+      <span className="text-muted">
+        {discovery.logical_devices} LD · {discovery.logical_nodes} LN · {discovery.data_objects} DO
+        {info.state === 'connected' && ` · discovered in ${discovery.duration_ms} ms`}
+      </span>
+      {info.polling && <Chip tone="accent">polling every {info.polling.interval_ms / 1000} s</Chip>}
+      <Button className="ml-auto" icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>
+        {info.state === 'connected' ? 'Disconnect' : 'Close'}
+      </Button>
+    </div>
+  );
+}

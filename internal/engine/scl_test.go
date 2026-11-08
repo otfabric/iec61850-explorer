@@ -19,7 +19,7 @@ func TestInspectSCL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(info.IEDs) != 1 || info.IEDs[0].Name != simied.IEDName || len(info.IEDs[0].AccessPoints) != 1 {
+	if len(info.IEDs) != 1 || info.IEDs[0].Name != simied.IEDName || len(info.IEDs[0].AccessPoints) != 1 || info.Kind != "icd" {
 		t.Fatalf("info = %+v", info)
 	}
 	ap := info.IEDs[0].AccessPoints[0]

@@ -41,3 +41,11 @@ func TestServesAndCounts(t *testing.T) {
 	ied.Close()
 	ied.Close() // a second Close returns at once
 }
+
+func TestICDIsACopy(t *testing.T) {
+	a := ICD()
+	a[0] = 'x'
+	if ICD()[0] == 'x' {
+		t.Error("ICD returned the package's own bytes")
+	}
+}

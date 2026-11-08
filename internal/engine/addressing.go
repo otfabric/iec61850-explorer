@@ -18,8 +18,8 @@ import (
 // §6.2.3.2.2, enforced by go-mms); session and presentation selectors at
 // most 16 (ISO 8327-1, ISO 8823-1).
 const (
-	maxTSelector = 4
-	maxSPSelector = 16
+	maxTSelector   = 4
+	maxSPSelector  = 16
 	maxAPTitleArcs = 16
 )
 

@@ -46,7 +46,9 @@ func TestPollingLifecycle(t *testing.T) {
 	if err := e.StartPolling(ctx, info.ID, model.PollConfig{Refs: refs[:1], IntervalMS: model.MinPollIntervalMS}); err != nil {
 		t.Fatal(err)
 	}
-	waitEvent(t, events, func(ev model.Event) bool { return ev.Kind == model.EventSample && ev.Sample.Seq == 1 && len(ev.Sample.Values) == 1 })
+	waitEvent(t, events, func(ev model.Event) bool {
+		return ev.Kind == model.EventSample && ev.Sample.Seq == 1 && len(ev.Sample.Values) == 1
+	})
 	list, _ := e.Sessions(ctx)
 	if p := list[0].Polling; p == nil || p.Samples < 1 || p.IntervalMS != model.MinPollIntervalMS {
 		t.Errorf("state = %+v", p)
@@ -54,7 +56,9 @@ func TestPollingLifecycle(t *testing.T) {
 
 	// The IED goes away: polling stops with the session.
 	ied.Close()
-	waitEvent(t, events, func(ev model.Event) bool { return ev.Kind == model.EventSession && ev.Session.State == model.SessionLost })
+	waitEvent(t, events, func(ev model.Event) bool {
+		return ev.Kind == model.EventSession && ev.Session.State == model.SessionLost
+	})
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		list, _ = e.Sessions(ctx)
