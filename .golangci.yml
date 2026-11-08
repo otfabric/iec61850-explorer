@@ -1,0 +1,61 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck       # unchecked errors
+    - govet          # go vet checks (shadow, printf, etc.)
+    - ineffassign    # assigned but never used
+    - staticcheck    # comprehensive static analysis (includes gosimple + unused)
+    - misspell       # common spelling mistakes
+    - godot          # comment punctuation
+    - nilerr         # return nil instead of err
+    - exhaustive     # exhaustive switch on enums
+    - forbidigo      # Observe mode: no state-changing MMS service, no server outside tests
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true  # a default: case satisfies exhaustiveness
+    forbidigo:
+      # Match on types, so that a renamed import or a method value is caught too.
+      analyze-types: true
+      forbid:
+        # M0 is Observe mode only. Outside tests the engine discovers and reads;
+        # every call that changes an IED's state is banned here. go-mms blocks
+        # the services at run time as well (DialOptions.AllowedServices, see
+        # internal/readonly), and the wire test proves what the IED receives.
+        - pattern: ^iec61850\.Client\.(Write|WriteMultiple|Operate|Select|SelectWithValue|Cancel|SetReportControlBlock|TriggerGI|ReserveURCB|ReleaseURCB|SubscribeReport|CreateDataSet|DeleteDataSet|SelectActiveSG|SelectEditSG|ConfirmEditSG|SetEditSGValue|DeleteFile|RenameFile|ObtainFile)$
+          pkg: ^github\.com/otfabric/go-iec61850$
+          msg: "Observe mode: state-changing IEC 61850 services are not allowed"
+        - pattern: ^mms\.Client\.(Write|WriteVariables|WriteComponent|WriteArrayElement|WriteObject|WriteNamedVariableList|DefineNamedVariableList|DeleteNamedVariableList|DeleteAllDomainNVLs|DeleteAllVMDNVLs|FileDelete|FileRename|ObtainFile)$
+          pkg: ^github\.com/otfabric/go-mms$
+          msg: "Observe mode: state-changing MMS services are not allowed"
+        - pattern: ^(iec61850|mms)\.(NewServer|Server|ServerOptions)$
+          pkg: ^github\.com/otfabric/go-(iec61850|mms)$
+          msg: "the Explorer does not serve MMS; servers are for tests (internal/simied) only"
+  exclusions:
+    rules:
+      # Tests simulate IEDs and prove that the guard stops writes; simied is
+      # the simulated IED that only tests import (TestSimIEDOnlyInTests).
+      - path: _test\.go$
+        linters:
+          - forbidigo
+      - path: internal/simied/
+        linters:
+          - forbidigo
+
+formatters:
+  enable:
+    - gofmt          # formatting
+    - goimports      # import grouping / formatting
+
+issues:
+  # Bump the default per-linter issue limit (default is 50)
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # Whole-module analysis: see every issue, not only those in new code.
+  new: false
+
+run:
+  timeout: 5m
+  # Typecheck tests too (matches go test / IDE behavior for packages with _test.go).
+  tests: true

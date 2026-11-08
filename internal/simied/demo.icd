@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- The simulated IED of the Explorer's tests: a small feeder IED with
+     measurements, a breaker, a generic status input and a data set.
+     Values are set by simied.Start; nothing here describes a real device. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" version="2007" revision="B">
+  <Header id="ExplorerDemo" version="1" revision="0"/>
+  <Communication>
+    <SubNetwork name="Station" type="8-MMS">
+      <ConnectedAP iedName="DemoIED" apName="S1">
+        <Address>
+          <P type="IP">127.0.0.1</P>
+          <P type="OSI-PSEL">00000001</P>
+          <P type="OSI-SSEL">0001</P>
+          <P type="OSI-TSEL">0001</P>
+        </Address>
+      </ConnectedAP>
+    </SubNetwork>
+  </Communication>
+  <IED name="DemoIED" desc="Explorer demo IED" manufacturer="OT Fabric" type="Demo">
+    <Services>
+      <GetDirectory/>
+      <GetDataObjectDefinition/>
+      <GetDataSetValue/>
+      <DataSetDirectory/>
+      <ReadWrite/>
+      <ConfReportControl max="4"/>
+      <GetCBValues/>
+    </Services>
+    <AccessPoint name="S1">
+      <Server>
+        <LDevice inst="LD0" desc="Measurements and protection">
+          <LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+            <DataSet name="Meas" desc="Measurements">
+              <FCDA ldInst="LD0" lnClass="MMXU" lnInst="1" doName="Hz" fc="MX"/>
+              <FCDA ldInst="LD0" lnClass="MMXU" lnInst="1" doName="TotW" fc="MX"/>
+            </DataSet>
+            <ReportControl name="urcbMeas" rptID="Meas" datSet="Meas" confRev="1" buffered="false">
+              <TrgOps dchg="true" period="true" gi="true"/>
+              <OptFields seqNum="true" timeStamp="true" reasonCode="true"/>
+            </ReportControl>
+          </LN0>
+          <LN lnClass="LPHD" inst="1" lnType="LPHD_T"/>
+          <LN lnClass="MMXU" inst="1" lnType="MMXU_T" desc="Feeder measurements"/>
+          <LN lnClass="XCBR" inst="1" lnType="XCBR_T" desc="Feeder breaker"/>
+          <LN lnClass="GGIO" inst="1" lnType="GGIO_T"/>
+        </LDevice>
+      </Server>
+    </AccessPoint>
+  </IED>
+  <DataTypeTemplates>
+    <LNodeType id="LLN0_T" lnClass="LLN0">
+      <DO name="Mod" type="ENC_Mod"/>
+      <DO name="Beh" type="ENS_Beh"/>
+      <DO name="Health" type="ENS_Health"/>
+      <DO name="NamPlt" type="LPL_T"/>
+    </LNodeType>
+    <LNodeType id="LPHD_T" lnClass="LPHD">
+      <DO name="PhyHealth" type="ENS_Health"/>
+      <DO name="Proxy" type="SPS_T"/>
+    </LNodeType>
+    <LNodeType id="MMXU_T" lnClass="MMXU">
+      <DO name="Beh" type="ENS_Beh"/>
+      <DO name="Hz" type="MV_T"/>
+      <DO name="TotW" type="MV_T"/>
+    </LNodeType>
+    <LNodeType id="XCBR_T" lnClass="XCBR">
+      <DO name="Beh" type="ENS_Beh"/>
+      <DO name="Pos" type="DPC_T"/>
+      <DO name="OpCnt" type="INS_T"/>
+    </LNodeType>
+    <LNodeType id="GGIO_T" lnClass="GGIO">
+      <DO name="Beh" type="ENS_Beh"/>
+      <DO name="Ind1" type="SPS_T"/>
+    </LNodeType>
+    <DOType id="ENC_Mod" cdc="ENC">
+      <DA name="stVal" fc="ST" bType="Enum" type="Beh_E" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+      <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModel_E"><Val>0</Val></DA>
+    </DOType>
+    <DOType id="ENS_Beh" cdc="ENS">
+      <DA name="stVal" fc="ST" bType="Enum" type="Beh_E" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+    </DOType>
+    <DOType id="ENS_Health" cdc="ENS">
+      <DA name="stVal" fc="ST" bType="Enum" type="Health_E" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+    </DOType>
+    <DOType id="LPL_T" cdc="LPL">
+      <DA name="vendor" fc="DC" bType="VisString255"><Val>OT Fabric</Val></DA>
+      <DA name="swRev" fc="DC" bType="VisString255"><Val>1.0</Val></DA>
+    </DOType>
+    <DOType id="SPS_T" cdc="SPS">
+      <DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+    </DOType>
+    <DOType id="INS_T" cdc="INS">
+      <DA name="stVal" fc="ST" bType="INT32" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+    </DOType>
+    <DOType id="MV_T" cdc="MV">
+      <DA name="mag" fc="MX" bType="Struct" type="AnalogueValue_T" dchg="true"/>
+      <DA name="q" fc="MX" bType="Quality" qchg="true"/>
+      <DA name="t" fc="MX" bType="Timestamp"/>
+    </DOType>
+    <DOType id="DPC_T" cdc="DPC">
+      <DA name="stVal" fc="ST" bType="Dbpos" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+      <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModel_E"><Val>1</Val></DA>
+    </DOType>
+    <DAType id="AnalogueValue_T">
+      <BDA name="f" bType="FLOAT32"/>
+    </DAType>
+    <EnumType id="Beh_E">
+      <EnumVal ord="1">on</EnumVal>
+      <EnumVal ord="2">on-blocked</EnumVal>
+      <EnumVal ord="3">test</EnumVal>
+      <EnumVal ord="4">test/blocked</EnumVal>
+      <EnumVal ord="5">off</EnumVal>
+    </EnumType>
+    <EnumType id="Health_E">
+      <EnumVal ord="1">Ok</EnumVal>
+      <EnumVal ord="2">Warning</EnumVal>
+      <EnumVal ord="3">Alarm</EnumVal>
+    </EnumType>
+    <EnumType id="CtlModel_E">
+      <EnumVal ord="0">status-only</EnumVal>
+      <EnumVal ord="1">direct-with-normal-security</EnumVal>
+      <EnumVal ord="2">sbo-with-normal-security</EnumVal>
+      <EnumVal ord="3">direct-with-enhanced-security</EnumVal>
+      <EnumVal ord="4">sbo-with-enhanced-security</EnumVal>
+    </EnumType>
+  </DataTypeTemplates>
+</SCL>

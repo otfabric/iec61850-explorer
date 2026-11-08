@@ -1,0 +1,49 @@
+# systemd unit for the OT Fabric IEC 61850 Explorer daemon.
+#
+# Install:
+#   install -m 0755 iec61850-explorerd /usr/local/bin/
+#   useradd --system --no-create-home --shell /usr/sbin/nologin iec61850-explorer
+#   install -m 0644 iec61850-explorerd.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now iec61850-explorerd
+#
+# Get the URL (token included) as the service user:
+#   sudo -u iec61850-explorer iec61850-explorerd url --data-dir /var/lib/iec61850-explorer
+#
+# The private-temporary-directory option of systemd is deliberately absent:
+# with the default data directory (a folder in /tmp) systemd would delete the
+# token every time the service stops. This unit goes one step further
+# and keeps it in /var/lib, which survives reboots too.
+
+[Unit]
+Description=OT Fabric IEC 61850 Explorer daemon
+Documentation=https://github.com/otfabric/iec61850-explorer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iec61850-explorer
+Group=iec61850-explorer
+# Creates /var/lib/iec61850-explorer, owned by the service user, mode 0700.
+StateDirectory=iec61850-explorer
+StateDirectoryMode=0700
+ExecStart=/usr/local/bin/iec61850-explorerd --listen 127.0.0.1:8765 --data-dir /var/lib/iec61850-explorer
+Restart=on-failure
+RestartSec=5
+
+# Hardening. The daemon needs the network and its state directory, nothing else.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

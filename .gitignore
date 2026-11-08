@@ -1,0 +1,26 @@
+# Build output
+/bin/
+/release/
+
+# Frontend
+node_modules/
+
+# Coverage reports
+coverage.*
+
+# Logs
+*.log
+
+# Editor settings
+.vscode/
+
+# macOS
+.DS_Store
+
+# Build artefacts live in /bin/ and /release/ (otfabric/engineering REPO-005)
+*.test
+coverage.out
+
+# Output of a bare `go build`, anchored so it can never hide a source folder
+/cmd/iec61850-explorer/iec61850-explorer
+/cmd/iec61850-explorerd/iec61850-explorerd
