@@ -5,7 +5,24 @@ import { Browser, Call, Clipboard, Events } from '@wailsio/runtime';
 import type { Mode, Platform } from '../../app/platform/platform';
 import { loadTheme, persistTheme } from '../../app/platform/themeStorage';
 import { ServiceError, toServiceError, type ErrorCode, type Service } from '../../app/service/service';
-import type { ExplorerEvent, Health, ModelNode, OpError, ReadRequest, ReadResult, SessionInfo, TargetConfig } from '../../app/service/types';
+import type {
+  ExplorerEvent,
+  ExportFile,
+  ExportFormat,
+  FileUpload,
+  Health,
+  ModelNode,
+  OpError,
+  PollConfig,
+  Profile,
+  ReadRequest,
+  ReadResult,
+  SCLInfo,
+  SearchQuery,
+  SearchResult,
+  SessionInfo,
+  TargetConfig,
+} from '../../app/service/types';
 
 const BINDING = 'github.com/otfabric/iec61850-explorer/internal/gui.App';
 const EVENT_NAME = 'explorer:event';
@@ -42,6 +59,16 @@ async function call<T>(method: string, ...args: unknown[]): Promise<T> {
   }
 }
 
+/** Go's []byte crosses the binding as base64. */
+function toGoFile(file: FileUpload): { name: string; data: string } {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < file.data.length; i += chunk) {
+    binary += String.fromCharCode(...file.data.subarray(i, i + chunk));
+  }
+  return { name: file.name, data: btoa(binary) };
+}
+
 export class WailsService implements Service {
   health = () => call<Health>('Health');
   openSession = (cfg: TargetConfig) => call<SessionInfo>('OpenSession', cfg);
@@ -49,6 +76,17 @@ export class WailsService implements Service {
   sessions = () => call<SessionInfo[]>('Sessions');
   browse = (id: string, ref: string) => call<ModelNode[]>('Browse', id, ref);
   read = (id: string, req: ReadRequest) => call<ReadResult>('Read', id, req);
+  search = (id: string, query: SearchQuery) => call<SearchResult>('Search', id, query);
+  startPolling = (id: string, cfg: PollConfig) => call<void>('StartPolling', id, cfg);
+  stopPolling = (id: string) => call<void>('StopPolling', id);
+  exportSession = (id: string, format: ExportFormat, refs: string[]) => call<ExportFile>('Export', id, { format, refs });
+  openSnapshot = (file: FileUpload) => call<SessionInfo>('OpenSnapshot', toGoFile(file));
+  inspectSCL = (file: FileUpload) => call<SCLInfo>('InspectSCL', toGoFile(file));
+  openSCL = (file: FileUpload, ied: string, accessPoint: string) =>
+    call<SessionInfo>('OpenSCL', { file: toGoFile(file), ied, access_point: accessPoint });
+  profiles = () => call<Profile[]>('Profiles');
+  saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);
+  deleteProfile = (id: string) => call<void>('DeleteProfile', id);
 
   // The Go side forwards every engine event to the window as it happens, so
   // there is nothing to replay: sinceSeq is not used.

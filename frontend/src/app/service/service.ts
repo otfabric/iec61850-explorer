@@ -1,6 +1,23 @@
 // TypeScript mirror of internal/service/service.go.
 
-import type { ExplorerEvent, Health, ModelNode, OpError, ReadRequest, ReadResult, SessionInfo, TargetConfig } from './types';
+import type {
+  ExplorerEvent,
+  ExportFile,
+  ExportFormat,
+  FileUpload,
+  Health,
+  ModelNode,
+  OpError,
+  PollConfig,
+  Profile,
+  ReadRequest,
+  ReadResult,
+  SCLInfo,
+  SearchQuery,
+  SearchResult,
+  SessionInfo,
+  TargetConfig,
+} from './types';
 
 export type ErrorCode =
   | 'invalid_argument'
@@ -52,6 +69,20 @@ export interface Service {
   /** Children of a node of the discovered model; '' lists the logical devices. */
   browse(id: string, ref: string): Promise<ModelNode[]>;
   read(id: string, req: ReadRequest): Promise<ReadResult>;
+  /** Finds nodes of the discovered model; no IED traffic. */
+  search(id: string, query: SearchQuery): Promise<SearchResult>;
+  /** Polls references; samples arrive as events. Replaces a running poller. */
+  startPolling(id: string, cfg: PollConfig): Promise<void>;
+  stopPolling(id: string): Promise<void>;
+  /** Reads the references once and renders the session. */
+  exportSession(id: string, format: ExportFormat, refs: string[]): Promise<ExportFile>;
+  openSnapshot(file: FileUpload): Promise<SessionInfo>;
+  inspectSCL(file: FileUpload): Promise<SCLInfo>;
+  openSCL(file: FileUpload, ied: string, accessPoint: string): Promise<SessionInfo>;
+  profiles(): Promise<Profile[]>;
+  /** Creates (empty id) or replaces a profile. */
+  saveProfile(profile: Profile): Promise<Profile>;
+  deleteProfile(id: string): Promise<void>;
   /**
    * Delivers the event stream. Events above sinceSeq that the engine still
    * holds are replayed first; 0 delivers new events only. onLink, when given,

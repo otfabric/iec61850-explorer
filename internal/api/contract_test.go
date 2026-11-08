@@ -8,6 +8,7 @@ import (
 	"net"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,12 +55,12 @@ func targetOf(t testing.TB, addr string) model.TargetConfig {
 // behaviour in the desktop and the daemon form).
 func TestContract(t *testing.T) {
 	t.Run("engine", func(t *testing.T) {
-		eng := engine.New(engine.Options{})
+		eng := engine.New(engine.Options{DataDir: t.TempDir()})
 		t.Cleanup(eng.Close)
 		contract(t, eng)
 	})
 	t.Run("http", func(t *testing.T) {
-		contract(t, newDaemon(t, engine.Options{}, api.Options{}).svc)
+		contract(t, newDaemon(t, engine.Options{DataDir: t.TempDir()}, api.Options{}).svc)
 	})
 }
 
@@ -111,8 +112,57 @@ func contract(t *testing.T, svc service.Service) {
 		}
 	}
 
-	// Open and discover.
-	info, err := svc.OpenSession(ctx, targetOf(t, ied.Addr))
+	// Profiles: create, replace, list, delete; the target is validated.
+	if !slices.Contains(h.Features, model.FeatureProfiles) {
+		t.Errorf("features = %v", h.Features)
+	}
+	omit, tsel := "", "0001"
+	saved, err := svc.SaveProfile(ctx, model.Profile{Name: " Feeder 1 ", Target: model.TargetConfig{
+		Host: "10.0.0.5", Addressing: &model.Addressing{RemoteTSelector: &tsel, LocalAPTitle: &omit},
+	}})
+	if err != nil || saved.ID == "" || saved.Name != "Feeder 1" || saved.Target.Port != model.DefaultPort || saved.UpdatedAt.IsZero() {
+		t.Fatalf("SaveProfile = %+v, %v", saved, err)
+	}
+	saved.Notes = "bay 3"
+	if again, err := svc.SaveProfile(ctx, saved); err != nil || again.ID != saved.ID || again.Notes != "bay 3" {
+		t.Errorf("replace = %+v, %v", again, err)
+	}
+	bad := "zz"
+	for name, p := range map[string]model.Profile{
+		"no name":      {Target: model.TargetConfig{Host: "h"}},
+		"no host":      {Name: "x"},
+		"bad selector": {Name: "x", Target: model.TargetConfig{Host: "h", Addressing: &model.Addressing{RemotePSelector: &bad}}},
+	} {
+		if _, err := svc.SaveProfile(ctx, p); service.CodeOf(err) != service.CodeInvalidArgument {
+			t.Errorf("SaveProfile %s = %v", name, err)
+		}
+	}
+	if _, err := svc.SaveProfile(ctx, model.Profile{ID: "nope", Name: "x", Target: model.TargetConfig{Host: "h"}}); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("replace unknown = %v", err)
+	}
+	list, err := svc.Profiles(ctx)
+	if err != nil || len(list) != 1 || list[0].Target.Addressing == nil || *list[0].Target.Addressing.LocalAPTitle != "" {
+		t.Errorf("Profiles = %+v, %v", list, err)
+	}
+	if err := svc.DeleteProfile(ctx, saved.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteProfile(ctx, saved.ID); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("delete twice = %v", err)
+	}
+
+	// A bad selector is refused before connecting.
+	badTarget := targetOf(t, ied.Addr)
+	badTarget.Addressing = &model.Addressing{RemoteTSelector: &bad}
+	if _, err := svc.OpenSession(ctx, badTarget); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("open with a bad selector = %v", err)
+	}
+
+	// Open and discover, with explicit addressing the simulated IED accepts.
+	target := targetOf(t, ied.Addr)
+	psel, title, aeq := "00000001", "1.1.1.999.1", 12
+	target.Addressing = &model.Addressing{RemotePSelector: &psel, RemoteAPTitle: &title, RemoteAEQualifier: &aeq, LocalAPTitle: &omit}
+	info, err := svc.OpenSession(ctx, target)
 	if err != nil {
 		t.Fatalf("OpenSession: %v", err)
 	}
@@ -158,12 +208,80 @@ func contract(t *testing.T, svc service.Service) {
 		t.Errorf("empty read = %v", err)
 	}
 
+	// Search.
+	found, err := svc.Search(ctx, info.ID, model.SearchQuery{LNClass: "MMXU", Kind: model.NodeDO, FC: "MX"})
+	if err != nil || len(found.Hits) != 2 {
+		t.Errorf("Search = %+v, %v", found, err)
+	}
+
+	// Poll: samples arrive as events; the session shows the poller.
+	if err := svc.StartPolling(ctx, info.ID, model.PollConfig{Refs: []string{simied.Domain + "/MMXU1.Hz.mag.f[MX]"}, IntervalMS: 200}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []uint64{1, 2} {
+		ev := next(t, events, "sample", func(ev model.Event) bool { return ev.Kind == model.EventSample })
+		if ev.Sample == nil || ev.Sample.Seq != want || len(ev.Sample.Values) != 1 || ev.Sample.Values[0].Value == nil {
+			t.Fatalf("sample = %+v", ev.Sample)
+		}
+	}
+	if list, _ := svc.Sessions(ctx); len(list) != 1 || list[0].Polling == nil || list[0].Polling.IntervalMS != 200 {
+		t.Errorf("polling state = %+v", list)
+	}
+	if err := svc.StartPolling(ctx, info.ID, model.PollConfig{Refs: []string{"x"}, IntervalMS: 10}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("fast polling = %v", err)
+	}
+	if err := svc.StopPolling(ctx, info.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.StopPolling(ctx, info.ID); err != nil {
+		t.Errorf("stop twice = %v", err)
+	}
+
+	// Export a snapshot and open it again.
+	exp, err := svc.Export(ctx, info.ID, model.ExportRequest{Format: model.ExportSnapshot, Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}})
+	if err != nil || !strings.Contains(exp.Text, model.SnapshotSchema) {
+		t.Fatalf("Export = %v %.100s", err, exp.Text)
+	}
+	snapSession, err := svc.OpenSnapshot(ctx, model.File{Name: exp.Name, Data: []byte(exp.Text)})
+	if err != nil || snapSession.Snapshot == nil {
+		t.Fatalf("OpenSnapshot = %+v, %v", snapSession, err)
+	}
+	if res, err := svc.Read(ctx, snapSession.ID, model.ReadRequest{Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}}); err != nil || res.Source != model.SourceSnapshot || res.Values[0].Value == nil {
+		t.Errorf("Read snapshot = %+v, %v", res, err)
+	}
+	if err := svc.CloseSession(ctx, snapSession.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// SCL: inspect, open offline, browse; no reads.
+	file := model.File{Name: "demo.icd", Data: simied.ICD()}
+	sclInfo, err := svc.InspectSCL(ctx, file)
+	if err != nil || len(sclInfo.IEDs) != 1 || sclInfo.IEDs[0].AccessPoints[0].Target == nil {
+		t.Fatalf("InspectSCL = %+v, %v", sclInfo, err)
+	}
+	if _, err := svc.InspectSCL(ctx, model.File{Name: "x", Data: []byte("<nope/>")}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("InspectSCL of garbage = %v", err)
+	}
+	offline, err := svc.OpenSCL(ctx, model.OpenSCLRequest{File: file, IED: simied.IEDName, AccessPoint: "S1"})
+	if err != nil || offline.State != model.SessionOffline || offline.SCL == nil {
+		t.Fatalf("OpenSCL = %+v, %v", offline, err)
+	}
+	if nodes, err := svc.Browse(ctx, offline.ID, simied.Domain+"/MMXU1"); err != nil || len(nodes) != 3 {
+		t.Errorf("Browse offline = %+v, %v", nodes, err)
+	}
+	if _, err := svc.Read(ctx, offline.ID, model.ReadRequest{Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}}); service.CodeOf(err) != service.CodeNotAllowed {
+		t.Errorf("Read offline = %v", err)
+	}
+	if err := svc.CloseSession(ctx, offline.ID); err != nil {
+		t.Fatal(err)
+	}
+
 	// Close.
 	if err := svc.CloseSession(ctx, info.ID); err != nil {
 		t.Fatal(err)
 	}
 	gone := next(t, events, "closed event", func(ev model.Event) bool {
-		return ev.Kind == model.EventSession && ev.Session.State == model.SessionClosed
+		return ev.Kind == model.EventSession && ev.Session.State == model.SessionClosed && ev.SessionID == info.ID
 	})
 	if gone.SessionID != info.ID {
 		t.Errorf("closed event = %+v", gone)

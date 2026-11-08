@@ -44,7 +44,7 @@ In the page, connect to the IED with an address **as the gateway sees it** (for 
 
 ## Where the daemon keeps its files
 
-By default in a temporary folder, `/tmp/iec61850-explorer-<uid>`: the token and the state file. That is lost when the system clears `/tmp`, after which the daemon makes a new token. For a gateway that should keep its token, pass `--data-dir` (the systemd unit below does). The directory must belong to the daemon's user and be closed to everyone else (mode 0700); the daemon creates it that way and refuses anything else.
+By default in a temporary folder, `/tmp/iec61850-explorer-<uid>`: the token, the state file and the connection profiles. That is lost when the system clears `/tmp`, after which the daemon makes a new token. For a gateway that should keep its token, pass `--data-dir` (the systemd unit below does). The directory must belong to the daemon's user and be closed to everyone else (mode 0700); the daemon creates it that way and refuses anything else.
 
 ## As a service (systemd)
 

@@ -31,10 +31,36 @@ type Service interface {
 	// logical devices for "", the logical nodes of "LD", the data objects of
 	// "LD/LN", and so on. It does not talk to the IED.
 	Browse(ctx context.Context, id, ref string) ([]model.Node, error)
+	// StartPolling polls references of a session, replacing a running
+	// poller. Samples arrive as events.
+	StartPolling(ctx context.Context, id string, cfg model.PollConfig) error
+	// StopPolling stops polling; a session that does not poll is not an
+	// error.
+	StopPolling(ctx context.Context, id string) error
+	// Search finds nodes of the discovered model. It does not talk to the
+	// IED.
+	Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error)
 	// Read reads values. Each reference carries a functional constraint.
 	// A failed reference is reported in its ReadValue; the call fails only
 	// when nothing could be attempted.
 	Read(ctx context.Context, id string, req model.ReadRequest) (model.ReadResult, error)
+	// InspectSCL parses an SCL document and describes its IEDs.
+	InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error)
+	// OpenSCL opens an offline session on an IED of an SCL document: its
+	// model can be browsed and searched, not read.
+	OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error)
+	// Export reads references once and renders the session as a snapshot
+	// (JSON) or CSV.
+	Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error)
+	// OpenSnapshot opens an offline session from a snapshot; its reads
+	// return the snapshot's values.
+	OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo, error)
+	// Profiles lists the saved connection profiles, by name.
+	Profiles(ctx context.Context) ([]model.Profile, error)
+	// SaveProfile creates a profile (empty ID) or replaces one.
+	SaveProfile(ctx context.Context, p model.Profile) (model.Profile, error)
+	// DeleteProfile removes a profile.
+	DeleteProfile(ctx context.Context, id string) error
 	// Subscribe returns the event stream. Events with a sequence number above
 	// sinceSeq that the engine still holds are replayed first; sinceSeq 0
 	// delivers new events only. The channel is closed when ctx ends.

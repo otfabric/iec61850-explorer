@@ -88,6 +88,17 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}", s.closeSession)
 	api.HandleFunc("GET "+prefix+"/sessions/{id}/browse", s.browse)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/read", s.read)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/search", s.search)
+	api.HandleFunc("PUT "+prefix+"/sessions/{id}/polling", s.startPolling)
+	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/polling", s.stopPolling)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/export", s.export)
+	api.HandleFunc("POST "+prefix+"/snapshots/open", s.openSnapshot)
+	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
+	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
+	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
+	api.HandleFunc("POST "+prefix+"/profiles", s.createProfile)
+	api.HandleFunc("PUT "+prefix+"/profiles/{id}", s.replaceProfile)
+	api.HandleFunc("DELETE "+prefix+"/profiles/{id}", s.deleteProfile)
 	api.HandleFunc("GET "+prefix+"/events", s.events)
 	api.HandleFunc(prefix+"/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, service.Errorf(service.CodeNotFound, "no such endpoint: %s %s", r.Method, r.URL.Path))
@@ -209,6 +220,114 @@ func (s *server) read(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := s.svc.Read(r.Context(), r.PathValue("id"), req)
 	s.reply(w, r, v, err)
+}
+
+func (s *server) startPolling(w http.ResponseWriter, r *http.Request) {
+	var cfg model.PollConfig
+	if !s.decode(w, r, &cfg) {
+		return
+	}
+	s.replyEmpty(w, r, s.svc.StartPolling(r.Context(), r.PathValue("id"), cfg))
+}
+
+func (s *server) stopPolling(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.StopPolling(r.Context(), r.PathValue("id")))
+}
+
+func (s *server) search(w http.ResponseWriter, r *http.Request) {
+	var q model.SearchQuery
+	if !s.decode(w, r, &q) {
+		return
+	}
+	v, err := s.svc.Search(r.Context(), r.PathValue("id"), q)
+	s.reply(w, r, v, err)
+}
+
+// export renders a session. The client names a format, never a file: it
+// gets the text back and saves it itself.
+func (s *server) export(w http.ResponseWriter, r *http.Request) {
+	var req model.ExportRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.Export(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) openSnapshot(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.rawFile(w, r, model.MaxSnapshotBytes)
+	if !ok {
+		return
+	}
+	v, err := s.svc.OpenSnapshot(r.Context(), f)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+// sclFile reads an SCL document sent as the raw request body; ?name= names
+// it for display.
+func (s *server) sclFile(w http.ResponseWriter, r *http.Request) (model.File, bool) {
+	return s.rawFile(w, r, model.MaxSCLBytes)
+}
+
+// rawFile reads a file sent as the raw request body, up to limit bytes.
+func (s *server) rawFile(w http.ResponseWriter, r *http.Request, limit int64) (model.File, bool) {
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if err != nil {
+		s.fail(w, r, service.Errorf(service.CodeLimitExceeded, "the file is larger than %d MiB or unreadable", limit>>20))
+		return model.File{}, false
+	}
+	return model.File{Name: r.URL.Query().Get("name"), Data: data}, true
+}
+
+func (s *server) inspectSCL(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.sclFile(w, r)
+	if !ok {
+		return
+	}
+	v, err := s.svc.InspectSCL(r.Context(), f)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) openSCL(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.sclFile(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	v, err := s.svc.OpenSCL(r.Context(), model.OpenSCLRequest{File: f, IED: q.Get("ied"), AccessPoint: q.Get("ap")})
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) profiles(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Profiles(r.Context())
+	s.reply(w, r, v, err)
+}
+
+func (s *server) createProfile(w http.ResponseWriter, r *http.Request) {
+	var p model.Profile
+	if !s.decode(w, r, &p) {
+		return
+	}
+	if p.ID != "" {
+		s.fail(w, r, service.Errorf(service.CodeInvalidArgument, "a new profile has no id; use PUT /profiles/{id} to replace one"))
+		return
+	}
+	v, err := s.svc.SaveProfile(r.Context(), p)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) replaceProfile(w http.ResponseWriter, r *http.Request) {
+	var p model.Profile
+	if !s.decode(w, r, &p) {
+		return
+	}
+	p.ID = r.PathValue("id")
+	v, err := s.svc.SaveProfile(r.Context(), p)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) deleteProfile(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.DeleteProfile(r.Context(), r.PathValue("id")))
 }
 
 // events streams the events after ?since= (or Last-Event-ID) as server-sent

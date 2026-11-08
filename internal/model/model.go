@@ -40,8 +40,7 @@ type Health struct {
 	Mode string `json:"mode"`
 	// Time is the engine's clock, for clients to notice a skew.
 	Time time.Time `json:"time"`
-	// Features lists optional capabilities. None exist in M0; the field is
-	// there so that clients need no change when they do.
+	// Features lists optional capabilities, see the Feature constants.
 	Features []string `json:"features"`
 }
 
@@ -54,11 +53,60 @@ type TargetConfig struct {
 	// TimeoutMS bounds connecting and every request. Zero selects the
 	// engine default (10 s); at most 120000.
 	TimeoutMS int `json:"timeout_ms,omitempty"`
+	// Addressing overrides the ISO addressing; nil sends the defaults.
+	Addressing *Addressing `json:"addressing,omitempty"`
 }
+
+// Addressing is the ISO addressing of an association: the values of the
+// IED's SCL Address (OSI-TSEL, OSI-SSEL, OSI-PSEL, OSI-AP-Title,
+// OSI-AE-Qualifier). Each field left out (nil) takes the default go-mms
+// sends, the values libiec61850 sends: selectors 0001 (T, S) and 00000001
+// (P), AP-titles 1.1.1.999 (calling) and 1.1.1.999.1 (called), AE-qualifier
+// 12. A selector or AP-title set to "" is omitted from the request.
+// Selectors are hexadecimal; AP-titles are object identifiers written
+// 1.3.9999.23 or 1,3,9999,23.
+type Addressing struct {
+	LocalTSelector    *string `json:"local_tsel,omitempty"`
+	RemoteTSelector   *string `json:"remote_tsel,omitempty"`
+	LocalSSelector    *string `json:"local_ssel,omitempty"`
+	RemoteSSelector   *string `json:"remote_ssel,omitempty"`
+	LocalPSelector    *string `json:"local_psel,omitempty"`
+	RemotePSelector   *string `json:"remote_psel,omitempty"`
+	LocalAPTitle      *string `json:"local_ap_title,omitempty"`
+	RemoteAPTitle     *string `json:"remote_ap_title,omitempty"`
+	LocalAEQualifier  *int    `json:"local_ae_qualifier,omitempty"`
+	RemoteAEQualifier *int    `json:"remote_ae_qualifier,omitempty"`
+}
+
+// Profile is a saved connection.
+type Profile struct {
+	// ID is assigned by the engine; empty in a request creates a profile.
+	ID     string       `json:"id"`
+	Name   string       `json:"name"`
+	Target TargetConfig `json:"target"`
+	// Notes is free text, for example where the IED is.
+	Notes     string    `json:"notes,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Limits of profiles.
+const (
+	MaxProfiles        = 200
+	MaxProfileNameLen  = 80
+	MaxProfileNotesLen = 1000
+)
+
+// Features of an engine.
+const (
+	// FeatureProfiles: the engine stores connection profiles.
+	FeatureProfiles = "profiles"
+)
 
 // Session states.
 const (
 	SessionConnected = "connected"
+	// SessionOffline is a model imported from SCL; nothing to read.
+	SessionOffline = "offline"
 	// SessionLost means the association ended without the user closing it.
 	SessionLost   = "lost"
 	SessionClosed = "closed"
@@ -84,6 +132,119 @@ type SessionInfo struct {
 	Discovery DiscoverySummary `json:"discovery"`
 	// Error is set for a lost session.
 	Error *OpError `json:"error,omitempty"`
+	// Polling is set while the session polls.
+	Polling *PollState `json:"polling,omitempty"`
+	// SCL is set for an offline session: a model imported from an SCL
+	// file, with no IED behind it.
+	SCL *SCLOrigin `json:"scl,omitempty"`
+	// Snapshot is set for an offline session opened from a snapshot.
+	Snapshot *SnapshotOrigin `json:"snapshot,omitempty"`
+}
+
+// SCLOrigin names where an offline session's model came from.
+type SCLOrigin struct {
+	File        string `json:"file"`
+	IED         string `json:"ied"`
+	AccessPoint string `json:"access_point"`
+}
+
+// MaxSCLBytes bounds an SCL file the engine parses.
+const MaxSCLBytes = 64 << 20
+
+// File is a document handed to the engine: an SCL file or a snapshot. The
+// engine never reads a path: the user interface reads the file the user
+// chose.
+type File struct {
+	// Name is the file name, for display.
+	Name string `json:"name"`
+	Data []byte `json:"data"`
+}
+
+// SCLInfo describes an SCL document.
+type SCLInfo struct {
+	Name string `json:"name"`
+	// Kind is scd, cid, icd, iid, ssd or unknown.
+	Kind    string   `json:"kind"`
+	Version string   `json:"version"`
+	IEDs    []SCLIED `json:"ieds"`
+	// Diagnostics are the parser's findings, at most MaxSCLDiagnostics.
+	Diagnostics []SCLDiagnostic `json:"diagnostics"`
+	// DiagnosticsDropped counts findings beyond the ones listed.
+	DiagnosticsDropped int `json:"diagnostics_dropped,omitempty"`
+}
+
+// MaxSCLDiagnostics bounds SCLInfo.Diagnostics.
+const MaxSCLDiagnostics = 100
+
+// SCLIED is an IED of an SCL document.
+type SCLIED struct {
+	Name         string           `json:"name"`
+	Desc         string           `json:"desc,omitempty"`
+	Manufacturer string           `json:"manufacturer,omitempty"`
+	Type         string           `json:"type,omitempty"`
+	AccessPoints []SCLAccessPoint `json:"access_points"`
+}
+
+// SCLAccessPoint is an access point with an MMS server.
+type SCLAccessPoint struct {
+	Name           string `json:"name"`
+	LogicalDevices int    `json:"logical_devices"`
+	// Target is the address the Communication section gives it, ready to
+	// connect with; nil when the SCL has no IP address for it.
+	Target *TargetConfig `json:"target,omitempty"`
+}
+
+// SCLDiagnostic is a finding of the SCL parser.
+type SCLDiagnostic struct {
+	Severity string `json:"severity"`
+	Code     string `json:"code,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Message  string `json:"message"`
+}
+
+// OpenSCLRequest opens an offline session on one IED of an SCL document.
+// IED and AccessPoint may be empty when the document has only one.
+type OpenSCLRequest struct {
+	File        File   `json:"file"`
+	IED         string `json:"ied,omitempty"`
+	AccessPoint string `json:"access_point,omitempty"`
+}
+
+// Polling limits.
+const (
+	MinPollIntervalMS     = 200
+	MaxPollIntervalMS     = 3_600_000
+	DefaultPollIntervalMS = 1000
+)
+
+// PollConfig starts polling: the references are read every interval, start
+// to start. A cycle that is still running when the next is due skips it.
+type PollConfig struct {
+	Refs       []string `json:"refs"`
+	IntervalMS int      `json:"interval_ms,omitempty"`
+}
+
+// PollState describes a running poller.
+type PollState struct {
+	Refs       []string  `json:"refs"`
+	IntervalMS int       `json:"interval_ms"`
+	StartedAt  time.Time `json:"started_at"`
+	Samples    uint64    `json:"samples"`
+	// Failures counts cycles in which at least one reference failed.
+	Failures uint64 `json:"failures"`
+	// Overruns counts skipped cycles.
+	Overruns uint64 `json:"overruns"`
+}
+
+// Sample is one poll cycle.
+type Sample struct {
+	SessionID string `json:"session_id"`
+	// Seq numbers the samples of a poller, from 1.
+	Seq        uint64      `json:"seq"`
+	At         time.Time   `json:"at"`
+	DurationMS int64       `json:"duration_ms"`
+	Values     []ReadValue `json:"values"`
+	Overruns   uint64      `json:"overruns"`
 }
 
 // DiscoverySummary counts the discovered model.
@@ -132,9 +293,99 @@ type ReadRequest struct {
 // MaxReadRefs bounds the references of one ReadRequest.
 const MaxReadRefs = 200
 
+// SearchQuery searches the discovered model of a session. Every field that
+// is set must match.
+type SearchQuery struct {
+	// Text matches the reference, case-insensitively, as a substring.
+	Text string `json:"text,omitempty"`
+	// LNClass matches the class of the logical node the node is in.
+	LNClass string `json:"ln_class,omitempty"`
+	// FC matches one of the node's functional constraints.
+	FC string `json:"fc,omitempty"`
+	// Kind matches the node kind.
+	Kind string `json:"kind,omitempty"`
+	// Limit bounds the hits; zero is MaxSearchHits.
+	Limit int `json:"limit,omitempty"`
+}
+
+// MaxSearchHits bounds the hits of one search.
+const MaxSearchHits = 500
+
+// SearchResult is the answer to a SearchQuery.
+type SearchResult struct {
+	Hits []Node `json:"hits"`
+	// Truncated says that more nodes matched than Limit.
+	Truncated bool `json:"truncated"`
+}
+
+// Sources of read values.
+const (
+	SourceIED      = "ied"
+	SourceSnapshot = "snapshot"
+)
+
+// SnapshotSchema identifies the snapshot format.
+const SnapshotSchema = "otfabric.iec61850-explorer.snapshot/1"
+
+// MaxSnapshotBytes bounds a snapshot the engine opens.
+const MaxSnapshotBytes = 64 << 20
+
+// Snapshot is a session's model and values at one moment, as a file.
+type Snapshot struct {
+	Schema     string           `json:"schema"`
+	App        AppInfo          `json:"app"`
+	CapturedAt time.Time        `json:"captured_at"`
+	Target     TargetConfig     `json:"target"`
+	Identity   *Identity        `json:"identity,omitempty"`
+	Discovery  DiscoverySummary `json:"discovery"`
+	SCL        *SCLOrigin       `json:"scl,omitempty"`
+	// Nodes is the whole model tree, depth first.
+	Nodes []Node `json:"nodes"`
+	// Values were read at ValuesAt; empty for an offline session.
+	Values   []ReadValue `json:"values"`
+	ValuesAt time.Time   `json:"values_at,omitempty"`
+}
+
+// AppInfo names the program and libraries that wrote a file.
+type AppInfo struct {
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	GoIEC61850 string `json:"go_iec61850"`
+	GoMMS      string `json:"go_mms"`
+}
+
+// Export formats.
+const (
+	ExportSnapshot = "snapshot"
+	ExportCSV      = "csv"
+)
+
+// ExportRequest reads the references once (none for an offline session) and
+// renders the session.
+type ExportRequest struct {
+	Format string   `json:"format"`
+	Refs   []string `json:"refs"`
+}
+
+// ExportFile is a rendered export; the user interface saves it.
+type ExportFile struct {
+	Name string `json:"name"`
+	MIME string `json:"mime"`
+	Text string `json:"text"`
+}
+
+// SnapshotOrigin names the snapshot an offline session was opened from.
+type SnapshotOrigin struct {
+	File       string    `json:"file"`
+	CapturedAt time.Time `json:"captured_at"`
+}
+
 // ReadResult is the answer to a ReadRequest, one value per reference in the
 // order of the request.
 type ReadResult struct {
+	// Source is "ied" for values read now, "snapshot" for the values a
+	// snapshot holds.
+	Source     string      `json:"source"`
 	At         time.Time   `json:"at"`
 	DurationMS int64       `json:"duration_ms"`
 	Values     []ReadValue `json:"values"`
@@ -250,7 +501,8 @@ const (
 // Operation records one user action on a session and the MMS requests it
 // caused, in order. It is the Explorer's own activity log.
 type Operation struct {
-	// Action is "connect", "discover", "read" or "close".
+	// Action is "connect", "discover", "read" or "close". A read of several
+	// references is one operation.
 	Action string `json:"action"`
 	// Target is the object reference or address the action was about.
 	Target     string       `json:"target,omitempty"`
@@ -280,6 +532,8 @@ const (
 	EventSession = "session"
 	// EventOperation carries an Operation.
 	EventOperation = "operation"
+	// EventSample carries a poll Sample.
+	EventSample = "sample"
 	// EventResync tells a subscriber that it missed events.
 	EventResync = "resync"
 )
@@ -293,4 +547,5 @@ type Event struct {
 	At        time.Time    `json:"at"`
 	Session   *SessionInfo `json:"session,omitempty"`
 	Operation *Operation   `json:"operation,omitempty"`
+	Sample    *Sample      `json:"sample,omitempty"`
 }

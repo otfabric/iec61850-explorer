@@ -123,6 +123,53 @@ func (a *App) Read(ctx context.Context, id string, req model.ReadRequest) (model
 	return a.svc.Read(ctx, id, req)
 }
 
+// StartPolling polls references of a session.
+func (a *App) StartPolling(ctx context.Context, id string, cfg model.PollConfig) error {
+	return a.svc.StartPolling(ctx, id, cfg)
+}
+
+// StopPolling stops polling a session.
+func (a *App) StopPolling(ctx context.Context, id string) error { return a.svc.StopPolling(ctx, id) }
+
+// Search finds nodes of a session's discovered model.
+func (a *App) Search(ctx context.Context, id string, q model.SearchQuery) (model.SearchResult, error) {
+	return a.svc.Search(ctx, id, q)
+}
+
+// Export reads references once and renders the session; the frontend saves
+// the text with SaveFile.
+func (a *App) Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error) {
+	return a.svc.Export(ctx, id, req)
+}
+
+// OpenSnapshot opens an offline session from a snapshot the user chose.
+func (a *App) OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo, error) {
+	return a.svc.OpenSnapshot(ctx, f)
+}
+
+// InspectSCL parses an SCL document the user chose in the window.
+func (a *App) InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error) {
+	return a.svc.InspectSCL(ctx, f)
+}
+
+// OpenSCL opens an offline session on an IED of an SCL document.
+func (a *App) OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error) {
+	return a.svc.OpenSCL(ctx, req)
+}
+
+// Profiles lists the saved connection profiles.
+func (a *App) Profiles(ctx context.Context) ([]model.Profile, error) { return a.svc.Profiles(ctx) }
+
+// SaveProfile creates or replaces a connection profile.
+func (a *App) SaveProfile(ctx context.Context, p model.Profile) (model.Profile, error) {
+	return a.svc.SaveProfile(ctx, p)
+}
+
+// DeleteProfile removes a connection profile.
+func (a *App) DeleteProfile(ctx context.Context, id string) error {
+	return a.svc.DeleteProfile(ctx, id)
+}
+
 // SaveFile asks the user where to save text under the suggested name and
 // writes it there. It returns the chosen path, or "" when the user cancelled.
 // The path comes from the native dialog, never from the frontend.

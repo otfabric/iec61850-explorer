@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,6 +54,10 @@ type Options struct {
 	AllowTarget func(ctx context.Context, host string) error
 	// EventBuffer overrides DefaultEventBuffer.
 	EventBuffer int
+	// DataDir, when set, is where the engine keeps its files (profiles). It
+	// must exist; the caller checks its ownership and mode. Empty keeps no
+	// files.
+	DataDir string
 }
 
 // Engine implements service.Service.
@@ -61,6 +66,7 @@ type Engine struct {
 	log     *slog.Logger
 	started time.Time
 	hub     *hub
+	store   *profileStore
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -82,10 +88,14 @@ func New(opts Options) *Engine {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &Engine{
+	e := &Engine{
 		opts: opts, log: log, started: time.Now(), hub: newHub(opts.EventBuffer),
 		sessions: make(map[string]*session),
 	}
+	if opts.DataDir != "" {
+		e.store = &profileStore{path: filepath.Join(opts.DataDir, "profiles.json")}
+	}
+	return e
 }
 
 // Close closes every session. The engine refuses new sessions afterwards.
@@ -111,8 +121,16 @@ func (e *Engine) Health(context.Context) (model.Health, error) {
 		UptimeS:    int64(time.Since(e.started).Seconds()),
 		GoIEC61850: buildinfo.ModuleVersion(buildinfo.GoIEC61850Path),
 		GoMMS:      buildinfo.ModuleVersion(buildinfo.GoMMSPath),
-		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: []string{},
+		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: e.features(),
 	}, nil
+}
+
+func (e *Engine) features() []string {
+	f := []string{}
+	if e.store != nil {
+		f = append(f, model.FeatureProfiles)
+	}
+	return f
 }
 
 // validateTarget fills defaults and checks the target.
@@ -167,6 +185,14 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 		rec: &recorder{}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+	mmsOpts := mms.DialOptions{
+		AllowedServices: readonly.AllowedServices(),
+		RequestTimeout:  timeout,
+		Metrics:         s.rec,
+	}
+	if err := applyAddressing(cfg.Addressing, &mmsOpts); err != nil {
+		return model.SessionInfo{}, err
+	}
 
 	// Connect.
 	s.rec.start()
@@ -175,11 +201,7 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	client, err := iec61850.Dial(dctx, addr, iec61850.DialOptions{
 		Logger: e.log.With("session", s.id),
 		Cache:  iec61850.CacheLazy,
-		MMS: mms.DialOptions{
-			AllowedServices: readonly.AllowedServices(),
-			RequestTimeout:  timeout,
-			Metrics:         s.rec,
-		},
+		MMS:    mmsOpts,
 	})
 	cancel()
 	if err != nil {
@@ -257,6 +279,7 @@ func (e *Engine) watch(s *session) {
 	s.state = model.SessionLost
 	s.lostErr = classify(m.Err(), false)
 	s.stateMu.Unlock()
+	e.stopPoller(s)
 	info := s.info()
 	e.hub.publish(model.Event{Kind: model.EventSession, SessionID: s.id, Session: &info})
 	e.log.Warn("session lost", "session", s.id, "error", m.Err())
@@ -311,6 +334,7 @@ func (e *Engine) CloseSession(ctx context.Context, id string) error {
 }
 
 func (e *Engine) closeSession(ctx context.Context, s *session) error {
+	e.stopPoller(s)
 	s.stateMu.Lock()
 	wasConnected := s.state == model.SessionConnected
 	s.closing, s.state = true, model.SessionClosed
@@ -380,90 +404,6 @@ func (e *Engine) Browse(_ context.Context, id, ref string) ([]model.Node, error)
 		out[i] = nodeOf(c)
 	}
 	return out, nil
-}
-
-// Read implements service.Service.
-func (e *Engine) Read(ctx context.Context, id string, req model.ReadRequest) (model.ReadResult, error) {
-	switch {
-	case len(req.Refs) == 0:
-		return model.ReadResult{}, service.Errorf(service.CodeInvalidArgument, "no reference to read")
-	case len(req.Refs) > model.MaxReadRefs:
-		return model.ReadResult{}, service.Errorf(service.CodeLimitExceeded, "at most %d references per read", model.MaxReadRefs)
-	}
-	s, err := e.session(id)
-	if err != nil {
-		return model.ReadResult{}, err
-	}
-	if st := s.info().State; st != model.SessionConnected {
-		return model.ReadResult{}, service.Errorf(service.CodeSessionLost, "the session is %s", st)
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	res := model.ReadResult{At: time.Now().UTC(), Values: make([]model.ReadValue, len(req.Refs))}
-	start := time.Now()
-	for i, raw := range req.Refs {
-		res.Values[i] = e.readOne(ctx, s, raw)
-	}
-	res.DurationMS = since(start)
-	return res, nil
-}
-
-// readOne reads one reference as its own operation.
-func (e *Engine) readOne(ctx context.Context, s *session, raw string) model.ReadValue {
-	out := model.ReadValue{Ref: raw}
-	ref, err := iec61850.ParseRef(strings.TrimSpace(raw))
-	if err == nil && ref.FC == "" {
-		err = &iec61850.ReferenceError{Input: raw, Reason: "functional constraint required, such as [MX]"}
-	}
-	if err != nil {
-		out.Error = classify(err, false)
-		out.Error.Code = model.ErrCodeInvalidRef
-		return out
-	}
-	out.Ref = ref.String()
-	if dom, item, err := ref.ToMMS(); err == nil {
-		out.MMS = model.MMSName{Domain: string(dom), ItemID: string(item)}
-	}
-
-	s.rec.start()
-	start := time.Now()
-	tctx, cancel := s.timeoutCtx(ctx)
-	defer cancel()
-	v, err := s.client.ReadRaw(tctx, ref)
-	if err != nil {
-		out.Error = classify(err, false)
-		e.publishOperation(s.rec, s.id, "read", out.Ref, start, out.Error)
-		return out
-	}
-	ts := e.typeOf(tctx, s, ref)
-	name := ""
-	if len(ref.Path) > 0 {
-		name = ref.Path[len(ref.Path)-1]
-	}
-	val := convertValue(v, ts, name)
-	out.Value = &val
-	e.publishOperation(s.rec, s.id, "read", out.Ref, start, nil)
-	return out
-}
-
-// typeOf returns the MMS type of ref, from the cache or the IED. A failure
-// leaves components unnamed; it does not fail the read. s.mu must be held.
-func (e *Engine) typeOf(ctx context.Context, s *session, ref iec61850.Ref) *mms.TypeSpec {
-	key := ref.String()
-	if ts, ok := s.types[key]; ok {
-		return ts
-	}
-	if !ref.IsObject() {
-		return nil
-	}
-	ts, err := s.client.GetVariableType(ctx, ref)
-	if err != nil {
-		e.log.Debug("no type", "ref", key, "error", err)
-		ts = nil
-	}
-	s.types[key] = ts
-	return ts
 }
 
 // Subscribe implements service.Service.

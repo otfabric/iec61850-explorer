@@ -1,4 +1,4 @@
-import { CopyIcon, ErrorIcon, ReadIcon } from '../icons';
+import { CopyIcon, ErrorIcon, PinIcon, ReadIcon } from '../icons';
 import type { ModelNode, SessionInfo } from '../service/types';
 import type { ReadEntry } from '../state/useExplorer';
 import { Button, Chip } from './ui';
@@ -8,9 +8,11 @@ interface NodePanelProps {
   session: SessionInfo;
   node: ModelNode;
   reads: Record<string, ReadEntry>;
-  reading: string | null;
+  reading: boolean;
   disabled: boolean;
+  watched: (ref: string) => boolean;
   onRead: (refs: string[]) => void;
+  onWatch: (ref: string, on: boolean) => void;
   onCopy: (text: string) => void;
 }
 
@@ -22,7 +24,8 @@ export function cliCommand(session: SessionInfo, ref: string, fc: string): strin
   return `iec61850ctl get object --host ${session.target.host}${port} --object ${ref} --fc ${fc}`;
 }
 
-export function NodePanel({ session, node, reads, reading, disabled, onRead, onCopy }: NodePanelProps) {
+export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy }: NodePanelProps) {
+  const sclOnly = session.state === 'offline' && !session.snapshot;
   const readable = node.kind !== 'ld' && node.fcs.length > 0;
   return (
     <section aria-label="Selected node" className="min-h-0 overflow-auto p-4">
@@ -36,6 +39,10 @@ export function NodePanel({ session, node, reads, reading, disabled, onRead, onC
       </div>
       {node.kind === 'ld' && <p className="mt-3 text-muted">A logical device. Open it in the tree to see its logical nodes.</p>}
       {node.kind !== 'ld' && node.fcs.length === 0 && <p className="mt-3 text-muted">No functional constraint was discovered for this node.</p>}
+      {sclOnly && readable && (
+        <p className="mt-3 text-muted">This model comes from an SCL file: it has no live values. Connect to the IED to read them.</p>
+      )}
+      {session.snapshot && readable && <p className="mt-3 text-muted">Values come from the snapshot {session.snapshot.file}, not from the IED.</p>}
       {readable &&
         node.fcs.map((fc) => {
           const ref = withFC(node.ref, fc);
@@ -45,14 +52,27 @@ export function NodePanel({ session, node, reads, reading, disabled, onRead, onC
               <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
                 <span className="ot-label">FC</span>
                 <span className="font-mono text-fg-strong">{fc}</span>
-                {entry && <span className="text-[12px] text-muted">read {new Date(entry.at).toLocaleTimeString()}</span>}
+                {entry && (
+                  <span className="text-[12px] text-muted">
+                    {entry.source === 'snapshot' ? 'from snapshot' : 'read'} {new Date(entry.at).toLocaleTimeString()}
+                  </span>
+                )}
                 <span className="ml-auto flex gap-2">
-                  <Button icon={<CopyIcon size={14} />} onClick={() => onCopy(cliCommand(session, node.ref, fc))} title="Copy the equivalent iec61850ctl command">
-                    CLI
-                  </Button>
-                  <Button variant="primary" icon={<ReadIcon size={14} />} disabled={disabled || reading !== null} onClick={() => onRead([ref])}>
-                    Read
-                  </Button>
+                  {session.target.host && (
+                    <Button icon={<CopyIcon size={14} />} onClick={() => onCopy(cliCommand(session, node.ref, fc))} title="Copy the equivalent iec61850ctl command">
+                      CLI
+                    </Button>
+                  )}
+                  {session.state === 'connected' && (
+                    <Button icon={<PinIcon size={14} />} aria-pressed={watched(ref)} onClick={() => onWatch(ref, !watched(ref))} title="Follow this value in the watch table">
+                      {watched(ref) ? 'Watching' : 'Watch'}
+                    </Button>
+                  )}
+                  {!sclOnly && (
+                    <Button variant="primary" icon={<ReadIcon size={14} />} disabled={disabled || reading} onClick={() => onRead([ref])}>
+                      Read
+                    </Button>
+                  )}
                 </span>
               </div>
               {entry?.value.error && (

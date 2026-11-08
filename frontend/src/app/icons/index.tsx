@@ -89,3 +89,7 @@ export const SunIcon = icon(
   </>,
 );
 export const MoonIcon = icon(<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />);
+export const PinIcon = icon(<path d="M9 4h6M10 4v6l-3 4h10l-3-4V4M12 14v6" />);
+export const FileIcon = icon(<path d="M7 3h7l4 4v14H7V3ZM14 3v4h4" />);
+export const CloseIcon = icon(<path d="M6 6l12 12M18 6 6 18" />);
+export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);

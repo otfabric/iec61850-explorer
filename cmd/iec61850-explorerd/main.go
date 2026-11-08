@@ -93,7 +93,7 @@ type paths struct {
 
 func (p *paths) register(flags *flag.FlagSet) {
 	flags.StringVar(&p.dataDir, "data-dir", daemon.DefaultDataDir(),
-		"directory for the token and the state file; the default is $"+daemon.DataDirEnv+" or temporary storage")
+		"directory for the token, the state file and the profiles; the default is $"+daemon.DataDirEnv+" or temporary storage")
 	flags.StringVar(&p.tokenFile, "token-file", "", "file that holds the bearer token (default <data-dir>/token)")
 }
 
@@ -162,7 +162,7 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 		return err
 	}
 
-	eng := engine.New(engine.Options{Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow})
+	eng := engine.New(engine.Options{Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow, DataDir: p.dataDir})
 	defer eng.Close()
 
 	var ui http.Handler

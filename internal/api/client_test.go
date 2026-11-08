@@ -105,6 +105,69 @@ func (c *httpService) Read(ctx context.Context, id string, req model.ReadRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/read", req, &v)
 }
 
+func (c *httpService) StartPolling(ctx context.Context, id string, cfg model.PollConfig) error {
+	return c.do(ctx, "PUT", "/api/v1/sessions/"+id+"/polling", cfg, nil)
+}
+
+func (c *httpService) StopPolling(ctx context.Context, id string) error {
+	return c.do(ctx, "DELETE", "/api/v1/sessions/"+id+"/polling", nil, nil)
+}
+
+func (c *httpService) Search(ctx context.Context, id string, q model.SearchQuery) (v model.SearchResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/search", q, &v)
+}
+
+// sclRequest posts an SCL document as the raw body.
+func (c *httpService) sclRequest(ctx context.Context, path string, f model.File, query url.Values, out any) error {
+	query.Set("name", f.Name)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.base+path+"?"+query.Encode(), bytes.NewReader(f.Data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/xml")
+	res, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode >= 400 {
+		return decodeError(res)
+	}
+	return json.NewDecoder(res.Body).Decode(out)
+}
+
+func (c *httpService) Export(ctx context.Context, id string, req model.ExportRequest) (v model.ExportFile, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/export", req, &v)
+}
+
+func (c *httpService) OpenSnapshot(ctx context.Context, f model.File) (v model.SessionInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/snapshots/open", f, url.Values{}, &v)
+}
+
+func (c *httpService) InspectSCL(ctx context.Context, f model.File) (v model.SCLInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/scl/inspect", f, url.Values{}, &v)
+}
+
+func (c *httpService) OpenSCL(ctx context.Context, r model.OpenSCLRequest) (v model.SessionInfo, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/scl/open", r.File, url.Values{"ied": {r.IED}, "ap": {r.AccessPoint}}, &v)
+}
+
+func (c *httpService) Profiles(ctx context.Context) (v []model.Profile, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/profiles", nil, &v)
+}
+
+func (c *httpService) SaveProfile(ctx context.Context, p model.Profile) (v model.Profile, err error) {
+	if p.ID == "" {
+		return v, c.do(ctx, "POST", "/api/v1/profiles", p, &v)
+	}
+	return v, c.do(ctx, "PUT", "/api/v1/profiles/"+url.PathEscape(p.ID), p, &v)
+}
+
+func (c *httpService) DeleteProfile(ctx context.Context, id string) error {
+	return c.do(ctx, "DELETE", "/api/v1/profiles/"+url.PathEscape(id), nil, nil)
+}
+
 // Subscribe reads the event stream until ctx ends or the server closes it.
 func (c *httpService) Subscribe(ctx context.Context, sinceSeq uint64) (<-chan model.Event, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.base+"/api/v1/events?since="+strconv.FormatUint(sinceSeq, 10), nil)

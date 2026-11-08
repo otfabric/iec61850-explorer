@@ -25,6 +25,11 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `.golangci.yml` (forbidigo) bans state-changing go-iec61850 and go-mms calls and MMS servers outside `_test.go` files and `internal/simied`.
 - `TestConnectRefused`, `TestConnectNotMMS`, `TestClassify` (`internal/engine`): a failed connect names its layer only from the error type.
 - `TestSessionLost`: an IED that goes away makes the session `lost`; reads are refused, the tree stays browsable.
+- `TestReadBatched` (`internal/engine`): several references go out as one MMS Read per batch of 32; a logical-node read is not batched.
+- `TestPollingLifecycle`, `TestPollingOverruns`: polling replaces, counts failures and missed starts, and stops with a lost session.
+- `TestOpenSCLMatchesDiscovery`: the data model built from the simulated IED's SCL file equals its live discovery, node for node, with the same FCs.
+- `TestSnapshotRoundTrip`, `TestExportCSV`: a snapshot reopens with the same tree and answers reads from its values; CSV has one row per leaf value and no spreadsheet formulas.
+- `TestApplyAddressing`, `TestProfilesStore`, `TestProfileEdges`: ISO addressing is validated before dialling; profiles are stored 0600 and atomically.
 - `TestAuthAndHost`, `TestHostCheck`, `TestEventsResume`, `TestEventsEndWhenTokenRotates`, `FuzzRequest` (`internal/api`): token, Host check, SSE replay and resync, rotation.
 
 ## Fuzz targets

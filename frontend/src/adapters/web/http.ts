@@ -1,5 +1,22 @@
 import { ServiceError, type ErrorCode, type LinkStatus, type Service } from '../../app/service/service';
-import type { ExplorerEvent, Health, ModelNode, OpError, ReadRequest, ReadResult, SessionInfo, TargetConfig } from '../../app/service/types';
+import type {
+  ExplorerEvent,
+  ExportFile,
+  ExportFormat,
+  FileUpload,
+  Health,
+  ModelNode,
+  OpError,
+  PollConfig,
+  Profile,
+  ReadRequest,
+  ReadResult,
+  SCLInfo,
+  SearchQuery,
+  SearchResult,
+  SessionInfo,
+  TargetConfig,
+} from '../../app/service/types';
 import { createSseParser } from './sse';
 
 const BASE = '/api/v1';
@@ -45,6 +62,20 @@ export class HttpService implements Service {
   sessions = () => this.request<SessionInfo[]>('GET', '/sessions');
   browse = (id: string, ref: string) => this.request<ModelNode[]>('GET', `/sessions/${encodeURIComponent(id)}/browse?ref=${encodeURIComponent(ref)}`);
   read = (id: string, req: ReadRequest) => this.request<ReadResult>('POST', `/sessions/${encodeURIComponent(id)}/read`, req);
+  search = (id: string, query: SearchQuery) => this.request<SearchResult>('POST', `/sessions/${encodeURIComponent(id)}/search`, query);
+  startPolling = (id: string, cfg: PollConfig) => this.request<void>('PUT', `/sessions/${encodeURIComponent(id)}/polling`, cfg);
+  stopPolling = (id: string) => this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/polling`);
+  exportSession = (id: string, format: ExportFormat, refs: string[]) =>
+    this.request<ExportFile>('POST', `/sessions/${encodeURIComponent(id)}/export`, { format, refs });
+  openSnapshot = (file: FileUpload) => this.upload<SessionInfo>('/snapshots/open', file, {});
+  inspectSCL = (file: FileUpload) => this.upload<SCLInfo>('/scl/inspect', file, {});
+  openSCL = (file: FileUpload, ied: string, accessPoint: string) => this.upload<SessionInfo>('/scl/open', file, { ied, ap: accessPoint });
+  profiles = () => this.request<Profile[]>('GET', '/profiles');
+  saveProfile = (profile: Profile) =>
+    profile.id === ''
+      ? this.request<Profile>('POST', '/profiles', profile)
+      : this.request<Profile>('PUT', `/profiles/${encodeURIComponent(profile.id)}`, profile);
+  deleteProfile = (id: string) => this.request<void>('DELETE', `/profiles/${encodeURIComponent(id)}`);
 
   subscribe(sinceSeq: number, onEvent: (event: ExplorerEvent) => void, onLink?: (status: LinkStatus) => void): () => void {
     const abort = new AbortController();
@@ -71,10 +102,12 @@ export class HttpService implements Service {
       throw this.unauthorized('This page has no access token.');
     }
     try {
+      const raw = body instanceof Uint8Array;
       return await fetch(BASE + path, {
         method,
-        headers: body === undefined ? this.headers() : { ...this.headers(), 'Content-Type': 'application/json' },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        headers:
+          body === undefined ? this.headers() : { ...this.headers(), 'Content-Type': raw ? 'application/octet-stream' : 'application/json' },
+        body: body === undefined ? undefined : raw ? (body as BodyInit) : JSON.stringify(body),
       });
     } catch {
       // The stream may not have noticed yet: report the loss now and have the
@@ -99,8 +132,17 @@ export class HttpService implements Service {
     return response.status === 401 ? this.unauthorized(message) : new ServiceError(error?.code ?? 'internal', message, error?.detail);
   }
 
+  /** Sends a file as the raw request body; the query names it. */
+  private async upload<T>(path: string, file: FileUpload, query: Record<string, string>): Promise<T> {
+    const params = new URLSearchParams({ name: file.name, ...query });
+    return this.parse<T>(await this.send('POST', `${path}?${params}`, file.data));
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await this.send(method, path, body);
+    return this.parse<T>(await this.send(method, path, body));
+  }
+
+  private async parse<T>(response: Response): Promise<T> {
     const text = await response.text();
     if (!response.ok) {
       throw this.failure(response, text);

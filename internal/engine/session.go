@@ -12,6 +12,7 @@ import (
 	"github.com/otfabric/go-mms"
 
 	"github.com/otfabric/iec61850-explorer/internal/model"
+	"github.com/otfabric/iec61850-explorer/internal/service"
 )
 
 // session is one association with an IED and the model discovered on it.
@@ -39,15 +40,28 @@ type session struct {
 	state   string
 	lostErr *model.OpError
 	closing bool
+	poller  *poller
+	// scl is set for an offline session from SCL (or a snapshot of one).
+	scl *model.SCLOrigin
+	// snapshot, snapValues and snapAt are set for an offline session opened
+	// from a snapshot.
+	snapshot   *model.SnapshotOrigin
+	snapValues map[string]model.ReadValue
+	snapAt     time.Time
 }
 
 func (s *session) info() model.SessionInfo {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
-	return model.SessionInfo{
+	info := model.SessionInfo{
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
-		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr,
+		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr, SCL: s.scl,
+		Snapshot: s.snapshot,
 	}
+	if s.poller != nil {
+		info.Polling = s.poller.snapshot()
+	}
+	return info
 }
 
 // setTree indexes a discovered tree and counts it.
@@ -175,6 +189,19 @@ func (r *recorder) stop() ([]model.MMSRequest, int) {
 		reqs = []model.MMSRequest{}
 	}
 	return reqs, r.dropped
+}
+
+// liveErr refuses an operation that needs the IED when the session has
+// none, or lost it.
+func (s *session) liveErr() error {
+	switch st := s.info().State; st {
+	case model.SessionConnected:
+		return nil
+	case model.SessionOffline:
+		return service.Errorf(service.CodeNotAllowed, "an SCL model has no live values: connect to the IED to read")
+	default:
+		return service.Errorf(service.CodeSessionLost, "the session is %s", st)
+	}
 }
 
 // timeoutCtx bounds ctx by the session's timeout.

@@ -9,6 +9,7 @@ import (
 
 	"github.com/otfabric/iec61850-explorer/internal/api"
 	"github.com/otfabric/iec61850-explorer/internal/engine"
+	"github.com/otfabric/iec61850-explorer/internal/model"
 )
 
 func TestAuthAndHost(t *testing.T) {
@@ -41,5 +42,32 @@ func TestAuthAndHost(t *testing.T) {
 		if h.Get("X-Content-Type-Options") != "nosniff" {
 			t.Errorf("%s: headers %v", tc.name, h)
 		}
+	}
+}
+
+func TestM1RequestErrors(t *testing.T) {
+	d := newDaemon(t, engine.Options{DataDir: t.TempDir()}, api.Options{})
+	for _, tc := range []struct {
+		name, method, path, body string
+		status                   int
+	}{
+		{"profile with id on POST", "POST", "/api/v1/profiles", `{"id":"x","name":"a","target":{"host":"h"}}`, http.StatusBadRequest},
+		{"profile bad JSON", "POST", "/api/v1/profiles", `{`, http.StatusBadRequest},
+		{"replace bad JSON", "PUT", "/api/v1/profiles/x", `{`, http.StatusBadRequest},
+		{"poll bad JSON", "PUT", "/api/v1/sessions/x/polling", `{`, http.StatusBadRequest},
+		{"poll unknown", "PUT", "/api/v1/sessions/x/polling", `{"refs":["a"]}`, http.StatusNotFound},
+		{"stop unknown", "DELETE", "/api/v1/sessions/x/polling", ``, http.StatusNotFound},
+		{"search bad JSON", "POST", "/api/v1/sessions/x/search", `{`, http.StatusBadRequest},
+		{"export bad JSON", "POST", "/api/v1/sessions/x/export", `{`, http.StatusBadRequest},
+		{"empty snapshot", "POST", "/api/v1/snapshots/open?name=x.json", ``, http.StatusBadRequest},
+		{"empty SCL", "POST", "/api/v1/scl/open?name=x.scd", ``, http.StatusBadRequest},
+	} {
+		if status, _, body := d.request(t, tc.method, tc.path, testToken, tc.body, nil); status != tc.status {
+			t.Errorf("%s: %d %s", tc.name, status, body)
+		}
+	}
+	huge := strings.Repeat("x", int(model.MaxSnapshotBytes)+1)
+	if status, _, _ := d.request(t, "POST", "/api/v1/snapshots/open", testToken, huge, nil); status != http.StatusTooManyRequests {
+		t.Errorf("huge snapshot = %d", status)
 	}
 }

@@ -2,4 +2,34 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
-No release yet.
+## v0.1.0
+
+**Date:** 2026-11-08
+**Previous release:** none (first release)
+
+The first release: a read-only IEC 61850 browser, as a desktop application (Windows, macOS, Linux) and as a daemon for gateways with a web UI (Linux amd64, arm64, armv7; container image).
+
+### Added
+
+- **Connect** to an IED over MMS with configurable ISO addressing (T/S/P selectors, AP-titles, AE-qualifiers; omitted with `-`), ask its identity and discover its model.
+- **Browse** the model in a tree, **search** it by reference, LN class, FC and kind.
+- **Read** values in batches (32 references per MMS Read); structures with their component names, decoded quality and time quality, the MMS domain and item ID of every value, the equivalent `iec61850ctl` command.
+- **Watch and poll** points from several IEDs in one table (0.5 s to 1 min), polled by the engine; missed cycles are counted, not caught up.
+- **SCL import**: list the IEDs and access points of an SCD/CID/ICD/IID file with their addresses and the parser's findings; browse a data model offline, or connect with the address the file gives.
+- **Snapshots** (`otfabric.iec61850-explorer.snapshot/1`): the model and the watched values as JSON; open a snapshot again as an offline session. **CSV** export of the watched values.
+- **Connection profiles**, stored by the engine (desktop: the user's configuration directory; daemon: `--data-dir`).
+- **Diagnostics**: every action with the MMS requests it caused; a failed connect names its layer (TCP, COTP, session, presentation, ACSE, MMS Initiate) when the error type proves it, with what to check.
+- **Observe mode**, enforced in the MMS client (go-mms `DialOptions.AllowedServices`), by the linter and by a wire test: no state-changing service can be sent.
+- **Daemon**: bearer token (0600, rotatable), Host check, loopback bind, target allow-list (private and link-local ranges by default), `url` and `token rotate` commands, systemd unit, container image.
+
+### Known limitations
+
+- Control blocks (reports, logs, GOOSE, setting groups) are not built from SCL; the live tree shows them.
+- No datasets, reports, controls, setting groups, files or journals yet (M2); no SCL-to-live comparison (M3).
+- Releases are not code-signed: macOS Gatekeeper and Windows SmartScreen warn before the first start.
+
+### Dependencies
+
+go-iec61850 v1.9.3, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
