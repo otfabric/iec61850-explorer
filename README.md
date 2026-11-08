@@ -71,7 +71,7 @@ On the workstation, forward the port and open the URL that `iec61850-explorerd u
 ssh -N -L 8765:127.0.0.1:8765 user@gateway
 ```
 
-The daemon listens on loopback, requires its token even there, checks the Host header and connects only to private and link-local addresses unless `--allow-target` says otherwise. `iec61850-explorerd token rotate` replaces the token. A systemd unit is in [`packaging/`](packaging/).
+The daemon listens on loopback, requires its token even there, checks the Host header and connects only to private and link-local addresses unless `--allow-target` says otherwise. `iec61850-explorerd token rotate` replaces the token. More in [docs/REMOTE-USE.md](docs/REMOTE-USE.md); a systemd unit is in [`packaging/`](packaging/).
 
 ## Documentation
 
