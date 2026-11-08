@@ -264,7 +264,7 @@ func contract(t *testing.T, svc service.Service) {
 		t.Fatal(err)
 	}
 	gone := next(t, events, "closed event", func(ev model.Event) bool {
-		return ev.Kind == model.EventSession && ev.Session.State == model.SessionClosed
+		return ev.Kind == model.EventSession && ev.Session.State == model.SessionClosed && ev.SessionID == info.ID
 	})
 	if gone.SessionID != info.ID {
 		t.Errorf("closed event = %+v", gone)
