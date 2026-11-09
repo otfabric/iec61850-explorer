@@ -24,6 +24,9 @@ const (
 	CapDataSets = "datasets"
 	// CapSettingGroups: select the active and the edit setting group.
 	CapSettingGroups = "setting-groups"
+	// CapControls: operate controls (direct and select before operate,
+	// normal and enhanced security).
+	CapControls = "controls"
 )
 
 // WritableFCs are the functional constraints a write may target: set
@@ -148,7 +151,86 @@ const (
 	AuditCreateDS    = "create-dataset"
 	AuditDeleteDS    = "delete-dataset"
 	AuditActiveSG    = "select-active-sg"
+	AuditControl     = "control"
 )
+
+// Control timeouts: how long a control with enhanced security waits for
+// its CommandTermination.
+const (
+	DefaultControlTimeoutMS = 10_000
+	MaxControlTimeoutMS     = 60_000
+)
+
+// ControlRequest operates a controllable data object in Commission mode.
+// The engine reads the object's ctlModel and runs its sequence: operate;
+// select and operate; operate and wait for the CommandTermination; select
+// with value, operate and wait.
+type ControlRequest struct {
+	// Ref is the data object, such as "LD/XCBR1.Pos" (no FC).
+	Ref string `json:"ref"`
+	// Value is ctlVal as text, parsed with the type of Oper.ctlVal.
+	Value string `json:"value"`
+	// Test sets the Test flag: the IED treats the command as a test.
+	Test bool `json:"test,omitempty"`
+	// TimeoutMS bounds the wait for the CommandTermination (enhanced
+	// security); 0 means DefaultControlTimeoutMS.
+	TimeoutMS int `json:"timeout_ms,omitempty"`
+}
+
+// Steps of a control sequence.
+const (
+	StepSelect      = "select"
+	StepOperate     = "operate"
+	StepTermination = "termination"
+	StepCancel      = "cancel"
+)
+
+// ControlStep is one service of a control sequence.
+type ControlStep struct {
+	Step string `json:"step"`
+	OK   bool   `json:"ok"`
+	// AddCause is the IED's reason for a refusal or a negative
+	// termination (from LastApplError), such as "blocked-by-interlocking".
+	AddCause   string `json:"add_cause,omitempty"`
+	Error      string `json:"error,omitempty"`
+	DurationMS int64  `json:"duration_ms"`
+}
+
+// Outcomes of a control.
+const (
+	// ControlOK: operated (and, with enhanced security, terminated
+	// positively).
+	ControlOK = "ok"
+	// ControlRefused: the IED refused the select or the operate.
+	ControlRefused = "refused"
+	// ControlNegative: the operate was accepted and ended with a negative
+	// CommandTermination.
+	ControlNegative = "negative"
+	// ControlNoTermination: the operate was accepted; no CommandTermination
+	// arrived within the timeout.
+	ControlNoTermination = "no-termination"
+	// ControlFailed: a service failed for another reason (lost association,
+	// timeout).
+	ControlFailed = "failed"
+)
+
+// ControlResult is the outcome of a control, with every step.
+type ControlResult struct {
+	Ref        string        `json:"ref"`
+	At         time.Time     `json:"at"`
+	DurationMS int64         `json:"duration_ms"`
+	CtlModel   string        `json:"ctl_model"`
+	CtlNum     uint8         `json:"ctl_num"`
+	Written    *Value        `json:"written,omitempty"`
+	Test       bool          `json:"test,omitempty"`
+	Steps      []ControlStep `json:"steps"`
+	Outcome    string        `json:"outcome"`
+	AddCause   string        `json:"add_cause,omitempty"`
+	// Before and After are the data object's stVal, read before the
+	// sequence and after it; nil when it has none or the read failed.
+	Before *Value `json:"before,omitempty"`
+	After  *Value `json:"after,omitempty"`
+}
 
 // MaxSubscriptions bounds the report subscriptions of one grant.
 const MaxSubscriptions = 8

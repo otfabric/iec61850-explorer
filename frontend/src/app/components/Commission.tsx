@@ -10,6 +10,8 @@ import {
   type SessionInfo,
   type Value,
   type WriteResult,
+  type ControlRequest,
+  type ControlResult,
 } from '../service/types';
 import type { ReportEntryView } from '../state/useExplorer';
 import { summarize } from './summary';
@@ -21,6 +23,7 @@ export const OFFERED_CAPABILITIES: { cap: Capability; label: string }[] = [
   { cap: 'reports', label: 'Subscribe to report control blocks (reserve, enable, GI; released when the grant ends)' },
   { cap: 'datasets', label: 'Create and delete data sets' },
   { cap: 'setting-groups', label: 'Select the active setting group' },
+  { cap: 'controls', label: 'Operate controls (select, operate, CommandTermination)' },
 ];
 
 interface GrantDialogProps {
@@ -212,6 +215,113 @@ function WriteOutcome({ result }: { result: WriteResult }) {
         {result.before?.text ?? '?'} → {result.written?.text ?? '?'} · read back {result.after?.text ?? 'nothing'}
       </span>
     </p>
+  );
+}
+
+interface ControlFormProps {
+  doRef: string;
+  disabled: boolean;
+  onControl: (req: ControlRequest) => Promise<ControlResult | null>;
+}
+
+/**
+ * Operates a controllable data object. The engine reads its ctlModel and
+ * runs the sequence; the user confirms before anything is sent.
+ */
+export function ControlForm({ doRef, disabled, onControl }: ControlFormProps) {
+  const [value, setValue] = useState('true');
+  const [test, setTest] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<ControlResult | null>(null);
+
+  async function operate() {
+    setBusy(true);
+    setResult(await onControl({ ref: doRef, value, test }));
+    setBusy(false);
+    setConfirming(false);
+  }
+
+  return (
+    <form
+      aria-label="Control"
+      className="flex flex-col gap-2 border-t border-wire px-3 py-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!busy && !disabled) {
+          if (confirming) {
+            void operate();
+          } else {
+            setResult(null);
+            setConfirming(true);
+          }
+        }
+      }}
+    >
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="ctlVal">
+          <TextInput aria-label="ctlVal" value={value} disabled={confirming} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        <Toggle label="Test" checked={test} onChange={setTest} />
+        {!confirming && (
+          <Button type="submit" icon={<WriteIcon size={14} />} disabled={disabled || busy || value.trim() === ''} title={`Operate ${doRef}`}>
+            Operate…
+          </Button>
+        )}
+      </div>
+      {confirming && (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-wire px-2 py-1.5" role="group" aria-label="Confirm the control">
+          <WarningIcon size={14} />
+          <span>
+            Operate <span className="font-mono">{doRef}</span> with ctlVal <span className="font-mono">{value}</span>
+            {test ? ' as a test' : ''} on the IED?
+          </span>
+          <Button type="submit" variant="primary" disabled={busy}>
+            {busy ? 'Operating…' : 'Operate'}
+          </Button>
+          <Button type="button" disabled={busy} onClick={() => setConfirming(false)}>
+            Back
+          </Button>
+        </div>
+      )}
+      {result && <ControlOutcome result={result} />}
+    </form>
+  );
+}
+
+const OUTCOME_TEXT: Record<ControlResult['outcome'], string> = {
+  ok: 'Operated',
+  refused: 'The IED refused the control',
+  negative: 'Accepted, then ended negatively',
+  'no-termination': 'Accepted; no CommandTermination arrived',
+  failed: 'The control failed',
+};
+
+/** The outcome of a control: every step and the IED's reason. */
+export function ControlOutcome({ result }: { result: ControlResult }) {
+  const ok = result.outcome === 'ok';
+  return (
+    <div className={`flex flex-col gap-1 font-mono text-[12px] ${ok ? 'text-accent' : 'text-danger'}`} role={ok ? 'status' : 'alert'} aria-label="Control outcome">
+      <p className="flex flex-wrap items-center gap-2">
+        {ok ? <CheckIcon size={14} /> : <ErrorIcon size={14} />}
+        {OUTCOME_TEXT[result.outcome]}
+        {result.add_cause && <Chip tone="wire">{result.add_cause}</Chip>}
+        <span className="text-muted">
+          {result.ctl_model} · ctlNum {result.ctl_num}
+          {result.test ? ' · test' : ''}
+        </span>
+      </p>
+      <ol className="flex flex-wrap gap-2 text-muted">
+        {result.steps.map((st, i) => (
+          <li key={`${st.step}${i}`} className={st.ok ? '' : 'text-danger'}>
+            {st.step} {st.ok ? 'ok' : (st.add_cause ?? st.error ?? 'failed')}
+          </li>
+        ))}
+      </ol>
+      <p className="text-muted">
+        stVal {result.before?.text ?? '?'} → {result.after?.text ?? '?'}
+      </p>
+    </div>
   );
 }
 

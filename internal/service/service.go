@@ -87,6 +87,11 @@ type Service interface {
 	// with the write capability. An IED that refuses the write is reported
 	// in the result.
 	Write(ctx context.Context, id string, req model.WriteRequest) (model.WriteResult, error)
+	// Control operates a controllable data object with the sequence of its
+	// control model (select, operate, CommandTermination) and reports every
+	// step and the IED's reasons. It needs the controls capability. A
+	// control the IED refuses is a result, not an error.
+	Control(ctx context.Context, id string, req model.ControlRequest) (model.ControlResult, error)
 	// SubscribeReport subscribes to a report control block: reserve
 	// (unbuffered), enable, optionally GI. Reports arrive as events. Needs
 	// the reports capability.

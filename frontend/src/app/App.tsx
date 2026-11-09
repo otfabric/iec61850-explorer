@@ -186,6 +186,11 @@ export function App({ service, platform }: AppProps) {
                         ? (ref, value, reread) => explorer.write(view.info.id, ref, value, reread)
                         : undefined
                     }
+                    onControl={
+                      view.info.grant?.capabilities.includes('controls') && view.info.state === 'connected'
+                        ? (req) => explorer.control(view.info.id, req)
+                        : undefined
+                    }
                   />
                 ) : (
                   <p className="p-4 text-muted">Select a node in the tree, or search.</p>

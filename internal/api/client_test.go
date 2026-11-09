@@ -203,6 +203,10 @@ func (c *httpService) Write(ctx context.Context, id string, r model.WriteRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/write", r, &v)
 }
 
+func (c *httpService) Control(ctx context.Context, id string, r model.ControlRequest) (v model.ControlResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/control", r, &v)
+}
+
 func (c *httpService) SubscribeReport(ctx context.Context, id string, r model.SubscribeRequest) (v model.Subscription, err error) {
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/reports/subscriptions", r, &v)
 }

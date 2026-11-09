@@ -105,7 +105,7 @@ Subscribing to a report control block writes RCB attributes, so report subscript
 
 ## 5a. Commission mode (ADR 0004)
 
-A session stays in Observe mode for its whole life. `GrantCommission` adds a grant: a reason, a duration (1 to 480 minutes, default 30) and capabilities (`write`, `reports`, `datasets`, `setting-groups`; `controls` is not grantable). The engine opens a *second* association to the same IED whose allow-list is `internal/commission.Services(capabilities)`: the Observe services plus only what the capabilities need (Write; DefineNamedVariableList and DeleteNamedVariableList for data sets). Every state-changing call uses that association; the engine checks the capability before each call, and go-mms refuses a service outside the list.
+A session stays in Observe mode for its whole life. `GrantCommission` adds a grant: a reason, a duration (1 to 480 minutes, default 30) and capabilities (`write`, `reports`, `datasets`, `setting-groups`, `controls`). The engine opens a *second* association to the same IED whose allow-list is `internal/commission.Services(capabilities)`: the Observe services plus only what the capabilities need (Write; DefineNamedVariableList and DeleteNamedVariableList for data sets). Every state-changing call uses that association; the engine checks the capability before each call, and go-mms refuses a service outside the list.
 
 - **Ends.** Revoke, expiry, a lost Commission association, the session closing or being lost, the engine stopping. Before concluding the association the engine runs its cleanup steps (what it set up for itself, newest first); each is audited, a failed one too.
 - **Audit trail.** `<data dir>/audit/audit-YYYY-MM-DD.jsonl`, mode 0600, appended and synced before the outcome is reported. The sequence continues across runs; the recent 500 records are kept in memory, returned by `Audit` and published as `audit` events. Without a data directory, or when the trail cannot be written, no grant is given.
@@ -113,6 +113,13 @@ A session stays in Observe mode for its whole life. `GrantCommission` adds a gra
 - **Where.** The desktop application offers Commission mode; the daemon only with `--allow-commission`. `Health.features` contains `commission` when it is offered.
 - **Reports** (`reports`). The engine runs the control block's lifecycle itself so that each step reaches the audit trail: it refuses an RCB that is enabled or reserved (another client may own it), registers a passive go-iec61850 subscription, reserves an unbuffered RCB, enables it and, if asked, triggers a general interrogation. Reports are published as `report` events; entries are named by the data set's members (or by the report's data references, converted from MMS form) and converted with their types. Unsubscribing, revoking or losing the grant disables and releases the RCB. At most 8 subscriptions per grant; a queue of 256 reports per subscription, overflow counted.
 - **Data sets** (`datasets`). Create a persistent data set in a logical node (`LD/LLN0.Name`, 1 to 100 FC-qualified members) and read it back; delete only what the IED marks deletable and no subscription of the grant uses. The Observe association's cached definitions are invalidated after each change.
+- **Controls** (`controls`). `Control` takes a data object and a ctlVal (text, parsed with the type of `Oper.ctlVal`) and reads the object's `ctlModel` on the Observe association. It then runs that model's sequence on the grant's association (IEC 61850-7-2, clause 20):
+  - direct, normal security: Operate;
+  - SBO, normal security: Select (a Read of SBO), then Operate;
+  - direct, enhanced security: Operate, then wait for the CommandTermination (`OperateWait`, default 10 s, at most 60 s);
+  - SBO, enhanced security: SelectWithValue, then Operate and wait.
+
+  A failed operate after a select sends Cancel. The result lists every step with the IED's AddCause (from LastApplError) and the stVal before and after. The outcome is ok, refused, negative (accepted, then a negative termination), no-termination or failed. One audit record holds the whole sequence. The originator is remote-control, "OT Fabric IEC 61850 Explorer", with a process-wide ctlNum. Interlock and synchrocheck flags are not offered: go-iec61850 (v1.10.0) encodes the two Check bits in the opposite order to libiec61850.
 - **Setting groups** (`setting-groups`). Select the active setting group (1 to NumOfSGs) and read the control block back. Editing setting values (SelectEditSG, SE values, ConfirmEditSG) is not offered: go-iec61850's server keeps no SE values, so there is no peer to test it against.
 - **Lint.** forbidigo exempts the engine's `commission*.go` files, the only code that holds the Commission association.
 
@@ -144,6 +151,7 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `GET /api/v1/sessions/{id}/setting-groups?ld=` | The setting group control block |
 | `PUT /api/v1/sessions/{id}/commission`, `DELETE ...` | Grant Commission mode (`{reason, minutes, capabilities}`), revoke it |
 | `POST /api/v1/sessions/{id}/write` | `{ref, value}` -> the write with the value before and read back; needs the `write` capability |
+| `POST /api/v1/sessions/{id}/control` | `{ref, value, test, timeout_ms}` -> every step of the control, its outcome and AddCause, stVal before and after; needs the `controls` capability |
 | `POST /api/v1/sessions/{id}/reports/subscriptions` (`{rcb, gi}`), `DELETE .../{sub}`, `POST .../{sub}/gi` | Subscribe to an RCB, unsubscribe, general interrogation; needs `reports` |
 | `POST /api/v1/sessions/{id}/datasets` (`{ref, members}`), `DELETE .../datasets?ref=` | Create, delete a data set; needs `datasets` |
 | `PUT /api/v1/sessions/{id}/setting-groups/active` (`{ld, sg}`) | Select the active setting group; needs `setting-groups` |
@@ -170,7 +178,7 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | Model cache across runs | Gap: in-memory only | Snapshots (M1) are the Explorer's own versioned files |
 | Datasets | `ListDataSets`, `GetDataSet`, `ReadDataSet`; create/delete | Inspection since M2a; create/delete in Commission mode (M2b) |
 | Reports | RCB read/write, subscription; gap: single-client ownership assumed. Data-object members (FCD, such as `MMXU1.Hz[MX]`) are reported as structures and trigger on changes below them since go-iec61850 v1.9.4 | Since M2b2: the engine runs the RCB lifecycle itself, refuses RCBs another client enabled or reserved, audits each step. The simulated IED's `Events` data set mixes attribute members and a data-object member |
-| Enhanced-security controls | Gap: the client does not wait for or surface CommandTermination; no time-activated operate | Close in go-iec61850 before advanced controls are offered |
+| Controls | `OperateWait` waits for the CommandTermination and `ControlError.LastApplError` carries the IED's reason (go-iec61850 v1.10.0, checked against libiec61850, dscsystems, iec61850-rust and cbsigma). Gaps: no time-activated operate; the Check bits (interlock, synchrocheck) are swapped against libiec61850; Cancel always sends Test false | Since M2b3: all four control models, with steps and causes audited; no Check flags until the bit order is fixed |
 | Setting groups, files, journals | Client APIs present; server gap: no SE (edit) values | Reading since M2a (file and journal reads joined `readonly.Services`); active setting group selection since M2b2; SE editing waits for a peer that supports it |
 | SCL | Parser, `Flatten`, semantic validation; gaps: `Inputs`, `ExtRef`, `ClientLN` not normalised, no XSD validation | Import and offline browsing since M1; flow analysis waits for the normalisation |
 | GOOSE/SV live capture | Linux and macOS raw Ethernet; gap: Windows `ErrUnsupportedPlatform` | PCAP import first |
@@ -187,7 +195,7 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | M2a (done) | Inspection in Observe mode: data sets, report control blocks, logs, setting groups, the file store; SCL definitions alongside | Everything an IED defines can be seen without changing it |
 | M2b1 (done) | Commission mode foundation: per-session grant on a second association, audit trail, writes with readback | A user changes a set point or configuration value with a verified, recorded write |
 | M2b2 (done) | Report subscription (reserve, enable, GI, cleanup on revoke), dynamic data sets, active setting group selection | Practical MMS workflows with predictable safety and cleanup |
-| M2b3 | Controls (direct, SBO, enhanced security), after go-iec61850's client waits for CommandTermination | A control's outcome, including its termination, is shown and audited |
+| M2b3 (done) | Controls (direct, SBO, enhanced security), after go-iec61850's client waits for CommandTermination | A control's outcome, including its termination, is shown and audited |
 | M3 | Diagnostics and semantics: SCL/live/snapshot comparison, NSD descriptions, semantic search, integration exports | Introduced mismatches can be diagnosed from visible evidence |
 | M4 | Trace analysis: PCAP/PCAPNG, timelines, application-to-wire correlation | A capture is analysed offline, gaps identified |
 | M5 | Laboratory: evidence bundles, constrained replay on the go-iec61850 server | Repeatable scenarios; unsupported behaviour is not fabricated |

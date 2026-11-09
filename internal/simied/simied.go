@@ -267,7 +267,12 @@ func registerControls(srv *iec61850.Server) error {
 			return fmt.Errorf("simied: control %s: %w", ref, err)
 		}
 	}
-	pos := iec61850.ControlHandler{OnExecute: func(ctx context.Context, req iec61850.ControlRequest) error { return executePos(ctx, srv, req) }}
+	// OnOperate accepts (without it the server would write ctlVal to stVal);
+	// OnExecute moves the breaker.
+	pos := iec61850.ControlHandler{
+		OnOperate: func(context.Context, iec61850.ControlRequest) error { return nil },
+		OnExecute: func(ctx context.Context, req iec61850.ControlRequest) error { return executePos(ctx, srv, req) },
+	}
 	if err := srv.RegisterControl(Domain, "XCBR1.Pos", iec61850.CtlModelSBOEnhanced, pos); err != nil {
 		return fmt.Errorf("simied: control XCBR1.Pos: %w", err)
 	}

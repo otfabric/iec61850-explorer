@@ -15,7 +15,7 @@ const AppName = "iec61850-explorer"
 
 // APIVersion is the version of the Service contract and of the HTTP API. The
 // major part changes on incompatible changes, the minor part on additions.
-const APIVersion = "0.3"
+const APIVersion = "0.4"
 
 // DefaultPort is the MMS port (ISO-on-TCP, RFC 1006).
 const DefaultPort = 102

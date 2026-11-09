@@ -17,6 +17,8 @@ import type {
   SessionInfo,
   TargetConfig,
   WriteResult,
+  ControlRequest,
+  ControlResult,
 } from '../service/types';
 
 /** Operations kept in the activity log. */
@@ -501,6 +503,19 @@ export function useExplorer(service: Service) {
     [service, fail, read],
   );
 
+  /** Operates a control; the IED's refusals are in the result, not errors. */
+  const control = useCallback(
+    async (id: string, req: ControlRequest): Promise<ControlResult | null> => {
+      try {
+        return await service.control(id, req);
+      } catch (err) {
+        fail(err);
+        return null;
+      }
+    },
+    [service, fail],
+  );
+
   const clearError = useCallback(() => dispatch({ type: 'error', message: null }), []);
 
   return {
@@ -522,6 +537,7 @@ export function useExplorer(service: Service) {
     grantCommission,
     revokeCommission,
     write,
+    control,
     clearError,
     /** Shows an error that happened outside the hook's own actions. */
     report: fail,
