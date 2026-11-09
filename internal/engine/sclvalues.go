@@ -27,8 +27,10 @@ type sclValue struct {
 
 // sclValues resolves the configured values of an access point's server,
 // keyed by FC-qualified reference ("LD/LN.DO.a.b[FC]"), for valueFCs.
-// Attributes without a value are left out, and so are arrays.
-func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclValue, map[string]uint8) {
+// Attributes without a value are left out, and so are arrays. It also
+// gives the active setting group per logical device and the CDC each data
+// object's type declares ("LD/LN.DO").
+func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclValue, map[string]uint8, map[string]string) {
 	t := doc.DataTypeTemplates
 	lnTypes := map[string]scl.LNodeType{}
 	for _, x := range t.LNodeTypes {
@@ -53,6 +55,7 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclV
 
 	out := map[string]sclValue{}
 	actSG := map[string]uint8{}
+	cdcs := map[string]string{}
 	r := &valueResolver{doTypes: doTypes, daTypes: daTypes, enums: enums, out: out}
 	for _, ld := range ap.Server.LDevices {
 		domain := ldDomain(ied, ld)
@@ -78,11 +81,14 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclV
 			}
 			for _, do := range lnt.DOs {
 				doi := dois[do.Name]
+				if dot, ok := doTypes[do.Type]; ok && dot.CDC != "" {
+					cdcs[domain+"/"+name+"."+do.Name] = dot.CDC
+				}
 				r.dataObject(domain+"/"+name+"."+do.Name, do.Type, override{dais: doi.DAIs, sdis: doi.SDIs}, 0)
 			}
 		}
 	}
-	return out, actSG
+	return out, actSG, cdcs
 }
 
 // override is the instance part of a data object or structure: its DAI

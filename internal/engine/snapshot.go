@@ -31,8 +31,17 @@ func appInfo() model.AppInfo {
 
 // Export implements service.Service.
 func (e *Engine) Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error) {
-	if req.Format != model.ExportSnapshot && req.Format != model.ExportCSV {
-		return model.ExportFile{}, service.Errorf(service.CodeInvalidArgument, "export format %q: use %s or %s", req.Format, model.ExportSnapshot, model.ExportCSV)
+	switch req.Format {
+	case model.ExportPointsCSV, model.ExportPointsJSON:
+		s, err := e.session(id)
+		if err != nil {
+			return model.ExportFile{}, err
+		}
+		return e.exportPoints(ctx, s, req.Format)
+	case model.ExportSnapshot, model.ExportCSV:
+	default:
+		return model.ExportFile{}, service.Errorf(service.CodeInvalidArgument, "export format %q: use %s, %s, %s or %s", req.Format,
+			model.ExportSnapshot, model.ExportCSV, model.ExportPointsCSV, model.ExportPointsJSON)
 	}
 	if len(req.Refs) > model.MaxReadRefs {
 		return model.ExportFile{}, service.Errorf(service.CodeLimitExceeded, "at most %d references", model.MaxReadRefs)

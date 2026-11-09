@@ -9,11 +9,15 @@ Release notes, newest first. Each release has a section headed `## vX.Y.Z` with 
 
 ### Added
 
+- **Namespace view (M3c).** The node panel shows what the IEC 61850 namespace defines for the selected node: its logical node class and base class, the data object's CDC and presence, the attribute's type and FC, and for a measurement the quantity, phase and unit. For a logical node it lists the class's data objects, which the node has, and which mandatory ones are missing. From go-iec61850-model's embedded namespaces (IEC 61850-7-2, 7-3, 7-4:2007B6, 7-410, 7-420); identifiers and structure only, no documentation texts. API: `GET /api/v1/sessions/{id}/semantics?ref=`.
+- **Conformance check (M3c).** Check, in the session bar, lists missing mandatory data objects (error), logical node classes the namespace does not define (warning), data objects a class does not define (information), and, for an SCL file, data objects whose CDC differs from the namespace's (warning). API: `GET /api/v1/sessions/{id}/conformance`.
+- **Search by quantity (M3c).** The search can ask for a measured quantity (frequency, voltage, current, power, ...): it finds the data objects that measure it by the namespace's semantic rules. The engine lists the quantities in its health (`quantities`).
+- **Point lists (M3d).** Points CSV and Points JSON export every attribute of the open tab with its FC, the namespace's CDC, type and presence, the quantity and unit, and the data sets and report control blocks that carry it, for SCADA and gateway engineering. API: `points-csv` and `points-json` export formats.
 - **Compare values (M3b).** The Compare view has a Values option: it adds the values of configuration, description, set point and setting attributes (FC CF, DC, SP, SG) to the comparison. An SCL file gives its configured values (instance values, or the type's defaults), an IED the values read now, a snapshot the values it holds. Enumerations compare by ordinal and show the SCL literal; floats compare at FLOAT32 precision. Settings compare per setting group between two SCL files, and in the IED's active group against an IED. API: `values` in `POST /api/v1/compare`.
 
 ### Dependencies
 
-go-iec61850 v1.14.0, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+go-iec61850 v1.14.0, go-iec61850-model v0.6.0 (new: its embedded namespaces add about 4 MB to the binaries), go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
 
 ---
 

@@ -163,7 +163,10 @@ func TestSCLValuesTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	ied := &res.Document.IEDs[0]
-	vals, act := sclValues(res.Document, ied, &ied.AccessPoints[0])
+	vals, act, cdcs := sclValues(res.Document, ied, &ied.AccessPoints[0])
+	if cdcs["IL/GGIO1.W"] != "WYE" || cdcs["IL/GGIO1.X"] != "" {
+		t.Errorf("CDCs = %v", cdcs)
+	}
 	var keys []string
 	for k := range vals {
 		keys = append(keys, k)

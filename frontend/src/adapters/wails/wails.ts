@@ -14,6 +14,8 @@ import type {
   AuditRecord,
   CompareRequest,
   Comparison,
+  Conformance,
+  Semantics,
   GrantRequest,
   ControlRequest,
   ControlResult,
@@ -117,6 +119,8 @@ export class WailsService implements Service {
   control = (id: string, req: ControlRequest) => call<ControlResult>('Control', id, req);
   audit = (query: AuditQuery) => call<AuditRecord[]>('Audit', query);
   compare = (req: CompareRequest) => call<Comparison>('Compare', req);
+  semantics = (id: string, ref: string) => call<Semantics>('Semantics', id, ref);
+  conformance = (id: string) => call<Conformance>('Conformance', id);
   subscribeReport = (id: string, req: SubscribeRequest) => call<Subscription>('SubscribeReport', id, req);
   unsubscribe = (id: string, sub: string) => call<void>('Unsubscribe', id, sub);
   triggerGI = (id: string, sub: string) => call<void>('TriggerGI', id, sub);

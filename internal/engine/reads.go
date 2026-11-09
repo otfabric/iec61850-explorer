@@ -10,6 +10,7 @@ import (
 	"time"
 
 	iec61850 "github.com/otfabric/go-iec61850"
+	"github.com/otfabric/go-iec61850-model/catalog"
 	"github.com/otfabric/go-mms"
 
 	"github.com/otfabric/iec61850-explorer/internal/model"
@@ -200,8 +201,15 @@ func (e *Engine) Search(_ context.Context, id string, q model.SearchQuery) (mode
 	text := strings.ToLower(strings.TrimSpace(q.Text))
 	class := strings.ToUpper(strings.TrimSpace(q.LNClass))
 	fc := strings.ToUpper(strings.TrimSpace(q.FC))
-	if text == "" && class == "" && fc == "" && q.Kind == "" {
+	quantity := strings.ToLower(strings.TrimSpace(q.Quantity))
+	if text == "" && class == "" && fc == "" && q.Kind == "" && quantity == "" {
 		return model.SearchResult{}, service.Errorf(service.CodeInvalidArgument, "an empty search")
+	}
+	var nsd *catalog.Profile
+	if quantity != "" {
+		if nsd, err = namespace(); err != nil {
+			return model.SearchResult{}, err
+		}
 	}
 
 	s.mu.Lock()
@@ -215,7 +223,7 @@ func (e *Engine) Search(_ context.Context, id string, q model.SearchQuery) (mode
 			if node.Kind == model.NodeLN {
 				cls = node.LNClass
 			}
-			if matches(node, cls, text, class, fc, q.Kind) {
+			if matches(node, cls, text, class, fc, q.Kind) && (quantity == "" || node.Kind == model.NodeDO && quantityOf(nsd, node.Ref) == quantity) {
 				if len(res.Hits) == limit {
 					res.Truncated = true
 					return false

@@ -157,6 +157,14 @@ func (c *httpService) Compare(ctx context.Context, req model.CompareRequest) (v 
 	return v, c.do(ctx, "POST", "/api/v1/compare", req, &v)
 }
 
+func (c *httpService) Semantics(ctx context.Context, id, ref string) (v model.Semantics, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/semantics?ref="+url.QueryEscape(ref), nil, &v)
+}
+
+func (c *httpService) Conformance(ctx context.Context, id string) (v model.Conformance, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/conformance", nil, &v)
+}
+
 func (c *httpService) Reports(ctx context.Context, id, ld string) (v []model.RCB, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/reports?ld="+url.QueryEscape(ld), nil, &v)
 }

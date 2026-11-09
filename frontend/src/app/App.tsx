@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityPanel } from './components/ActivityPanel';
 import { AuditPanel, CommissionBanner, GrantDialog, ReportsPanel } from './components/Commission';
 import { ComparePanel } from './components/ComparePanel';
+import { ConformancePanel } from './components/ConformancePanel';
 import { ConnectError } from './components/ConnectError';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { DeviceTree } from './components/DeviceTree';
@@ -38,8 +39,9 @@ export function App({ service, platform }: AppProps) {
   const [initialTarget, setInitialTarget] = useState<TargetConfig | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [bottom, setBottom] = useState<BottomTab>('watch');
-  const [filesOpen, setFilesOpen] = useState<Record<string, boolean>>({});
-  const [compareOpen, setCompareOpen] = useState<Record<string, boolean>>({});
+  // The panel a session shows instead of the selected node: its files, a comparison or the conformance check.
+  const [panel, setPanel] = useState<Record<string, 'files' | 'compare' | 'check' | undefined>>({});
+  const togglePanel = (id: string, p: 'files' | 'compare' | 'check') => setPanel((all) => ({ ...all, [id]: all[id] === p ? undefined : p }));
   const [granting, setGranting] = useState<string | null>(null);
   const commission = state.health?.features.includes('commission') ?? false;
   const offline = state.link !== 'up';
@@ -127,16 +129,8 @@ export function App({ service, platform }: AppProps) {
             <div className="flex h-full min-h-0 flex-col">
               <SessionBar
                 info={view.info}
-                filesOpen={filesOpen[view.info.id] === true}
-                onToggleFiles={() => {
-                  setCompareOpen((c) => ({ ...c, [view.info.id]: false }));
-                  setFilesOpen((f) => ({ ...f, [view.info.id]: !f[view.info.id] }));
-                }}
-                compareOpen={compareOpen[view.info.id] === true}
-                onToggleCompare={() => {
-                  setFilesOpen((f) => ({ ...f, [view.info.id]: false }));
-                  setCompareOpen((c) => ({ ...c, [view.info.id]: !c[view.info.id] }));
-                }}
+                panel={panel[view.info.id]}
+                onToggle={(p) => togglePanel(view.info.id, p)}
                 onCommission={commission && !offline ? () => setGranting(view.info.id) : undefined}
                 onClose={() => void explorer.close(view.info.id)}
               />
@@ -155,6 +149,7 @@ export function App({ service, platform }: AppProps) {
                     selected={view.selected}
                     onSearch={(q) => void explorer.search(view.info.id, q)}
                     onPick={(node) => explorer.select(view.info.id, node)}
+                    quantities={state.health?.quantities ?? []}
                   />
                   <div className="flex min-h-0 flex-1 flex-col">
                     <DeviceTree
@@ -166,7 +161,9 @@ export function App({ service, platform }: AppProps) {
                     />
                   </div>
                 </div>
-                {compareOpen[view.info.id] ? (
+                {panel[view.info.id] === 'check' ? (
+                  <ConformancePanel key={view.info.id} service={service} session={view.info} />
+                ) : panel[view.info.id] === 'compare' ? (
                   <ComparePanel
                     key={view.info.id}
                     service={service}
@@ -174,7 +171,7 @@ export function App({ service, platform }: AppProps) {
                     others={views.map((v) => v.info).filter((i) => i.id !== view.info.id && i.state !== 'closed')}
                     label={label}
                   />
-                ) : filesOpen[view.info.id] && view.info.state === 'connected' ? (
+                ) : panel[view.info.id] === 'files' && view.info.state === 'connected' ? (
                   <FilesPanel service={service} session={view.info} disabled={offline} />
                 ) : view.selected?.kind === 'ld' ? (
                   <LDPanel
@@ -190,6 +187,7 @@ export function App({ service, platform }: AppProps) {
                   />
                 ) : view.selected ? (
                   <NodePanel
+                    service={service}
                     session={view.info}
                     node={view.selected}
                     reads={view.reads}

@@ -237,6 +237,51 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: 'Compare' })).not.toBeInTheDocument();
   });
 
+  it('shows what the namespace defines for a node and a logical node', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await connect(user);
+    const panel = await openHz(user);
+    const ns = await within(panel).findByRole('region', { name: 'Namespace' });
+    expect(within(ns).getByText('MV')).toBeInTheDocument();
+    expect(within(ns).getByText('frequency · Hz')).toBeInTheDocument();
+
+    await user.click(screen.getByText('MMXU1'));
+    const lnPanel = screen.getByRole('region', { name: 'Selected node' });
+    const table = await within(lnPanel).findByRole('table', { name: 'Data objects of the class' });
+    expect(within(table).getByText('Beh')).toBeInTheDocument();
+    expect(within(table).queryByText('PhV')).not.toBeInTheDocument();
+    await user.click(within(lnPanel).getByRole('button', { name: /Show all 3 data objects/ }));
+    expect(within(table).getByText('PhV')).toBeInTheDocument();
+  });
+
+  it('checks conformance, searches by quantity and exports the point list', async () => {
+    const user = userEvent.setup();
+    const host = platform();
+    render(<App service={new MockService()} platform={host} />);
+    await connect(user);
+    await screen.findByText(/OT Fabric · Mock IED/);
+
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    const panel = screen.getByRole('region', { name: 'Conformance' });
+    await user.click(within(panel).getByRole('button', { name: 'Check' }));
+    expect(await within(panel).findByText('1 error')).toBeInTheDocument();
+    expect(within(panel).getByText(/XCBR requires the data object Loc/)).toBeInTheDocument();
+    await user.selectOptions(within(panel).getByLabelText('Severity'), 'info');
+    expect(within(panel).queryByText(/XCBR requires/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Model' }));
+
+    await user.selectOptions(screen.getByLabelText('Quantity'), 'frequency');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    const hits = await screen.findByRole('list', { name: 'Search results' });
+    expect(within(hits).getAllByRole('button')).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Points CSV' }));
+    await waitFor(() => expect(host.saveFile).toHaveBeenCalledWith('iec61850-mock-points.csv', 'text/csv', expect.stringContaining('frequency')));
+    await user.click(screen.getByRole('button', { name: 'Points JSON' }));
+    await waitFor(() => expect(host.saveFile).toHaveBeenCalledWith('iec61850-mock-points.json', 'application/json', expect.any(String)));
+  });
+
   it('says what to open before a single session can be compared', async () => {
     const user = userEvent.setup();
     render(<App service={new MockService()} platform={platform()} />);

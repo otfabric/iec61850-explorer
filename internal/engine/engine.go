@@ -126,7 +126,7 @@ func (e *Engine) Health(context.Context) (model.Health, error) {
 		UptimeS:    int64(time.Since(e.started).Seconds()),
 		GoIEC61850: buildinfo.ModuleVersion(buildinfo.GoIEC61850Path),
 		GoMMS:      buildinfo.ModuleVersion(buildinfo.GoMMSPath),
-		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: e.features(),
+		Mode:       model.ModeObserve, Time: time.Now().UTC(), Features: e.features(), Quantities: Quantities(),
 	}, nil
 }
 

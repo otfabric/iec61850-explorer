@@ -10,21 +10,24 @@ interface SearchBoxProps {
   onSearch: (query: SearchQuery | null) => void;
   onPick: (node: ModelNode) => void;
   selected: ModelNode | null;
+  /** Measured quantities to search for (from the engine's health). */
+  quantities: string[];
 }
 
-/** Searches the discovered model by reference text, LN class and FC. */
-export function SearchBox({ search, onSearch, onPick, selected }: SearchBoxProps) {
+/** Searches the discovered model by reference text, LN class, FC and measured quantity. */
+export function SearchBox({ search, onSearch, onPick, selected, quantities }: SearchBoxProps) {
   const [text, setText] = useState(search?.query.text ?? '');
   const [lnClass, setLnClass] = useState(search?.query.ln_class ?? '');
   const [fc, setFc] = useState(search?.query.fc ?? '');
+  const [quantity, setQuantity] = useState(search?.query.quantity ?? '');
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!text.trim() && !lnClass.trim() && !fc) {
+    if (!text.trim() && !lnClass.trim() && !fc && !quantity) {
       onSearch(null);
       return;
     }
-    onSearch({ text: text.trim() || undefined, ln_class: lnClass.trim() || undefined, fc: fc || undefined });
+    onSearch({ text: text.trim() || undefined, ln_class: lnClass.trim() || undefined, fc: fc || undefined, quantity: quantity || undefined });
   }
 
   return (
@@ -39,6 +42,22 @@ export function SearchBox({ search, onSearch, onPick, selected }: SearchBoxProps
             </option>
           ))}
         </select>
+        {quantities.length > 0 && (
+          <select
+            aria-label="Quantity"
+            title="Data objects that measure this quantity, by the IEC 61850 namespace"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="h-8 w-full rounded border border-control bg-bg px-1 text-[13px] text-fg-strong"
+          >
+            <option value="">Any quantity</option>
+            {quantities.map((q) => (
+              <option key={q} value={q}>
+                {q}
+              </option>
+            ))}
+          </select>
+        )}
         <button type="submit" aria-label="Search" className="inline-flex size-8 cursor-pointer items-center justify-center rounded border border-control hover:text-accent">
           <SearchIcon size={16} />
         </button>
@@ -55,6 +74,7 @@ export function SearchBox({ search, onSearch, onPick, selected }: SearchBoxProps
                 setText('');
                 setLnClass('');
                 setFc('');
+                setQuantity('');
                 onSearch(null);
               }}
             >

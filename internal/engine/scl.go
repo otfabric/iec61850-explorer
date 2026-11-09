@@ -169,7 +169,7 @@ func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.Ses
 	}
 	s.setTree(root, time.Since(start))
 	s.sclDataSets, s.sclReports = sclControls(ied, ap)
-	s.sclValues, s.sclActSG = sclValues(doc, ied, ap)
+	s.sclValues, s.sclActSG, s.sclCDC = sclValues(doc, ied, ap)
 	e.sessions[s.id] = s
 	e.order = append(e.order, s.id)
 	info := s.info()

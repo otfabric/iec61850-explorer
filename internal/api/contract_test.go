@@ -315,6 +315,22 @@ func contract(t *testing.T, svc service.Service) {
 	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 4 || cmp.Categories[3].Items == 0 {
 		t.Errorf("Compare with values = %+v, %v", cmp, err)
 	}
+	// Semantics, conformance and the point list (M3c, M3d).
+	if sem, err := svc.Semantics(ctx, info.ID, simied.Domain+"/MMXU1.Hz.mag.f"); err != nil || sem.CDC != "MV" || sem.Type != "FLOAT32" || sem.Quantity != "frequency" {
+		t.Errorf("Semantics = %+v, %v", sem, err)
+	}
+	if _, err := svc.Semantics(ctx, info.ID, simied.Domain+"/MMXU1.Hz[MX]"); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("Semantics with FC = %v", err)
+	}
+	if conf, err := svc.Conformance(ctx, offline.ID); err != nil || len(conf.Findings) != 4 || conf.LogicalNodes != 5 {
+		t.Errorf("Conformance = %+v, %v", conf, err)
+	}
+	if pts, err := svc.Export(ctx, info.ID, model.ExportRequest{Format: model.ExportPointsCSV}); err != nil || !strings.Contains(pts.Text, "MMXU1.Hz.mag.f[MX]") {
+		t.Errorf("points = %v", err)
+	}
+	if hits, err := svc.Search(ctx, info.ID, model.SearchQuery{Quantity: "frequency"}); err != nil || len(hits.Hits) != 1 {
+		t.Errorf("Search by quantity = %+v, %v", hits, err)
+	}
 	if _, err := svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: offline.ID}); service.CodeOf(err) != service.CodeInvalidArgument {
 		t.Errorf("Compare with itself = %v", err)
 	}

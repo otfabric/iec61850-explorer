@@ -96,6 +96,7 @@ type cmpNode struct {
 	kind   string
 	class  string
 	fcs    []string
+	leaf   bool
 }
 
 // compareNodes lists a session's model, depth first, without control
@@ -113,7 +114,7 @@ func compareNodes(s *session) []cmpNode {
 				continue
 			}
 			slices.Sort(fcs)
-			out = append(out, cmpNode{ref: node.Ref, parent: parent, kind: node.Kind, class: node.LNClass, fcs: fcs})
+			out = append(out, cmpNode{ref: node.Ref, parent: parent, kind: node.Kind, class: node.LNClass, fcs: fcs, leaf: len(c.Children) == 0})
 			walk(c, node.Ref)
 		}
 	}

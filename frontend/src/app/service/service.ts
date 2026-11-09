@@ -5,6 +5,8 @@ import type {
   AuditRecord,
   CompareRequest,
   Comparison,
+  Conformance,
+  Semantics,
   CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
@@ -130,6 +132,10 @@ export interface Service {
   audit(query: AuditQuery): Promise<AuditRecord[]>;
   /** Compares two open sessions: the model, the data sets and the report control blocks. Reads only. */
   compare(req: CompareRequest): Promise<Comparison>;
+  /** What the IEC 61850 namespace defines for a node (reference without FC). */
+  semantics(id: string, ref: string): Promise<Semantics>;
+  /** The session's model against the namespace: missing mandatory data objects, unknown classes, CDC mismatches. */
+  conformance(id: string): Promise<Conformance>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

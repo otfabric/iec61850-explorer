@@ -167,13 +167,7 @@ func valueRefs(s *session) []string {
 }
 
 func valueLDs(s *session) []string {
-	var out []string
-	for _, n := range compareNodes(s) {
-		if n.kind == model.NodeLD {
-			out = append(out, n.ref)
-		}
-	}
-	return out
+	return valueLDsOf(compareNodes(s))
 }
 
 // flattenValue records the basic attributes of a value read for a data

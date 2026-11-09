@@ -69,6 +69,22 @@ export function WatchTable(props: WatchTableProps) {
           <Button icon={<ExportIcon size={14} />} onClick={() => props.onExport('snapshot')} disabled={props.disabled || props.activeSessionId === null} title="The model of the open tab and its watched points, read now">
             Snapshot
           </Button>
+          <Button
+            icon={<ExportIcon size={14} />}
+            onClick={() => props.onExport('points-csv')}
+            disabled={props.disabled || props.activeSessionId === null}
+            title="Point list of the open tab: every attribute with FC, CDC, type, quantity, data sets and reports (CSV)"
+          >
+            Points CSV
+          </Button>
+          <Button
+            icon={<ExportIcon size={14} />}
+            onClick={() => props.onExport('points-json')}
+            disabled={props.disabled || props.activeSessionId === null}
+            title="Point list of the open tab as JSON"
+          >
+            Points JSON
+          </Button>
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4">

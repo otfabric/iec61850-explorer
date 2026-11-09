@@ -1,20 +1,19 @@
-import { CloseIcon, CompareIcon, DisconnectIcon, FileIcon, UnlockIcon } from '../icons';
+import { CheckIcon, CloseIcon, CompareIcon, DisconnectIcon, FileIcon, UnlockIcon } from '../icons';
 import type { SessionInfo } from '../service/types';
 import { Button, Chip } from './ui';
 
 interface SessionBarProps {
   info: SessionInfo;
-  filesOpen: boolean;
-  onToggleFiles: () => void;
-  compareOpen: boolean;
-  onToggleCompare: () => void;
+  /** The panel shown instead of the selected node. */
+  panel: 'files' | 'compare' | 'check' | undefined;
+  onToggle: (panel: 'files' | 'compare' | 'check') => void;
   /** Set when the engine offers Commission mode. */
   onCommission?: () => void;
   onClose: () => void;
 }
 
 /** What the open tab is: an IED, an SCL model or a snapshot. */
-export function SessionBar({ info, filesOpen, onToggleFiles, compareOpen, onToggleCompare, onCommission, onClose }: SessionBarProps) {
+export function SessionBar({ info, panel, onToggle, onCommission, onClose }: SessionBarProps) {
   const { identity, discovery } = info;
   const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
   return (
@@ -45,8 +44,22 @@ export function SessionBar({ info, filesOpen, onToggleFiles, compareOpen, onTogg
         {info.state === 'connected' && ` · discovered in ${discovery.duration_ms} ms`}
       </span>
       {info.polling && <Chip tone="accent">polling every {info.polling.interval_ms / 1000} s</Chip>}
-      <Button className="ml-auto" icon={<CompareIcon size={16} />} aria-pressed={compareOpen} onClick={onToggleCompare} title="Compare this session with another: SCL, snapshot or IED">
-        {compareOpen ? 'Model' : 'Compare'}
+      {panel && (
+        <Button className="ml-auto" onClick={() => onToggle(panel)} title="Back to the selected node">
+          Model
+        </Button>
+      )}
+      <Button
+        className={panel ? '' : 'ml-auto'}
+        icon={<CheckIcon size={16} />}
+        aria-pressed={panel === 'check'}
+        onClick={() => onToggle('check')}
+        title="Check the model against the IEC 61850 namespace"
+      >
+        Check
+      </Button>
+      <Button icon={<CompareIcon size={16} />} aria-pressed={panel === 'compare'} onClick={() => onToggle('compare')} title="Compare this session with another: SCL, snapshot or IED">
+        Compare
       </Button>
       {info.state === 'connected' && onCommission && !info.grant && (
         <Button className="" icon={<UnlockIcon size={16} />} onClick={onCommission} title="Ask for Commission mode: audited changes to this IED">
@@ -54,8 +67,8 @@ export function SessionBar({ info, filesOpen, onToggleFiles, compareOpen, onTogg
         </Button>
       )}
       {info.state === 'connected' && (
-        <Button icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
-          {filesOpen ? 'Model' : 'Files'}
+        <Button icon={<FileIcon size={16} />} aria-pressed={panel === 'files'} onClick={() => onToggle('files')}>
+          Files
         </Button>
       )}
       <Button icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>

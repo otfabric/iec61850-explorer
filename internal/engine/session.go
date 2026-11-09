@@ -53,6 +53,8 @@ type session struct {
 	// SG), and sclActSG its active setting group per logical device.
 	sclValues map[string]sclValue
 	sclActSG  map[string]uint8
+	// sclCDC is the CDC of each data object of an SCL session ("LD/LN.DO").
+	sclCDC map[string]string
 	// snapshot, snapValues and snapAt are set for an offline session opened
 	// from a snapshot.
 	snapshot   *model.SnapshotOrigin
