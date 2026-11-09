@@ -62,7 +62,12 @@
           <LN lnClass="LPHD" inst="1" lnType="LPHD_T"/>
           <LN lnClass="MMXU" inst="1" lnType="MMXU_T" desc="Feeder measurements"/>
           <LN lnClass="XCBR" inst="1" lnType="XCBR_T" desc="Feeder breaker"/>
-          <LN lnClass="GGIO" inst="1" lnType="GGIO_T"/>
+          <LN lnClass="GGIO" inst="1" lnType="GGIO_T" desc="Controls, one per control model">
+            <DOI name="SPCSO1"><DAI name="ctlModel"><Val>direct-with-normal-security</Val></DAI></DOI>
+            <DOI name="SPCSO2"><DAI name="ctlModel"><Val>sbo-with-normal-security</Val></DAI></DOI>
+            <DOI name="SPCSO3"><DAI name="ctlModel"><Val>direct-with-enhanced-security</Val></DAI></DOI>
+            <DOI name="SPCSO4"><DAI name="ctlModel"><Val>sbo-with-enhanced-security</Val></DAI></DOI>
+          </LN>
         </LDevice>
       </Server>
     </AccessPoint>
@@ -91,6 +96,10 @@
     <LNodeType id="GGIO_T" lnClass="GGIO">
       <DO name="Beh" type="ENS_Beh"/>
       <DO name="Ind1" type="SPS_T"/>
+      <DO name="SPCSO1" type="SPC_T"/>
+      <DO name="SPCSO2" type="SPC_T"/>
+      <DO name="SPCSO3" type="SPC_T"/>
+      <DO name="SPCSO4" type="SPC_T"/>
     </LNodeType>
     <DOType id="ENC_Mod" cdc="ENC">
       <DA name="stVal" fc="ST" bType="Enum" type="Beh_E" dchg="true"/>
@@ -131,10 +140,42 @@
       <DA name="stVal" fc="ST" bType="Dbpos" dchg="true"/>
       <DA name="q" fc="ST" bType="Quality" qchg="true"/>
       <DA name="t" fc="ST" bType="Timestamp"/>
-      <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModel_E"><Val>1</Val></DA>
+      <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModel_E"><Val>4</Val></DA>
+      <DA name="SBOw" fc="CO" bType="Struct" type="Oper_T"/>
+      <DA name="Oper" fc="CO" bType="Struct" type="Oper_T"/>
+      <DA name="Cancel" fc="CO" bType="Struct" type="Cancel_T"/>
+    </DOType>
+    <DOType id="SPC_T" cdc="SPC">
+      <DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>
+      <DA name="q" fc="ST" bType="Quality" qchg="true"/>
+      <DA name="t" fc="ST" bType="Timestamp"/>
+      <DA name="ctlModel" fc="CF" bType="Enum" type="CtlModel_E"/>
+      <DA name="SBO" fc="CO" bType="VisString255"/>
+      <DA name="SBOw" fc="CO" bType="Struct" type="Oper_T"/>
+      <DA name="Oper" fc="CO" bType="Struct" type="Oper_T"/>
+      <DA name="Cancel" fc="CO" bType="Struct" type="Cancel_T"/>
     </DOType>
     <DAType id="AnalogueValue_T">
       <BDA name="f" bType="FLOAT32"/>
+    </DAType>
+    <DAType id="Originator_T">
+      <BDA name="orCat" bType="Enum" type="OrCat_E"/>
+      <BDA name="orIdent" bType="Octet64"/>
+    </DAType>
+    <DAType id="Oper_T">
+      <BDA name="ctlVal" bType="BOOLEAN"/>
+      <BDA name="origin" bType="Struct" type="Originator_T"/>
+      <BDA name="ctlNum" bType="INT8U"/>
+      <BDA name="T" bType="Timestamp"/>
+      <BDA name="Test" bType="BOOLEAN"/>
+      <BDA name="Check" bType="Check"/>
+    </DAType>
+    <DAType id="Cancel_T">
+      <BDA name="ctlVal" bType="BOOLEAN"/>
+      <BDA name="origin" bType="Struct" type="Originator_T"/>
+      <BDA name="ctlNum" bType="INT8U"/>
+      <BDA name="T" bType="Timestamp"/>
+      <BDA name="Test" bType="BOOLEAN"/>
     </DAType>
     <EnumType id="Beh_E">
       <EnumVal ord="1">on</EnumVal>
@@ -147,6 +188,17 @@
       <EnumVal ord="1">Ok</EnumVal>
       <EnumVal ord="2">Warning</EnumVal>
       <EnumVal ord="3">Alarm</EnumVal>
+    </EnumType>
+    <EnumType id="OrCat_E">
+      <EnumVal ord="0">not-supported</EnumVal>
+      <EnumVal ord="1">bay-control</EnumVal>
+      <EnumVal ord="2">station-control</EnumVal>
+      <EnumVal ord="3">remote-control</EnumVal>
+      <EnumVal ord="4">automatic-bay</EnumVal>
+      <EnumVal ord="5">automatic-station</EnumVal>
+      <EnumVal ord="6">automatic-remote</EnumVal>
+      <EnumVal ord="7">maintenance</EnumVal>
+      <EnumVal ord="8">process</EnumVal>
     </EnumType>
     <EnumType id="CtlModel_E">
       <EnumVal ord="0">status-only</EnumVal>

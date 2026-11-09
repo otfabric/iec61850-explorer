@@ -99,6 +99,7 @@ Defense in depth:
 1. The allow-list in the MMS client (`TestGuardRefusesWrite`).
 2. `forbidigo` in `.golangci.yml`: state-changing go-iec61850 and go-mms calls and MMS servers are banned outside tests and `internal/simied`.
 3. The wire test: `TestWireReadOnly` runs every workflow against the simulated IED, whose server metrics count the services it received, and asserts that each is in the list.
+4. No read of FC CO (`internal/engine/observe_co.go`): reading `SBO` selects a control with normal security (IEC 61850-8-1), a state change the Read service carries, so the allow-list cannot catch it. The engine refuses CO references (`service_not_allowed`) and data sets with a CO member; the UI offers no read for CO (`TestObserveNeverReadsControls`, which checks from a second connection that no select is held; `TestSBOReadSelects` shows that the read does select).
 
 Subscribing to a report control block writes RCB attributes, so report subscription belongs to Commission mode, not Observe mode. Reading an RCB's configuration does not.
 

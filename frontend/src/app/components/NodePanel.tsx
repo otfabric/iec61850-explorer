@@ -22,6 +22,9 @@ interface NodePanelProps {
 
 const withFC = (ref: string, fc: string) => `${ref}[${fc}]`;
 
+/** The functional constraint of the control services; never read (reading SBO selects). */
+export const CONTROL_FC = 'CO';
+
 /** The iec61850ctl command that reads the same reference. */
 export function cliCommand(session: SessionInfo, ref: string, fc: string): string {
   const port = session.target.port && session.target.port !== 102 ? ` --port ${session.target.port}` : '';
@@ -51,6 +54,7 @@ export function NodePanel({ session, node, reads, reading, disabled, watched, on
         node.fcs.map((fc) => {
           const ref = withFC(node.ref, fc);
           const entry = reads[ref];
+          const control = fc === CONTROL_FC;
           return (
             <div key={fc} className="mt-4 rounded border border-line">
               <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
@@ -67,18 +71,23 @@ export function NodePanel({ session, node, reads, reading, disabled, watched, on
                       CLI
                     </Button>
                   )}
-                  {session.state === 'connected' && (
+                  {session.state === 'connected' && !control && (
                     <Button icon={<PinIcon size={14} />} aria-pressed={watched(ref)} onClick={() => onWatch(ref, !watched(ref))} title="Follow this value in the watch table">
                       {watched(ref) ? 'Watching' : 'Watch'}
                     </Button>
                   )}
-                  {!sclOnly && (
+                  {!sclOnly && !control && (
                     <Button variant="primary" icon={<ReadIcon size={14} />} disabled={disabled || reading} onClick={() => onRead([ref])}>
                       Read
                     </Button>
                   )}
                 </span>
               </div>
+              {control && (
+                <p className="px-3 py-2 text-muted">
+                  Control attributes (Oper, SBO, SBOw, Cancel) are not read: reading SBO selects the control on the IED.
+                </p>
+              )}
               {entry?.value.error && (
                 <div className="flex gap-2 px-3 py-2 text-danger" role="alert">
                   <ErrorIcon size={16} />

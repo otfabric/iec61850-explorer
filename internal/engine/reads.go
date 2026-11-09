@@ -76,6 +76,11 @@ func (e *Engine) readLocked(ctx context.Context, s *session, raw []string) (mode
 			res.Values[i].Error.Code = model.ErrCodeInvalidRef
 			continue
 		}
+		if isControlFC(ref) {
+			res.Values[i].Ref = ref.String()
+			res.Values[i].Error = &model.OpError{Code: model.ErrCodeNotAllowed, Message: controlReadMessage}
+			continue
+		}
 		refs[i] = ref
 		res.Values[i].Ref = ref.String()
 		if dom, item, err := ref.ToMMS(); err == nil {
