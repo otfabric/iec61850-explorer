@@ -469,6 +469,7 @@ export class MockService implements Service {
     this.operation(id, { action: 'control', target: req.ref, ok: !negative });
     return {
       ref: req.ref, at: new Date().toISOString(), duration_ms: 110, ctl_model: models[m]!, ctl_num: this.ctlNum, written, test: req.test ?? false,
+      interlock_check: req.interlock_check ?? false, synchro_check: req.synchro_check ?? false,
       steps, outcome, ...(negative ? { add_cause: 'blocked-by-mode' } : {}), before, after,
     };
   }

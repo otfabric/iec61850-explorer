@@ -32,7 +32,7 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 - **Observe mode** by default: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
 - **Commission mode** on request, per session: a grant with a reason and a duration opens a second, restricted association. **Write** set points and configuration values (FC SP, CF, DC, SV, BL), each verified by reading it back; **subscribe** to report control blocks and watch the reports arrive (the control block is released again when you stop); **create and delete** data sets; **switch** the active setting group; **operate controls** of every control model, with the select, the operate, the CommandTermination and the IED's reasons shown. Everything is recorded in an audit trail. The daemon offers it only with `--allow-commission`.
 
-Not yet: editing setting values, interlock and synchrocheck flags on controls, comparison of SCL with the live model, semantic search, trace analysis.
+Not yet: editing setting values, time-activated controls, comparison of SCL with the live model, semantic search, trace analysis.
 
 ## Build from source
 

@@ -327,18 +327,21 @@ describe('App', () => {
     expect(ok).toHaveTextContent('select ok');
     expect(ok).toHaveTextContent('termination ok');
     expect(ok).toHaveTextContent('stVal 1 → 2');
-    expect(control).toHaveBeenCalledWith(expect.any(String), { ref: 'DemoIEDLD0/LLN0.Mod', value: '2', test: false });
+    expect(control).toHaveBeenCalledWith(expect.any(String), { ref: 'DemoIEDLD0/LLN0.Mod', value: '2', test: false, interlock_check: false, synchro_check: false });
 
     // Switching it off ends negatively, with the IED's cause.
     await user.clear(within(form).getByLabelText('ctlVal'));
     await user.type(within(form).getByLabelText('ctlVal'), '5');
     await user.click(within(form).getByLabelText('Test'));
+    await user.click(within(form).getByLabelText('Interlock check'));
     await user.click(within(form).getByRole('button', { name: 'Operate…' }));
+    expect(within(form).getByRole('group', { name: 'Confirm the control' })).toHaveTextContent('as a test, checking interlock on the IED?');
     await user.click(within(form).getByRole('button', { name: 'Operate' }));
     const negative = await within(form).findByRole('alert', { name: 'Control outcome' });
     expect(negative).toHaveTextContent('Accepted, then ended negatively');
     expect(negative).toHaveTextContent('blocked-by-mode');
     expect(negative).toHaveTextContent('test');
+    expect(negative).toHaveTextContent('interlock check');
 
     await user.click(screen.getByRole('tab', { name: /^Audit/ }));
     const audit = screen.getByRole('region', { name: 'Audit trail' });

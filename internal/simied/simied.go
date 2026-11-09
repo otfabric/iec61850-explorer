@@ -249,11 +249,12 @@ func (fileStore) Rename(context.Context, string, string) error     { return fs.E
 func (fileStore) ObtainFile(context.Context, string, string) error { return fs.ErrPermission }
 
 // Controls of the IED: GGIO1.SPCSO1 to SPCSO4 have one control model each
-// (direct and SBO, normal and enhanced security) and set their stVal.
-// XCBR1.Pos (SBO with enhanced security) sets the breaker position and is
-// interlocked by GGIO1.Ind1: while Ind1 is false the operation fails after
-// it was accepted, with a negative CommandTermination (blocked by
-// interlocking).
+// (direct and SBO, normal and enhanced security) and set their stVal; asked
+// for a synchrocheck they refuse (blocked by synchrocheck: the simulated
+// IED is never in synchronism). XCBR1.Pos (SBO with enhanced security) sets
+// the breaker position; asked for an interlock check it is interlocked by
+// GGIO1.Ind1: while Ind1 is false the operation fails after it was
+// accepted, with a negative CommandTermination (blocked by interlocking).
 var controlModels = map[string]iec61850.CtlModel{
 	"GGIO1.SPCSO1": iec61850.CtlModelDirectNormal,
 	"GGIO1.SPCSO2": iec61850.CtlModelSBONormal,
@@ -283,15 +284,19 @@ func registerControls(srv *iec61850.Server) error {
 func setStVal(srv *iec61850.Server, ref string) func(context.Context, iec61850.ControlRequest) error {
 	item := strings.Replace(ref, ".", "$ST$", 1) + "$stVal"
 	return func(ctx context.Context, req iec61850.ControlRequest) error {
+		if req.Check.Has(iec61850.CheckSynchroCheck) {
+			return &iec61850.ControlError{Ref: req.Ref, Operation: "operate", AddCause: iec61850.AddCauseBlockedBySynchrocheck}
+		}
 		srv.SetValue(ctx, Domain+"/"+item, req.CtlVal)
 		return nil
 	}
 }
 
 // executePos moves the breaker: true closes it (on), false opens it (off),
-// unless GGIO1.Ind1 (the interlock release) is false.
+// unless an interlock check was asked for and GGIO1.Ind1 (the interlock
+// release) is false.
 func executePos(ctx context.Context, srv *iec61850.Server, req iec61850.ControlRequest) error {
-	if v := srv.ValueStore().Get(Domain + "/GGIO1$ST$Ind1$stVal"); v != nil {
+	if v := srv.ValueStore().Get(Domain + "/GGIO1$ST$Ind1$stVal"); v != nil && req.Check.Has(iec61850.CheckInterlockCheck) {
 		if released, ok := v.Bool(); ok && !released {
 			return &iec61850.ControlError{Ref: req.Ref, Operation: "operate", AddCause: iec61850.AddCauseBlockedByInterlocking}
 		}

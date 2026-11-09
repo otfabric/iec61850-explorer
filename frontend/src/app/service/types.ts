@@ -441,6 +441,9 @@ export interface ControlRequest {
   /** ctlVal as text. */
   value: string;
   test?: boolean;
+  /** Ask the IED to check the interlocking / the synchronism (Check). */
+  interlock_check?: boolean;
+  synchro_check?: boolean;
   timeout_ms?: number;
 }
 
@@ -464,6 +467,8 @@ export interface ControlResult {
   ctl_num: number;
   written?: Value;
   test?: boolean;
+  interlock_check?: boolean;
+  synchro_check?: boolean;
   steps: ControlStep[];
   outcome: ControlOutcome;
   add_cause?: string;

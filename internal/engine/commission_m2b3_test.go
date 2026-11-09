@@ -77,8 +77,8 @@ func TestControlModels(t *testing.T) {
 	}
 }
 
-// The breaker is interlocked by GGIO1.Ind1: accepted, then a negative
-// CommandTermination with the IED's cause.
+// With an interlock check the breaker is interlocked by GGIO1.Ind1:
+// accepted, then a negative CommandTermination with the IED's cause.
 func TestControlNegativeTermination(t *testing.T) {
 	e, ied, id, dir := controlSession(t)
 	ctx := t.Context()
@@ -92,7 +92,7 @@ func TestControlNegativeTermination(t *testing.T) {
 	}
 
 	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
-	res, err = e.Control(ctx, id, model.ControlRequest{Ref: pos, Value: "true"})
+	res, err = e.Control(ctx, id, model.ControlRequest{Ref: pos, Value: "true", InterlockCheck: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,10 +103,13 @@ func TestControlNegativeTermination(t *testing.T) {
 	if res.After == nil || res.After.Text != "01" {
 		t.Errorf("Pos after the refused close = %+v", res.After)
 	}
+	if !res.InterlockCheck || res.SynchroCheck {
+		t.Errorf("check flags = %v, %v", res.InterlockCheck, res.SynchroCheck)
+	}
 	last := readAuditFiles(t, dir)
 	rec := last[len(last)-1]
 	if rec.Action != model.AuditControl || rec.Outcome != model.OutcomeFailed ||
-		!strings.Contains(rec.Error, "negative: blocked-by-interlocking") || !strings.Contains(rec.Detail, "termination blocked-by-interlocking") {
+		!strings.Contains(rec.Error, "negative: blocked-by-interlocking") || !strings.Contains(rec.Detail, "termination blocked-by-interlocking") || !strings.Contains(rec.Detail, "interlock-check") {
 		t.Errorf("audit %+v", rec)
 	}
 }
@@ -182,5 +185,21 @@ func TestNextCtlNumSkipsZero(t *testing.T) {
 	ctlNums.Store(254)
 	if a, b := nextCtlNum(), nextCtlNum(); a != 255 || b != 1 {
 		t.Errorf("ctlNums after 254 = %d, %d", a, b)
+	}
+}
+
+// Without an interlock check the breaker closes although Ind1 is false;
+// a synchrocheck is refused by the single point controls.
+func TestControlCheckFlags(t *testing.T) {
+	e, ied, id, _ := controlSession(t)
+	ctx := t.Context()
+	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
+	res, err := e.Control(ctx, id, model.ControlRequest{Ref: simied.Domain + "/XCBR1.Pos", Value: "true"})
+	if err != nil || res.Outcome != model.ControlOK {
+		t.Errorf("close without interlock check = %+v, %v", res, err)
+	}
+	res, err = e.Control(ctx, id, model.ControlRequest{Ref: simied.Domain + "/GGIO1.SPCSO1", Value: "true", SynchroCheck: true})
+	if err != nil || res.Outcome != model.ControlRefused || res.AddCause != "blocked-by-synchrocheck" || !res.SynchroCheck {
+		t.Errorf("operate with synchrocheck = %+v, %v", res, err)
 	}
 }

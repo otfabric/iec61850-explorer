@@ -231,13 +231,15 @@ interface ControlFormProps {
 export function ControlForm({ doRef, disabled, onControl }: ControlFormProps) {
   const [value, setValue] = useState('true');
   const [test, setTest] = useState(false);
+  const [interlock, setInterlock] = useState(false);
+  const [synchro, setSynchro] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ControlResult | null>(null);
 
   async function operate() {
     setBusy(true);
-    setResult(await onControl({ ref: doRef, value, test }));
+    setResult(await onControl({ ref: doRef, value, test, interlock_check: interlock, synchro_check: synchro }));
     setBusy(false);
     setConfirming(false);
   }
@@ -263,6 +265,8 @@ export function ControlForm({ doRef, disabled, onControl }: ControlFormProps) {
           <TextInput aria-label="ctlVal" value={value} disabled={confirming} onChange={(e) => setValue(e.target.value)} />
         </Field>
         <Toggle label="Test" checked={test} onChange={setTest} />
+        <Toggle label="Interlock check" checked={interlock} onChange={setInterlock} />
+        <Toggle label="Synchrocheck" checked={synchro} onChange={setSynchro} />
         {!confirming && (
           <Button type="submit" icon={<WriteIcon size={14} />} disabled={disabled || busy || value.trim() === ''} title={`Operate ${doRef}`}>
             Operate…
@@ -274,7 +278,8 @@ export function ControlForm({ doRef, disabled, onControl }: ControlFormProps) {
           <WarningIcon size={14} />
           <span>
             Operate <span className="font-mono">{doRef}</span> with ctlVal <span className="font-mono">{value}</span>
-            {test ? ' as a test' : ''} on the IED?
+            {test ? ' as a test' : ''}
+            {checks(interlock, synchro)} on the IED?
           </span>
           <Button type="submit" variant="primary" disabled={busy}>
             {busy ? 'Operating…' : 'Operate'}
@@ -287,6 +292,12 @@ export function ControlForm({ doRef, disabled, onControl }: ControlFormProps) {
       {result && <ControlOutcome result={result} />}
     </form>
   );
+}
+
+/** The Check flags as words for the confirmation. */
+function checks(interlock: boolean, synchro: boolean): string {
+  const asked = [interlock && 'interlock', synchro && 'synchronism'].filter(Boolean);
+  return asked.length ? `, checking ${asked.join(' and ')}` : '';
 }
 
 const OUTCOME_TEXT: Record<ControlResult['outcome'], string> = {
@@ -309,6 +320,8 @@ export function ControlOutcome({ result }: { result: ControlResult }) {
         <span className="text-muted">
           {result.ctl_model} · ctlNum {result.ctl_num}
           {result.test ? ' · test' : ''}
+          {result.interlock_check ? ' · interlock check' : ''}
+          {result.synchro_check ? ' · synchrocheck' : ''}
         </span>
       </p>
       <ol className="flex flex-wrap gap-2 text-muted">
