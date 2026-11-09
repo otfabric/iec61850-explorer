@@ -2,6 +2,25 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.6.1
+
+**Date:** 2026-11-09
+**Previous release:** v0.6.0
+
+### Changed
+
+- Built on go-iec61850 v1.12.1. More SCL files open as offline sessions:
+  - files that declare a schema version the library has no bindings for (2007A, 2007B5, a non-2007 version) open with a `schema-fallback` warning;
+  - files declared as `encoding="utf8"` open.
+
+  The SCL check also reports missing required attributes, a missing `Header` element, and file-kind content (an ICD, IID or CID without an IED).
+
+### Dependencies
+
+go-iec61850 v1.12.1, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.6.0
 
 **Date:** 2026-11-09
