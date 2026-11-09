@@ -40,10 +40,10 @@
               <TrgOps dchg="true" period="true" gi="true"/>
               <OptFields seqNum="true" timeStamp="true" reasonCode="true"/>
             </ReportControl>
-            <DataSet name="Events" desc="Attribute-level members">
+            <DataSet name="Events" desc="Attribute members and a data-object member">
               <FCDA ldInst="LD0" lnClass="GGIO" lnInst="1" doName="Ind1" daName="stVal" fc="ST"/>
               <FCDA ldInst="LD0" lnClass="XCBR" lnInst="1" doName="OpCnt" daName="stVal" fc="ST"/>
-              <FCDA ldInst="LD0" lnClass="MMXU" lnInst="1" doName="Hz" daName="mag.f" fc="MX"/>
+              <FCDA ldInst="LD0" lnClass="MMXU" lnInst="1" doName="Hz" fc="MX"/>
             </DataSet>
             <ReportControl name="urcbEvents" rptID="Events" datSet="Events" confRev="1" buffered="false">
               <TrgOps dchg="true" gi="true"/>

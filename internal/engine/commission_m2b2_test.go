@@ -81,11 +81,11 @@ func TestReportSubscription(t *testing.T) {
 		t.Fatalf("subscription = %+v", sub)
 	}
 	gi := nextReport(t, events, func(r *model.Report) bool { return slices.Contains(r.Entries[0].Reasons, "GI") })
-	wantRefs := []string{simied.Domain + "/GGIO1.Ind1.stVal[ST]", simied.Domain + "/XCBR1.OpCnt.stVal[ST]", simied.Domain + "/MMXU1.Hz.mag.f[MX]"}
+	wantRefs := []string{simied.Domain + "/GGIO1.Ind1.stVal[ST]", simied.Domain + "/XCBR1.OpCnt.stVal[ST]", simied.Domain + "/MMXU1.Hz[MX]"}
 	if gi.SubscriptionID != sub.ID || gi.RptID != "Events" || !slices.Equal(entryRefs(gi), wantRefs) || gi.SeqNum == nil || gi.Time == nil {
 		t.Fatalf("GI report = %+v", gi)
 	}
-	if v := gi.Entries; v[0].Value.Text != "true" || v[1].Value.Text != "17" || v[2].Value.Type != model.TypeFloat || v[2].Value.Name != "f" {
+	if v := gi.Entries; v[0].Value.Text != "true" || v[1].Value.Text != "17" || v[2].Value.Name != "Hz" || hzMag(v[2].Value) == nil || hzMag(v[2].Value).Type != model.TypeFloat {
 		t.Errorf("GI values = %+v", v)
 	}
 
@@ -93,7 +93,7 @@ func TestReportSubscription(t *testing.T) {
 	dchg := nextReport(t, events, func(r *model.Report) bool {
 		return len(r.Entries) == 1 && slices.Contains(r.Entries[0].Reasons, "data-change")
 	})
-	if dchg.Entries[0].Ref != wantRefs[2] || dchg.Entries[0].Value.Text != "49.5" {
+	if dchg.Entries[0].Ref != wantRefs[2] || hzMag(dchg.Entries[0].Value) == nil || hzMag(dchg.Entries[0].Value).Text != "49.5" {
 		t.Errorf("data change report = %+v", dchg)
 	}
 	if err := e.TriggerGI(ctx, info.ID, sub.ID); err != nil {
@@ -391,4 +391,20 @@ func TestSplitRCBRef(t *testing.T) {
 	if clip("abcdef", 3) != "abc…" || clip("ab", 3) != "ab" {
 		t.Error("clip")
 	}
+}
+
+// hzMag returns mag.f of a reported MMXU1.Hz[MX] data object (a data
+// set member naming a whole data object is reported as its structure).
+func hzMag(v model.Value) *model.Value {
+	for i := range v.Children {
+		if v.Children[i].Name != "mag" {
+			continue
+		}
+		for j := range v.Children[i].Children {
+			if v.Children[i].Children[j].Name == "f" {
+				return &v.Children[i].Children[j]
+			}
+		}
+	}
+	return nil
 }
