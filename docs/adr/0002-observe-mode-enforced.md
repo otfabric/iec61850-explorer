@@ -13,4 +13,4 @@ Every MMS client the engine creates sets go-mms `DialOptions.AllowedServices` to
 
 ## Consequences
 
-The Explorer needs go-mms v1.5.0 or later. One state change rides on an allowed service: reading a control's `SBO` attribute selects it (IEC 61850-8-1). The allow-list cannot see that, so the engine also refuses every read of the functional constraint CO (added in 0.4.1). A new read service (file directory, journal read) is added to the list and its test deliberately. Commission and Laboratory modes will be separate, explicit per-session grants enforced in the engine, with their own allow-lists; Observe stays the default.
+The Explorer needs go-mms v1.5.0 or later. One state change rides on an allowed service: reading a control's `SBO` attribute selects it (IEC 61850-8-1). The allow-list cannot see that, so the engine also refuses every read of the functional constraint CO (added in 0.5.0). A new read service (file directory, journal read) is added to the list and its test deliberately. Commission and Laboratory modes will be separate, explicit per-session grants enforced in the engine, with their own allow-lists; Observe stays the default.
