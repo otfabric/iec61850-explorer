@@ -12,6 +12,7 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 | Fuzz | `make fuzz` (`FUZZTIME`, default 30 s per target) | Every `Fuzz*` target in the `TEST_PKGS` | `fuzz` job in `ci.yml`, 10 s per target; `nightly.yml`, 5 min |
 | Build checks | workflow steps | The daemon is static, has no Wails, runs without a display; the image runs; the web bundle is free of the Wails runtime | yes |
 | Vulnerabilities | `make vuln` | govulncheck | yes |
+| SCL corpus | `make corpus` with `IEC61850_SCL_CORPUS` set to a checkout of the private otfabric/iec61850-scl-corpus | `TestSCLCorpusOffline`: every IED with an MMS server of every corpus file opens offline. The full tree is browsed, then a search, data sets, report control blocks and a snapshot export run, each IED within 5 s; unparsable files are refused | no (the corpus is private) |
 
 `make check` runs fmt, fmt-check, vet, lint, lint-ci, vuln, test, coverage-pkg-check and frontend-check.
 
@@ -60,3 +61,12 @@ go-mms and go-iec61850 fuzz their own decoders. A failing input lands in `testda
 ## Skips
 
 `go test -short` skips the tests that run `go list`. File-mode tests skip on Windows.
+
+## Large models in the user interface
+
+Measured on 2026-11-09 with the corpus's largest file (an ABB REX640 CID, 2.8 MB: 3 logical devices, 299 logical nodes, 4,502 data objects), daemon and web UI, in a browser:
+- **Opening the file:** 82 ms in the daemon.
+- **Expanding all logical devices, or searching the whole model:** no main-thread task over 50 ms.
+- **Expanding everything at once** (all 299 logical nodes, then all 4,502 data objects, about 63,000 DOM nodes): one task of 2.2 s. The tree renders every expanded row; it is not virtualized.
+
+The engine handles the whole corpus easily (`make corpus`): 170 IED sessions and about 537,000 nodes; the slowest session (34,465 nodes) takes about 130 ms.

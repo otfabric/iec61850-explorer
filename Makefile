@@ -1,4 +1,4 @@
-.PHONY: help all check test coverage-pkg-check fuzz coverage coverage-html coverage-check coverage-clean fmt fmt-check vet lint lint-ci vuln \
+.PHONY: corpus help all check test coverage-pkg-check fuzz coverage coverage-html coverage-check coverage-clean fmt fmt-check vet lint lint-ci vuln \
 	frontend frontend-install frontend-check build build-gui build-daemon build-daemon-all bundle-macos appicon winres docker docker-all docker-run dev clean
 
 help: ## This help
@@ -55,6 +55,9 @@ coverage-pkg-check: coverage-check ## Fail when a package is below COVER_PKG_MIN
 	for (p in s) { v = 100 * c[p] / s[p]; if (v < m) { printf "%s: %.1f%% < %s%%\n", p, v, m; bad = 1 } } exit bad }' coverage.out
 
 check: fmt fmt-check vet lint lint-ci vuln test coverage-pkg-check frontend-check ## Run all checks (Go and frontend)
+
+corpus: ## Open every IED of the private SCL corpus offline and run the workflow (IEC61850_SCL_CORPUS=<checkout>)
+	IEC61850_SCL_CORPUS_REQUIRE=1 go test -count=1 -run TestSCLCorpusOffline -v ./internal/engine/ | grep -E '^(--- FAIL|ok|FAIL)|corpus_stress_test.go'
 
 test: ## Run the Go tests with the race detector
 	@echo "Running tests (race detector)"

@@ -20,8 +20,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/otfabric/go-cotp v1.3.0 h1:IXfqzdt86GPg6+il9g2GIWLFFmtNuVBMiE2ceLrXJpo=
 github.com/otfabric/go-cotp v1.3.0/go.mod h1:0XVoeSHnOPj8XWI484tUC2U6dbaKCtVk0z18MipM37s=
-github.com/otfabric/go-iec61850 v1.10.1 h1:vWjqmUTDsmWqHh/e2VRJRbkbbN7zhYFvUCiWxNiiEXg=
-github.com/otfabric/go-iec61850 v1.10.1/go.mod h1:NEr4IkWGxCeHJgENVjmse6cV+BakfjFJmnhiPp3bHRI=
+github.com/otfabric/go-iec61850 v1.12.1 h1:GoFommqJhxLkEpImG55I4UHzQz6TIIOVO2zFTJ8MkKk=
+github.com/otfabric/go-iec61850 v1.12.1/go.mod h1:NEr4IkWGxCeHJgENVjmse6cV+BakfjFJmnhiPp3bHRI=
 github.com/otfabric/go-mms v1.5.0 h1:JlZ8Q9aOMOiHDzZ98iWkSyeNA86ZJrks40Wd3JRlfO0=
 github.com/otfabric/go-mms v1.5.0/go.mod h1:jnTh0K95bqNCQtdTBkBG/rMmGPeooYoABQa9Sqq3Zio=
 github.com/otfabric/go-tpkt v1.1.0 h1:KTCQePVqqnvDB0A3O4ReRqfa5jJ3jnsEYNUdS91vD4o=
