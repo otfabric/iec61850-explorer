@@ -241,6 +241,49 @@ describe('App', () => {
     expect(within(panel).queryByRole('button', { name: 'Read' })).not.toBeInTheDocument();
   });
 
+  it('grants Commission mode, writes with readback, audits and revokes', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const write = vi.spyOn(service, 'write');
+    render(<App service={service} platform={platform()} />);
+    await connect(user);
+    await user.click(await screen.findByRole('button', { name: 'Commission…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Commission mode' });
+    const grant = within(dialog).getByRole('button', { name: 'Grant' });
+    expect(grant).toBeDisabled(); // no reason yet
+    await user.type(within(dialog).getByLabelText(/Reason/), 'WO-4711');
+    await user.click(grant);
+    const banner = await screen.findByRole('status', { name: 'Commission grant' });
+    expect(banner).toHaveTextContent('Commission mode');
+    expect(banner).toHaveTextContent('WO-4711');
+    expect(screen.queryByRole('button', { name: 'Commission…' })).not.toBeInTheDocument();
+    expect(screen.getByTitle(/Commission mode: this session/)).toHaveTextContent('commission');
+
+    await user.click(await screen.findByRole('button', { name: 'Expand DemoIEDLD0' }));
+    await user.click(await screen.findByRole('button', { name: 'Expand LLN0' }));
+    await user.click(await screen.findByText('Mod'));
+    const panel = screen.getByRole('region', { name: 'Selected node' });
+    expect(within(panel).getByText('Read this FC to write its attributes.')).toBeInTheDocument();
+    await user.click(within(panel).getAllByRole('button', { name: 'Read' })[0]!);
+    const form = await within(panel).findByRole('form', { name: 'Write CF' });
+    const input = within(form).getByLabelText('New value');
+    await user.clear(input);
+    await user.type(input, '1');
+    await user.click(within(form).getByRole('button', { name: 'Write' }));
+    expect(write).toHaveBeenCalledWith(expect.any(String), { ref: 'DemoIEDLD0/LLN0.Mod.ctlModel[CF]', value: '1' });
+
+    await user.click(screen.getByRole('tab', { name: /Audit/ }));
+    const audit = screen.getByRole('region', { name: 'Audit trail' });
+    expect(await within(audit).findByText(/0 → 1/)).toBeInTheDocument();
+    expect(within(audit).getByText('DemoIEDLD0/LLN0.Mod.ctlModel[CF]')).toBeInTheDocument();
+    expect(within(audit).getByText('grant')).toBeInTheDocument();
+
+    await user.click(within(screen.getByRole('status', { name: 'Commission grant' })).getByRole('button', { name: 'Revoke' }));
+    expect(await screen.findByRole('button', { name: 'Commission…' })).toBeInTheDocument();
+    expect(await within(audit).findByText('revoke')).toBeInTheDocument();
+    expect(screen.getByTitle(/Observe mode/)).toHaveTextContent('observe');
+  });
+
   it('builds the equivalent iec61850ctl command', () => {
     const session = { target: { host: '10.0.0.5', port: 102 } } as SessionInfo;
     expect(cliCommand(session, 'LD0/MMXU1.Hz', 'MX')).toBe('iec61850ctl get object --host 10.0.0.5 --object LD0/MMXU1.Hz --fc MX');

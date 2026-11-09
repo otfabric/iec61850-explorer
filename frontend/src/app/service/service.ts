@@ -1,12 +1,15 @@
 // TypeScript mirror of internal/service/service.go.
 
 import type {
+  AuditQuery,
+  AuditRecord,
   DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
   FileEntry,
+  GrantRequest,
   Health,
   JournalRequest,
   JournalResult,
@@ -23,6 +26,8 @@ import type {
   SessionInfo,
   SettingGroups,
   TargetConfig,
+  WriteRequest,
+  WriteResult,
 } from './types';
 
 export type ErrorCode =
@@ -95,6 +100,14 @@ export interface Service {
   journals(id: string, ld: string): Promise<string[]>;
   readJournal(id: string, req: JournalRequest): Promise<JournalResult>;
   settingGroups(id: string, ld: string): Promise<SettingGroups>;
+  /** Puts a session in Commission mode: a second, audited association (ADR 0004). */
+  grantCommission(id: string, req: GrantRequest): Promise<SessionInfo>;
+  /** Ends a grant; a session without one is not an error. */
+  revokeCommission(id: string): Promise<SessionInfo>;
+  /** Writes one data attribute and reads it back; needs the write capability. */
+  write(id: string, req: WriteRequest): Promise<WriteResult>;
+  /** Recent audit records, newest first. */
+  audit(query: AuditQuery): Promise<AuditRecord[]>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

@@ -19,7 +19,8 @@ linters:
       # Match on types, so that a renamed import or a method value is caught too.
       analyze-types: true
       forbid:
-        # M0 is Observe mode only. Outside tests the engine discovers and reads;
+        # Observe mode is the default. Outside tests and the Commission files
+        # the engine discovers and reads;
         # every call that changes an IED's state is banned here. go-mms blocks
         # the services at run time as well (DialOptions.AllowedServices, see
         # internal/readonly), and the wire test proves what the IED receives.
@@ -40,6 +41,11 @@ linters:
         linters:
           - forbidigo
       - path: internal/simied/
+        linters:
+          - forbidigo
+      # Commission mode (ADR 0004): the only code that holds the granted
+      # association. Its services are bounded by internal/commission.
+      - path: internal/engine/commission[a-z_]*\.go$
         linters:
           - forbidigo
 

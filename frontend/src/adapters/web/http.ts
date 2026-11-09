@@ -1,6 +1,11 @@
 import type { Platform } from '../../app/platform/platform';
 import { ServiceError, type ErrorCode, type LinkStatus, type Service } from '../../app/service/service';
 import type {
+  AuditQuery,
+  AuditRecord,
+  GrantRequest,
+  WriteRequest,
+  WriteResult,
   DataSet,
   ExplorerEvent,
   ExportFile,
@@ -85,6 +90,11 @@ export class HttpService implements Service {
   files = (id: string, dir: string) => this.request<FileEntry[]>('GET', `/sessions/${encodeURIComponent(id)}/files?dir=${encodeURIComponent(dir)}`);
   journals = (id: string, ld: string) => this.request<string[]>('GET', `/sessions/${encodeURIComponent(id)}/journals?ld=${encodeURIComponent(ld)}`);
   readJournal = (id: string, req: JournalRequest) => this.request<JournalResult>('POST', `/sessions/${encodeURIComponent(id)}/journals/read`, req);
+  grantCommission = (id: string, req: GrantRequest) => this.request<SessionInfo>('PUT', `/sessions/${encodeURIComponent(id)}/commission`, req);
+  revokeCommission = (id: string) => this.request<SessionInfo>('DELETE', `/sessions/${encodeURIComponent(id)}/commission`);
+  write = (id: string, req: WriteRequest) => this.request<WriteResult>('POST', `/sessions/${encodeURIComponent(id)}/write`, req);
+  audit = (query: AuditQuery) =>
+    this.request<AuditRecord[]>('GET', `/audit?session=${encodeURIComponent(query.session_id ?? '')}&limit=${query.limit ?? 0}`);
   settingGroups = (id: string, ld: string) =>
     this.request<SettingGroups>('GET', `/sessions/${encodeURIComponent(id)}/setting-groups?ld=${encodeURIComponent(ld)}`);
 

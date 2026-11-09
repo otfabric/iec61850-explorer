@@ -58,6 +58,9 @@ type Options struct {
 	// must exist; the caller checks its ownership and mode. Empty keeps no
 	// files.
 	DataDir string
+	// Commission enables Commission grants (ADR 0004). They also need
+	// DataDir, for the audit trail.
+	Commission bool
 }
 
 // Engine implements service.Service.
@@ -67,6 +70,7 @@ type Engine struct {
 	started time.Time
 	hub     *hub
 	store   *profileStore
+	audit   *auditLog
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -94,6 +98,7 @@ func New(opts Options) *Engine {
 	}
 	if opts.DataDir != "" {
 		e.store = &profileStore{path: filepath.Join(opts.DataDir, "profiles.json")}
+		e.audit = newAuditLog(filepath.Join(opts.DataDir, "audit"), e.hub, log.Warn)
 	}
 	return e
 }
@@ -129,6 +134,9 @@ func (e *Engine) features() []string {
 	f := []string{}
 	if e.store != nil {
 		f = append(f, model.FeatureProfiles)
+	}
+	if e.commissionErr() == nil {
+		f = append(f, model.FeatureCommission)
 	}
 	return f
 }
@@ -185,25 +193,14 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 		rec: &recorder{}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
-	mmsOpts := mms.DialOptions{
-		AllowedServices: readonly.AllowedServices(),
-		RequestTimeout:  timeout,
-		Metrics:         s.rec,
-	}
-	if err := applyAddressing(cfg.Addressing, &mmsOpts); err != nil {
+	if err := applyAddressing(cfg.Addressing, &mms.DialOptions{}); err != nil {
 		return model.SessionInfo{}, err
 	}
 
 	// Connect.
 	s.rec.start()
 	start := time.Now()
-	dctx, cancel := context.WithTimeout(ctx, timeout)
-	client, err := iec61850.Dial(dctx, addr, iec61850.DialOptions{
-		Logger: e.log.With("session", s.id),
-		Cache:  iec61850.CacheLazy,
-		MMS:    mmsOpts,
-	})
-	cancel()
+	client, err := e.dial(ctx, s, readonly.AllowedServices())
 	if err != nil {
 		detail := classify(err, true)
 		e.publishOperation(s.rec, s.id, "connect", addr, start, detail)
@@ -254,6 +251,22 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	return info, nil
 }
 
+// dial opens an association to the session's IED with an allow-list of
+// services. Its requests are recorded by the session's recorder.
+func (e *Engine) dial(ctx context.Context, s *session, allowed []mms.Service) (*iec61850.Client, error) {
+	mmsOpts := mms.DialOptions{AllowedServices: allowed, RequestTimeout: s.timeout, Metrics: s.rec}
+	if err := applyAddressing(s.target.Addressing, &mmsOpts); err != nil {
+		return nil, err
+	}
+	dctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	return iec61850.Dial(dctx, net.JoinHostPort(s.target.Host, strconv.Itoa(s.target.Port)), iec61850.DialOptions{
+		Logger: e.log.With("session", s.id),
+		Cache:  iec61850.CacheLazy,
+		MMS:    mmsOpts,
+	})
+}
+
 // identify asks for the IED's identity. An IED without Identify is normal;
 // the request still appears in the connect operation.
 func (e *Engine) identify(ctx context.Context, s *session) (*model.Identity, error) {
@@ -280,6 +293,7 @@ func (e *Engine) watch(s *session) {
 	s.lostErr = classify(m.Err(), false)
 	s.stateMu.Unlock()
 	e.stopPoller(s)
+	e.endGrant(context.Background(), s, model.AuditEnd, "the session was lost")
 	info := s.info()
 	e.hub.publish(model.Event{Kind: model.EventSession, SessionID: s.id, Session: &info})
 	e.log.Warn("session lost", "session", s.id, "error", m.Err())
@@ -335,6 +349,7 @@ func (e *Engine) CloseSession(ctx context.Context, id string) error {
 
 func (e *Engine) closeSession(ctx context.Context, s *session) error {
 	e.stopPoller(s)
+	e.endGrant(ctx, s, model.AuditEnd, "the session was closed")
 	s.stateMu.Lock()
 	wasConnected := s.state == model.SessionConnected
 	s.closing, s.state = true, model.SessionClosed

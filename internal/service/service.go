@@ -15,8 +15,9 @@ import (
 
 // Service is the IEC 61850 engine as the user interfaces see it.
 //
-// In M0 every method is read-only: nothing takes a value to write, a control
-// to operate or a file to delete.
+// Every method but the Commission ones (GrantCommission, RevokeCommission,
+// Write) is read-only; those change the IED only through a granted,
+// audited second association (ADR 0004).
 type Service interface {
 	// Health reports versions, mode and uptime.
 	Health(ctx context.Context) (model.Health, error)
@@ -74,6 +75,20 @@ type Service interface {
 	// SettingGroups reads the setting group control block of a logical
 	// device.
 	SettingGroups(ctx context.Context, id, ld string) (model.SettingGroups, error)
+	// GrantCommission puts a session in Commission mode: it opens a second
+	// association whose allow-list follows the granted capabilities, and
+	// records the grant in the audit trail.
+	GrantCommission(ctx context.Context, id string, req model.GrantRequest) (model.SessionInfo, error)
+	// RevokeCommission ends a grant: it undoes what the engine set up for
+	// itself and concludes the second association. A session without a
+	// grant is not an error.
+	RevokeCommission(ctx context.Context, id string) (model.SessionInfo, error)
+	// Write writes one data attribute and reads it back. It needs a grant
+	// with the write capability. An IED that refuses the write is reported
+	// in the result.
+	Write(ctx context.Context, id string, req model.WriteRequest) (model.WriteResult, error)
+	// Audit returns recent audit records, newest first.
+	Audit(ctx context.Context, q model.AuditQuery) ([]model.AuditRecord, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

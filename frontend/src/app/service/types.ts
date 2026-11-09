@@ -3,7 +3,7 @@
 /** An RFC 3339 time in UTC. */
 export type Timestamp = string;
 
-export type Mode = 'observe';
+export type Mode = 'observe' | 'commission';
 
 export interface Health {
   status: string;
@@ -81,6 +81,8 @@ export interface SessionInfo {
   polling?: PollState;
   scl?: SCLOrigin;
   snapshot?: SnapshotOrigin;
+  /** Set while the session holds a Commission grant (mode 'commission'). */
+  grant?: Grant;
 }
 
 export interface SCLOrigin {
@@ -267,7 +269,21 @@ export interface MMSRequest {
 }
 
 export interface Operation {
-  action: 'connect' | 'discover' | 'read' | 'close';
+  action:
+    | 'connect'
+    | 'discover'
+    | 'read'
+    | 'close'
+    | 'datasets'
+    | 'reports'
+    | 'files'
+    | 'download'
+    | 'journals'
+    | 'journal'
+    | 'setting-groups'
+    | 'grant'
+    | 'revoke'
+    | 'write';
   target?: string;
   started_at: Timestamp;
   duration_ms: number;
@@ -277,7 +293,7 @@ export interface Operation {
   requests_dropped?: number;
 }
 
-export type EventKind = 'session' | 'operation' | 'sample' | 'resync';
+export type EventKind = 'session' | 'operation' | 'sample' | 'resync' | 'audit';
 
 export interface ExplorerEvent {
   seq: number;
@@ -287,6 +303,7 @@ export interface ExplorerEvent {
   session?: SessionInfo;
   operation?: Operation;
   sample?: Sample;
+  audit?: AuditRecord;
 }
 
 export interface DataSetMember {
@@ -362,4 +379,71 @@ export interface SettingGroups {
   edit_sg: number;
   cnf_edit: boolean;
   resv_tms: number;
+}
+
+// Commission mode (ADR 0004).
+
+export type Capability = 'write' | 'reports' | 'datasets' | 'setting-groups';
+
+/** The capabilities a grant may carry, in the order the dialog shows them. */
+export const CAPABILITIES: Capability[] = ['write', 'reports', 'datasets', 'setting-groups'];
+
+/** The functional constraints a write may target. */
+export const WRITABLE_FCS = ['SP', 'CF', 'DC', 'SV', 'BL'];
+
+export const DEFAULT_GRANT_MINUTES = 30;
+export const MAX_GRANT_MINUTES = 480;
+
+export interface GrantRequest {
+  reason: string;
+  minutes?: number;
+  capabilities: Capability[];
+}
+
+export interface Grant {
+  reason: string;
+  capabilities: Capability[];
+  granted_at: Timestamp;
+  expires_at: Timestamp;
+}
+
+export interface WriteRequest {
+  ref: string;
+  value: string;
+}
+
+export interface WriteResult {
+  ref: string;
+  mms: MMSName;
+  at: Timestamp;
+  written?: Value;
+  before?: Value;
+  after?: Value;
+  verified: boolean;
+  error?: OpError;
+  duration_ms: number;
+}
+
+export type AuditAction = 'grant' | 'revoke' | 'expire' | 'end' | 'write' | 'cleanup';
+
+export interface AuditRecord {
+  seq: number;
+  at: Timestamp;
+  session_id: string;
+  target: string;
+  ied?: string;
+  action: AuditAction;
+  outcome: 'ok' | 'mismatch' | 'failed';
+  reason?: string;
+  capabilities?: Capability[];
+  ref?: string;
+  before?: string;
+  written?: string;
+  after?: string;
+  error?: string;
+}
+
+export interface AuditQuery {
+  session_id?: string;
+  limit?: number;
 }

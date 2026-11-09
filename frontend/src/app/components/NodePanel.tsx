@@ -1,6 +1,8 @@
 import { CopyIcon, ErrorIcon, PinIcon, ReadIcon } from '../icons';
 import type { ModelNode, SessionInfo } from '../service/types';
 import type { ReadEntry } from '../state/useExplorer';
+import type { WriteResult } from '../service/types';
+import { WriteForm } from './Commission';
 import { Button, Chip } from './ui';
 import { ValueView } from './ValueView';
 
@@ -14,6 +16,8 @@ interface NodePanelProps {
   onRead: (refs: string[]) => void;
   onWatch: (ref: string, on: boolean) => void;
   onCopy: (text: string) => void;
+  /** Writes an attribute; set while the session holds the write capability. */
+  onWrite?: (ref: string, value: string, reread: string) => Promise<WriteResult | null>;
 }
 
 const withFC = (ref: string, fc: string) => `${ref}[${fc}]`;
@@ -24,7 +28,7 @@ export function cliCommand(session: SessionInfo, ref: string, fc: string): strin
   return `iec61850ctl get object --host ${session.target.host}${port} --object ${ref} --fc ${fc}`;
 }
 
-export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy }: NodePanelProps) {
+export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy, onWrite }: NodePanelProps) {
   const sclOnly = session.state === 'offline' && !session.snapshot;
   const readable = node.kind !== 'ld' && node.fcs.length > 0;
   return (
@@ -107,6 +111,16 @@ export function NodePanel({ session, node, reads, reading, disabled, watched, on
                     <CopyIcon size={14} />
                   </button>
                 </p>
+              )}
+              {onWrite && !node.ref.endsWith('/LLN0.SGCB') && (
+                <WriteForm
+                  key={`${ref}|${entry?.value.value ? 'read' : 'unread'}`}
+                  doRef={node.ref}
+                  fc={fc}
+                  value={entry?.value.value}
+                  disabled={disabled}
+                  onWrite={(attr, value) => onWrite(attr, value, ref)}
+                />
               )}
             </div>
           );

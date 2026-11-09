@@ -191,6 +191,22 @@ func (c *httpService) SettingGroups(ctx context.Context, id, ld string) (v model
 	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/setting-groups?ld="+url.QueryEscape(ld), nil, &v)
 }
 
+func (c *httpService) GrantCommission(ctx context.Context, id string, r model.GrantRequest) (v model.SessionInfo, err error) {
+	return v, c.do(ctx, "PUT", "/api/v1/sessions/"+id+"/commission", r, &v)
+}
+
+func (c *httpService) RevokeCommission(ctx context.Context, id string) (v model.SessionInfo, err error) {
+	return v, c.do(ctx, "DELETE", "/api/v1/sessions/"+id+"/commission", nil, &v)
+}
+
+func (c *httpService) Write(ctx context.Context, id string, r model.WriteRequest) (v model.WriteResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/write", r, &v)
+}
+
+func (c *httpService) Audit(ctx context.Context, q model.AuditQuery) (v []model.AuditRecord, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/audit?session="+url.QueryEscape(q.SessionID)+"&limit="+strconv.Itoa(q.Limit), nil, &v)
+}
+
 func (c *httpService) InspectSCL(ctx context.Context, f model.File) (v model.SCLInfo, err error) {
 	return v, c.sclRequest(ctx, "/api/v1/scl/inspect", f, url.Values{}, &v)
 }

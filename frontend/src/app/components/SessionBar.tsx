@@ -1,4 +1,4 @@
-import { CloseIcon, DisconnectIcon, FileIcon } from '../icons';
+import { CloseIcon, DisconnectIcon, FileIcon, UnlockIcon } from '../icons';
 import type { SessionInfo } from '../service/types';
 import { Button, Chip } from './ui';
 
@@ -6,11 +6,13 @@ interface SessionBarProps {
   info: SessionInfo;
   filesOpen: boolean;
   onToggleFiles: () => void;
+  /** Set when the engine offers Commission mode. */
+  onCommission?: () => void;
   onClose: () => void;
 }
 
 /** What the open tab is: an IED, an SCL model or a snapshot. */
-export function SessionBar({ info, filesOpen, onToggleFiles, onClose }: SessionBarProps) {
+export function SessionBar({ info, filesOpen, onToggleFiles, onCommission, onClose }: SessionBarProps) {
   const { identity, discovery } = info;
   const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
   return (
@@ -41,8 +43,13 @@ export function SessionBar({ info, filesOpen, onToggleFiles, onClose }: SessionB
         {info.state === 'connected' && ` · discovered in ${discovery.duration_ms} ms`}
       </span>
       {info.polling && <Chip tone="accent">polling every {info.polling.interval_ms / 1000} s</Chip>}
+      {info.state === 'connected' && onCommission && !info.grant && (
+        <Button className="ml-auto" icon={<UnlockIcon size={16} />} onClick={onCommission} title="Ask for Commission mode: audited changes to this IED">
+          Commission…
+        </Button>
+      )}
       {info.state === 'connected' && (
-        <Button className="ml-auto" icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
+        <Button className={onCommission && !info.grant ? '' : 'ml-auto'} icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
           {filesOpen ? 'Model' : 'Files'}
         </Button>
       )}

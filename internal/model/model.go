@@ -15,7 +15,7 @@ const AppName = "iec61850-explorer"
 
 // APIVersion is the version of the Service contract and of the HTTP API. The
 // major part changes on incompatible changes, the minor part on additions.
-const APIVersion = "0.1"
+const APIVersion = "0.2"
 
 // DefaultPort is the MMS port (ISO-on-TCP, RFC 1006).
 const DefaultPort = 102
@@ -36,7 +36,8 @@ type Health struct {
 	UptimeS    int64  `json:"uptime_s"`
 	GoIEC61850 string `json:"go_iec61850"`
 	GoMMS      string `json:"go_mms"`
-	// Mode is the operating mode of every session of this engine.
+	// Mode is the mode a session starts in; Commission mode is granted per
+	// session (FeatureCommission).
 	Mode string `json:"mode"`
 	// Time is the engine's clock, for clients to notice a skew.
 	Time time.Time `json:"time"`
@@ -137,6 +138,9 @@ type SessionInfo struct {
 	// SCL is set for an offline session: a model imported from an SCL
 	// file, with no IED behind it.
 	SCL *SCLOrigin `json:"scl,omitempty"`
+	// Grant is set while the session holds a Commission grant; Mode is
+	// then ModeCommission.
+	Grant *Grant `json:"grant,omitempty"`
 	// Snapshot is set for an offline session opened from a snapshot.
 	Snapshot *SnapshotOrigin `json:"snapshot,omitempty"`
 }
@@ -501,8 +505,10 @@ const (
 // Operation records one user action on a session and the MMS requests it
 // caused, in order. It is the Explorer's own activity log.
 type Operation struct {
-	// Action is "connect", "discover", "read" or "close". A read of several
-	// references is one operation.
+	// Action is "connect", "discover", "read", "close"; the inspections
+	// "datasets", "reports", "files", "download", "journals", "journal",
+	// "setting-groups"; and in Commission mode "grant", "revoke", "write". A
+	// read of several references is one operation.
 	Action string `json:"action"`
 	// Target is the object reference or address the action was about.
 	Target     string       `json:"target,omitempty"`
@@ -536,6 +542,8 @@ const (
 	EventSample = "sample"
 	// EventResync tells a subscriber that it missed events.
 	EventResync = "resync"
+	// EventAudit carries an AuditRecord.
+	EventAudit = "audit"
 )
 
 // Event is one entry of the event stream.
@@ -548,4 +556,5 @@ type Event struct {
 	Session   *SessionInfo `json:"session,omitempty"`
 	Operation *Operation   `json:"operation,omitempty"`
 	Sample    *Sample      `json:"sample,omitempty"`
+	Audit     *AuditRecord `json:"audit,omitempty"`
 }

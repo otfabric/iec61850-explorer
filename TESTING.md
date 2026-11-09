@@ -22,7 +22,7 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `TestGuardRefusesWrite` (`internal/engine`): a write through the engine's own MMS client fails with `mms.ErrServiceNotAllowed` and never reaches the IED.
 - `TestNoStateChangingService` (`internal/readonly`): the Observe list contains no state-changing service; adding a read service is a deliberate change of this test.
 - `TestSimIEDOnlyInTests` (`internal/readonly`) and `TestNoWailsNoCgo` (`cmd/iec61850-explorerd`): `go list` checks that neither program depends on the simulated IED, and that the daemon links no Wails and nothing that needs cgo.
-- `.golangci.yml` (forbidigo) bans state-changing go-iec61850 and go-mms calls and MMS servers outside `_test.go` files and `internal/simied`.
+- `.golangci.yml` (forbidigo) bans state-changing go-iec61850 and go-mms calls and MMS servers outside `_test.go` files, `internal/simied` and the engine's `commission*.go` files.
 - `TestConnectRefused`, `TestConnectNotMMS`, `TestClassify` (`internal/engine`): a failed connect names its layer only from the error type.
 - `TestSessionLost`: an IED that goes away makes the session `lost`; reads are refused, the tree stays browsable.
 - `TestReadBatched` (`internal/engine`): several references go out as one MMS Read per batch of 32; a logical-node read is not batched.
@@ -31,6 +31,9 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `TestSnapshotRoundTrip`, `TestExportCSV`: a snapshot reopens with the same tree and answers reads from its values; CSV has one row per leaf value and no spreadsheet formulas.
 - `TestDataSetsLiveMatchSCL`, `TestReportsLiveMatchSCL`: the data sets and report control blocks the simulated IED reports are those its SCL defines; the SCL ones claim no IED state.
 - `TestFilesJournalsSettingGroups`: file listing and download, log entries in a time range, the setting group control block, and only allowed services on the wire.
+- `TestCommissionWriteVerified`, `TestCommissionCapabilities`, `TestCommissionEnds`, `TestCommissionRefused`, `TestAuditAcrossRuns` (`internal/engine`): a grant opens a second association; a write is verified by readback and audited; the Observe association still refuses writes; a grant without `write`, an offline session, an engine without Commission mode or an unwritable audit trail refuse; expiry, close, loss and cleanup end the grant and are audited; the audit sequence continues across runs.
+- `TestServicesFollowCapabilities` (`internal/commission`): each capability adds only the services it needs; none adds file changes.
+- `TestContractCommission` (`internal/api`): grant, write, audit and revoke behave the same through the engine and the HTTP API, and are refused where Commission mode is not offered.
 - `TestApplyAddressing`, `TestProfilesStore`, `TestProfileEdges`: ISO addressing is validated before dialling; profiles are stored 0600 and atomically.
 - `TestAuthAndHost`, `TestHostCheck`, `TestEventsResume`, `TestEventsEndWhenTokenRotates`, `FuzzRequest` (`internal/api`): token, Host check, SSE replay and resync, rotation.
 

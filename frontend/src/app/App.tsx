@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivityPanel } from './components/ActivityPanel';
+import { AuditPanel, CommissionBanner, GrantDialog } from './components/Commission';
 import { ConnectError } from './components/ConnectError';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { DeviceTree } from './components/DeviceTree';
@@ -26,7 +27,7 @@ interface AppProps {
   platform: Platform;
 }
 
-type BottomTab = 'watch' | 'activity';
+type BottomTab = 'watch' | 'activity' | 'audit';
 
 export function App({ service, platform }: AppProps) {
   const explorer = useExplorer(service);
@@ -37,6 +38,8 @@ export function App({ service, platform }: AppProps) {
   const [formKey, setFormKey] = useState(0);
   const [bottom, setBottom] = useState<BottomTab>('watch');
   const [filesOpen, setFilesOpen] = useState<Record<string, boolean>>({});
+  const [granting, setGranting] = useState<string | null>(null);
+  const commission = state.health?.features.includes('commission') ?? false;
   const offline = state.link !== 'up';
 
   if (state.link === 'unauthorized') {
@@ -87,7 +90,7 @@ export function App({ service, platform }: AppProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <Header mode={platform.mode} theme={theme} onToggleTheme={toggleTheme} />
+      <Header mode={platform.mode} theme={theme} commission={view?.info.mode === 'commission'} onToggleTheme={toggleTheme} />
       <LinkBanner link={state.link} />
       <SessionTabs sessions={views} active={state.active} onActivate={explorer.activate} onClose={(id) => void explorer.close(id)} />
       {state.error && (
@@ -124,8 +127,10 @@ export function App({ service, platform }: AppProps) {
                 info={view.info}
                 filesOpen={filesOpen[view.info.id] === true}
                 onToggleFiles={() => setFilesOpen((f) => ({ ...f, [view.info.id]: !f[view.info.id] }))}
+                onCommission={commission && !offline ? () => setGranting(view.info.id) : undefined}
                 onClose={() => void explorer.close(view.info.id)}
               />
+              <CommissionBanner session={view.info} onRevoke={() => void explorer.revokeCommission(view.info.id)} />
               {view.info.state === 'lost' && view.info.error && (
                 <div className="flex shrink-0 items-center gap-2 border-b border-wire px-4 py-2 text-wire" role="alert">
                   <ErrorIcon />
@@ -174,6 +179,11 @@ export function App({ service, platform }: AppProps) {
                     onRead={(refs) => void explorer.read(view.info.id, refs)}
                     onWatch={(ref, on) => void explorer.watch({ sessionId: view.info.id, ref }, on)}
                     onCopy={(text) => void platform.copyText(text)}
+                    onWrite={
+                      view.info.grant?.capabilities.includes('write') && view.info.state === 'connected'
+                        ? (ref, value, reread) => explorer.write(view.info.id, ref, value, reread)
+                        : undefined
+                    }
                   />
                 ) : (
                   <p className="p-4 text-muted">Select a node in the tree, or search.</p>
@@ -185,7 +195,7 @@ export function App({ service, platform }: AppProps) {
 
         <div className="flex min-h-0 flex-col border-t border-line">
           <div role="tablist" className="flex shrink-0 gap-4 px-4 pt-2">
-            {(['watch', 'activity'] as const).map((tab) => (
+            {(commission ? (['watch', 'activity', 'audit'] as const) : (['watch', 'activity'] as const)).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -194,7 +204,7 @@ export function App({ service, platform }: AppProps) {
                 className={`ot-label cursor-pointer pb-1 ${bottom === tab ? 'border-b-2 border-accent text-accent' : ''}`}
                 onClick={() => setBottom(tab)}
               >
-                {tab === 'watch' ? `Watch (${state.watch.length})` : 'Activity & diagnostics'}
+                {tab === 'watch' ? `Watch (${state.watch.length})` : tab === 'activity' ? 'Activity & diagnostics' : `Audit (${state.audit.length})`}
               </button>
             ))}
           </div>
@@ -213,13 +223,22 @@ export function App({ service, platform }: AppProps) {
                 onRemove={(entry) => void explorer.watch(entry, false)}
                 onExport={(format) => void exportActive(format)}
               />
-            ) : (
+            ) : bottom === 'activity' ? (
               <ActivityPanel activity={state.activity} />
+            ) : (
+              <AuditPanel records={state.audit} label={label} />
             )}
           </div>
         </div>
       </div>
 
+      {granting && state.sessions[granting] && (
+        <GrantDialog
+          session={state.sessions[granting].info}
+          onGrant={(req) => explorer.grantCommission(granting, req)}
+          onCancel={() => setGranting(null)}
+        />
+      )}
       {scl && (
         <SCLDialog
           info={scl.info}

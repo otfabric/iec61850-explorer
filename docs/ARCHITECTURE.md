@@ -102,6 +102,16 @@ Defense in depth:
 
 Subscribing to a report control block writes RCB attributes, so report subscription belongs to Commission mode, not Observe mode. Reading an RCB's configuration does not.
 
+## 5a. Commission mode (ADR 0004)
+
+A session stays in Observe mode for its whole life. `GrantCommission` adds a grant: a reason, a duration (1 to 480 minutes, default 30) and capabilities (`write`, `reports`, `datasets`, `setting-groups`; `controls` is not grantable). The engine opens a *second* association to the same IED whose allow-list is `internal/commission.Services(capabilities)`: the Observe services plus only what the capabilities need (Write; DefineNamedVariableList and DeleteNamedVariableList for data sets). Every state-changing call uses that association; the engine checks the capability before each call, and go-mms refuses a service outside the list.
+
+- **Ends.** Revoke, expiry, a lost Commission association, the session closing or being lost, the engine stopping. Before concluding the association the engine runs its cleanup steps (what it set up for itself, newest first); each is audited, a failed one too.
+- **Audit trail.** `<data dir>/audit/audit-YYYY-MM-DD.jsonl`, mode 0600, appended and synced before the outcome is reported. The sequence continues across runs; the recent 500 records are kept in memory, returned by `Audit` and published as `audit` events. Without a data directory, or when the trail cannot be written, no grant is given.
+- **Writes.** `Write` takes a data attribute with FC SP, CF, DC, SV or BL and the value as text. The engine converts it with the attribute's MMS type (GetVariableAccessAttributes; a FLOAT32 is sent as a single float), reads the value before, writes, reads it back and reports `verified`. The setting group control block (`LLN0.SGCB`, FC SP) is refused: setting groups have their own capability.
+- **Where.** The desktop application offers Commission mode; the daemon only with `--allow-commission`. `Health.features` contains `commission` when it is offered.
+- **Lint.** forbidigo exempts the engine's `commission*.go` files, the only code that holds the Commission association.
+
 ## 6. Diagnostics
 
 - **Operations.** Every user action (`connect`, `discover`, `read`, `close`) is published as an `operation` event with its duration, result and the MMS requests it caused (service, invoke ID, duration, error), from go-mms `Metrics` events. The UI shows them in the activity panel.
@@ -114,7 +124,7 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/v1/health` | Versions, API version, mode, features (`profiles`), uptime, engine time |
+| `GET /api/v1/health` | Versions, API version, mode, features (`profiles`, `commission`), uptime, engine time |
 | `GET /api/v1/sessions`, `POST /api/v1/sessions` | List, open (`{host, port, timeout_ms, addressing}`) |
 | `GET /api/v1/sessions/{id}`, `DELETE ...` | Get, close |
 | `GET /api/v1/sessions/{id}/browse?ref=` | Children of a node; no `ref` lists the logical devices |
@@ -128,12 +138,15 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `GET /api/v1/sessions/{id}/files?dir=`, `GET .../files/download?name=` | The IED's files; a download as `application/octet-stream` |
 | `GET /api/v1/sessions/{id}/journals?ld=`, `POST .../journals/read` | Logs; entries in a time range |
 | `GET /api/v1/sessions/{id}/setting-groups?ld=` | The setting group control block |
+| `PUT /api/v1/sessions/{id}/commission`, `DELETE ...` | Grant Commission mode (`{reason, minutes, capabilities}`), revoke it |
+| `POST /api/v1/sessions/{id}/write` | `{ref, value}` -> the write with the value before and read back; needs the `write` capability |
+| `GET /api/v1/audit?session=&limit=` | Recent audit records, newest first |
 | `POST /api/v1/scl/inspect?name=`, `POST /api/v1/scl/open?name=&ied=&ap=` | Raw SCL body -> description, or an offline session |
 | `GET /api/v1/profiles`, `POST`, `PUT /profiles/{id}`, `DELETE /profiles/{id}` | Connection profiles |
-| `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`); replay from `since` or `Last-Event-ID` |
+| `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`, `audit`); replay from `since` or `Last-Event-ID` |
 | `GET /` and assets | The web UI, unless `--no-ui` |
 
-No endpoint accepts a file path, an MMS PDU, a service name or a value to write. Files arrive as request bodies.
+No endpoint accepts a file path, an MMS PDU or a service name. The only value to write goes through `/write`, which needs a Commission grant. Files arrive as request bodies.
 
 The daemon's security (token lifecycle, Host check, bind rules, target allow-list, data directory checks) is sunspec-explorer's, unchanged; see `SECURITY.md`.
 
@@ -165,7 +178,9 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | M0 (done) | The foundation: engine, Observe mode in the library, daemon and desktop, contract suite, diagnostics groundwork | One service against a simulated IED, identical in desktop and daemon (contract suite) |
 | M1 (done) | Read-only browser: connection profiles and ISO addressing, batched reads, polling and a watch table across IEDs, search, SCL import, snapshots, CSV, the first release | A user connects, finds meaningful points, monitors and exports them without the CLI |
 | M2a (done) | Inspection in Observe mode: data sets, report control blocks, logs, setting groups, the file store; SCL definitions alongside | Everything an IED defines can be seen without changing it |
-| M2b | Commission mode: explicit per-session grant, audit trail; report subscription, dynamic data sets, writes with readback, controls (after the CommandTermination gap is closed), setting group changes | Practical MMS workflows with predictable safety and cleanup |
+| M2b1 (done) | Commission mode foundation: per-session grant on a second association, audit trail, writes with readback | A user changes a set point or configuration value with a verified, recorded write |
+| M2b2 | Report subscription (reserve, enable, GI, cleanup on revoke), dynamic data sets, setting group changes | Practical MMS workflows with predictable safety and cleanup |
+| M2b3 | Controls (direct, SBO, enhanced security), after go-iec61850's client waits for CommandTermination | A control's outcome, including its termination, is shown and audited |
 | M3 | Diagnostics and semantics: SCL/live/snapshot comparison, NSD descriptions, semantic search, integration exports | Introduced mismatches can be diagnosed from visible evidence |
 | M4 | Trace analysis: PCAP/PCAPNG, timelines, application-to-wire correlation | A capture is analysed offline, gaps identified |
 | M5 | Laboratory: evidence bundles, constrained replay on the go-iec61850 server | Repeatable scenarios; unsupported behaviour is not fabricated |

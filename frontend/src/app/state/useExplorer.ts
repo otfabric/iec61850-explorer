@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { toServiceError, type LinkStatus, type Service, type ServiceError } from '../service/service';
 import type {
+  AuditRecord,
   ExplorerEvent,
   ExportFormat,
   FileUpload,
+  GrantRequest,
   Health,
   ModelNode,
   Operation,
@@ -13,10 +15,13 @@ import type {
   SearchResult,
   SessionInfo,
   TargetConfig,
+  WriteResult,
 } from '../service/types';
 
 /** Operations kept in the activity log. */
 export const MAX_ACTIVITY = 200;
+/** Audit records kept in the window. */
+export const MAX_AUDIT = 200;
 
 export interface ActivityEntry {
   seq: number;
@@ -64,6 +69,8 @@ export interface ExplorerState {
   reading: boolean;
   profiles: Profile[];
   activity: ActivityEntry[];
+  /** Recent Commission audit records, newest first. */
+  audit: AuditRecord[];
   error: string | null;
 }
 
@@ -80,6 +87,7 @@ export const initialState: ExplorerState = {
   reading: false,
   profiles: [],
   activity: [],
+  audit: [],
   error: null,
 };
 
@@ -99,6 +107,8 @@ type Action =
   | { type: 'read'; id: string; at: string; source: ReadEntry['source']; values: ReadValue[] }
   | { type: 'watch'; entry: WatchEntry; on: boolean }
   | { type: 'profiles'; profiles: Profile[] }
+  | { type: 'audit'; records: AuditRecord[] }
+  | { type: 'session'; session: SessionInfo }
   | { type: 'event'; event: ExplorerEvent }
   | { type: 'error'; message: string | null };
 
@@ -173,11 +183,22 @@ export function reducer(state: ExplorerState, action: Action): ExplorerState {
     }
     case 'profiles':
       return { ...state, profiles: action.profiles };
+    case 'audit': {
+      // Records from a query and from events may overlap.
+      const seen = new Set(state.audit.map((r) => r.seq));
+      const merged = [...action.records.filter((r) => !seen.has(r.seq)), ...state.audit];
+      return { ...state, audit: merged.sort((a, b) => b.seq - a.seq).slice(0, MAX_AUDIT) };
+    }
+    case 'session':
+      return patchView(state, action.session.id, () => ({ info: action.session }));
     case 'event': {
       const { event } = action;
       if (event.kind === 'operation' && event.operation) {
         const entry = { seq: event.seq, sessionId: event.session_id, operation: event.operation };
         return { ...state, activity: [entry, ...state.activity].slice(0, MAX_ACTIVITY) };
+      }
+      if (event.kind === 'audit' && event.audit) {
+        return reducer(state, { type: 'audit', records: [event.audit] });
       }
       if (event.kind === 'sample' && event.sample) {
         const { sample } = event;
@@ -232,6 +253,12 @@ export function useExplorer(service: Service) {
         dispatch({ type: 'health', health });
         if (health.features.includes('profiles')) {
           void loadProfiles();
+        }
+        if (health.features.includes('commission')) {
+          service.audit({ limit: MAX_AUDIT }).then(
+            (records) => dispatch({ type: 'audit', records }),
+            () => {},
+          );
         }
       },
       () => {},
@@ -418,6 +445,46 @@ export function useExplorer(service: Service) {
     [service, loadProfiles, fail],
   );
 
+  /** Asks for Commission mode; resolves to whether it was granted. */
+  const grantCommission = useCallback(
+    async (id: string, req: GrantRequest) => {
+      try {
+        dispatch({ type: 'session', session: await service.grantCommission(id, req) });
+        return true;
+      } catch (err) {
+        fail(err);
+        return false;
+      }
+    },
+    [service, fail],
+  );
+
+  const revokeCommission = useCallback(
+    async (id: string) => {
+      try {
+        dispatch({ type: 'session', session: await service.revokeCommission(id) });
+      } catch (err) {
+        fail(err);
+      }
+    },
+    [service, fail],
+  );
+
+  /** Writes and reads back; the attribute's FC is read again afterwards. */
+  const write = useCallback(
+    async (id: string, ref: string, value: string, reread: string): Promise<WriteResult | null> => {
+      try {
+        const result = await service.write(id, { ref, value });
+        await read(id, [reread]);
+        return result;
+      } catch (err) {
+        fail(err);
+        return null;
+      }
+    },
+    [service, fail, read],
+  );
+
   const clearError = useCallback(() => dispatch({ type: 'error', message: null }), []);
 
   return {
@@ -436,6 +503,9 @@ export function useExplorer(service: Service) {
     exportSession,
     saveProfile,
     deleteProfile,
+    grantCommission,
+    revokeCommission,
+    write,
     clearError,
     /** Shows an error that happened outside the hook's own actions. */
     report: fail,

@@ -37,7 +37,7 @@ LDFLAGS     = -ldflags "-s -w -X github.com/otfabric/iec61850-explorer/internal/
 # Packages measured by the coverage gate: the engine, the daemon and what they are built
 # from. The Wails shell (cmd/iec61850-explorer, internal/gui) needs a window and is covered
 # by the frontend tests.
-TEST_PKGS     := ./internal/engine/... ./internal/readonly/... ./internal/service/... ./internal/model/... ./internal/buildinfo/... \
+TEST_PKGS     := ./internal/engine/... ./internal/readonly/... ./internal/commission/... ./internal/service/... ./internal/model/... ./internal/buildinfo/... \
 	./internal/api/... ./internal/web/... ./internal/daemon/... ./internal/simied/... ./cmd/iec61850-explorerd/...
 COVERAGE_MIN  := 90
 # Per-package floor (TEST-012): what the weakest package measures now, rounded down.
