@@ -21,7 +21,7 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 
 ## What it does
 
-- **Connect** to an IED (host, port 102 by default) with the ISO addressing it expects: T/S/P selectors, AP-title and AE-qualifier, as in its SCL Address. Save connections as **profiles**.
+- **Connect** to an IED (host, port 102 by default) with the ISO addressing it expects: T/S/P selectors, AP-title and AE-qualifier, as in its SCL Address. Save connections as **profiles**. Reach IEDs **through a proxy** (SOCKS5 or HTTP CONNECT), per connection or by default.
 - **Discover** its model (MMS Identify, then logical devices, logical nodes, data objects and attributes with their functional constraints) and **browse** it in a tree, or **search** it by reference, LN class (`MMXU`, `XCBR`, ...) and FC.
 - **Read** a node under one of its functional constraints. Structures show their component names; a quality is decoded (`good`, `questionable (old-data)`, ...); a timestamp shows its time quality. Every value shows the MMS domain and item ID it was read from, and the equivalent `iec61850ctl get object` command can be copied.
 - **Watch** points from several IEDs in one table and **poll** them (0.5 s to 1 min); the engine polls, so a daemon keeps polling while the browser is away.
@@ -73,6 +73,24 @@ ssh -N -L 8765:127.0.0.1:8765 user@gateway
 ```
 
 The daemon listens on loopback, requires its token even there, checks the Host header and connects only to private and link-local addresses unless `--allow-target` says otherwise. `iec61850-explorerd token rotate` replaces the token. More in [docs/REMOTE-USE.md](docs/REMOTE-USE.md); a systemd unit is in [`packaging/`](packaging/).
+
+## Connecting through a proxy
+
+When the IEDs are reachable only through a jump host or a gateway proxy, the Explorer connects through a SOCKS5 proxy or an HTTP proxy's CONNECT method:
+
+- `socks5://[user:password@]host[:1080]`: the Explorer resolves the IED's host name and sends the address.
+- `socks5h://[user:password@]host[:1080]`: the proxy resolves the IED's host name.
+- `http://[user:password@]host[:8080]`: HTTP CONNECT, with `Proxy-Authorization: Basic` when a user is given; the proxy resolves the name.
+
+The **Proxy** field of the connection form (and of a profile) sets the proxy of one IED; empty uses the **default proxy**, `direct` connects without a proxy even when a default is set. The default proxy is set below the connection form; the desktop application keeps it in its data directory (`settings.json`, mode 0600). A session shows the proxy it connected through, always with the password replaced (`xxxxx`): in the session bar, the API, the logs, events and snapshots. A failed connection through a proxy is reported at the stage `proxy`: the proxy not reachable, a malformed answer, authentication refused, or the proxy refusing the IED (with the SOCKS reply code or the HTTP status).
+
+The daemon takes its default proxy from `--proxy URL` (or `--proxy direct`), else from the environment variable `ALL_PROXY` or `all_proxy`; it logs the one in use at start, without its password. A default the operator sets this way cannot be changed through the API, and the web UI shows it read-only. Without one, users of the daemon may set a default. The target allow-list still applies; see [SECURITY.md](SECURITY.md).
+
+```bash
+iec61850-explorerd --proxy socks5://127.0.0.1:1080   # for example the end of "ssh -D 1080 jump-host"
+```
+
+A password in a proxy URL is stored as given in a profile or the settings file (both mode 0600 in the data directory); use a proxy account for the purpose.
 
 ## Documentation
 

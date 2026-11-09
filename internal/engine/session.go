@@ -24,6 +24,9 @@ type session struct {
 	target   model.TargetConfig
 	timeout  time.Duration
 	openedAt time.Time
+	// proxy is how the IED is reached; target.Proxy holds the setting with
+	// the password replaced.
+	proxy proxyChoice
 
 	mu     sync.Mutex
 	client *iec61850.Client
@@ -74,6 +77,9 @@ func (s *session) info() model.SessionInfo {
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
 		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr, SCL: s.scl,
 		Snapshot: s.snapshot,
+	}
+	if s.proxy.cfg != nil {
+		info.Proxy = s.proxy.cfg.Redacted()
 	}
 	if s.grant != nil {
 		g := s.grant.infoCopy()

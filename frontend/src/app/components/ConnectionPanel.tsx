@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { ConnectIcon, FileIcon } from '../icons';
-import type { Addressing, FileUpload, Profile, TargetConfig } from '../service/types';
+import { PROXY_DIRECT, type Addressing, type FileUpload, type Profile, type Settings, type TargetConfig } from '../service/types';
 import { readUpload } from './files';
 import { Button, Field, TextInput } from './ui';
 
@@ -16,6 +16,66 @@ interface ConnectionPanelProps {
   onDeleteProfile: (id: string) => void;
   onOpenSCL: (file: FileUpload) => void;
   onOpenSnapshot: (file: FileUpload) => void;
+  /** The engine's settings; null while unknown. */
+  settings: Settings | null;
+  /** Saves the default proxy; resolves to whether it was saved. */
+  onSaveSettings: (settings: Settings) => Promise<boolean>;
+}
+
+/** What an empty Proxy field means, for its placeholder. */
+export function proxyPlaceholder(settings: Settings | null): string {
+  const def = settings?.default_proxy ?? '';
+  if (def === '' || def === PROXY_DIRECT) {
+    return 'direct (no default proxy)';
+  }
+  return `default: ${def}`;
+}
+
+/** The default proxy: editable, or read-only when the daemon's operator set it. */
+function DefaultProxy({ settings, onSave }: { settings: Settings; onSave: (s: Settings) => Promise<boolean> }) {
+  const [value, setValue] = useState(settings.default_proxy);
+  const [saved, setSaved] = useState(false);
+  if (settings.default_proxy_locked) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded border border-line p-4">
+        <span className="ot-label">Default proxy</span>
+        <span className="font-mono text-fg-strong" aria-label="Default proxy">
+          {settings.default_proxy}
+        </span>
+        <span className="text-[12px] text-muted">Set by the daemon&apos;s operator (--proxy); it cannot be changed here.</span>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="flex flex-wrap items-end gap-3 rounded border border-line p-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSave({ default_proxy: value.trim(), default_proxy_locked: false }).then(setSaved);
+      }}
+    >
+      <Field label="Default proxy">
+        <TextInput
+          aria-label="Default proxy"
+          value={value}
+          placeholder="none, or socks5://host:1080"
+          className="w-80"
+          onChange={(e) => {
+            setValue(e.target.value);
+            setSaved(false);
+          }}
+        />
+      </Field>
+      <Button type="submit" disabled={value.trim() === settings.default_proxy}>
+        Save default
+      </Button>
+      {saved && <span className="text-[12px] text-accent">Saved</span>}
+      <p className="w-full text-[12px] text-muted">
+        Used for every IED whose Proxy field is empty. socks5:// resolves the IED&apos;s name here, socks5h:// and http:// (CONNECT) let the proxy resolve
+        it. A user:password in the URL is stored in the settings file of the data directory.
+      </p>
+    </form>
+  );
 }
 
 const ADDRESS_FIELDS: { key: keyof Addressing; label: string; placeholder: string; numeric?: boolean }[] = [
@@ -59,6 +119,7 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
   const [host, setHost] = useState(props.initial?.host ?? '');
   const [port, setPort] = useState(String(props.initial?.port ?? 102));
   const [address, setAddress] = useState<AddressForm>(toForm(props.initial?.addressing));
+  const [proxy, setProxy] = useState(props.initial?.proxy ?? '');
   const [profileId, setProfileId] = useState('');
   const [profileName, setProfileName] = useState('');
   const sclInput = useRef<HTMLInputElement>(null);
@@ -66,7 +127,13 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
 
   function target(): TargetConfig {
     const p = Number(port);
-    return { host: host.trim(), port: Number.isInteger(p) && p > 0 ? p : undefined, addressing: fromForm(address) };
+    const via = proxy.trim();
+    return {
+      host: host.trim(),
+      port: Number.isInteger(p) && p > 0 ? p : undefined,
+      addressing: fromForm(address),
+      ...(via !== '' ? { proxy: via } : {}),
+    };
   }
 
   function choose(id: string) {
@@ -76,6 +143,7 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
       setHost(profile.target.host);
       setPort(String(profile.target.port ?? 102));
       setAddress(toForm(profile.target.addressing));
+      setProxy(profile.target.proxy ?? '');
       setProfileName(profile.name);
     }
   }
@@ -133,6 +201,22 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
             {props.connecting ? 'Connecting…' : 'Connect'}
           </Button>
         </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Proxy">
+            <TextInput
+              aria-label="Proxy"
+              value={proxy}
+              onChange={(e) => setProxy(e.target.value)}
+              placeholder={proxyPlaceholder(props.settings)}
+              className="w-80"
+              list="proxy-options"
+            />
+          </Field>
+          <datalist id="proxy-options">
+            <option value={PROXY_DIRECT}>No proxy, even when a default is set</option>
+          </datalist>
+          <span className="pb-2 text-[12px] text-muted">Empty: the default proxy. direct: none. socks5://, socks5h:// or http://[user:password@]host:port.</span>
+        </div>
         <details>
           <summary className="cursor-pointer text-[13px] text-muted">ISO addressing (selectors, AP-title)</summary>
           <p className="mt-2 text-[12px] text-muted">
@@ -172,6 +256,8 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
           </div>
         )}
       </form>
+
+      {props.settings && <DefaultProxy settings={props.settings} onSave={props.onSaveSettings} />}
 
       <div className="flex flex-wrap items-center gap-3 rounded border border-line p-4">
         <span className="text-muted">Without an IED:</span>

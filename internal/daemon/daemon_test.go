@@ -340,6 +340,12 @@ func TestTargetAllowList(t *testing.T) {
 	if _, err := NewTargetAllowList([]string{"not-a-cidr"}); err == nil {
 		t.Error("bad CIDR accepted")
 	}
+	// AllowAddr checks the address a connection goes to.
+	for addr, want := range map[string]bool{"127.0.0.1": true, "::ffff:127.0.0.9": true, "fe80::1%en0": false, "2001:db8::1%x": true, "8.8.8.8": false} {
+		if err := custom.AllowAddr(netip.MustParseAddr(addr)); (err == nil) != want {
+			t.Errorf("AllowAddr(%s) = %v, want allowed=%v", addr, err, want)
+		}
+	}
 
 	// A name is allowed only when every address behind it is.
 	names := map[string][]netip.Addr{

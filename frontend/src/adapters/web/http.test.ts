@@ -182,4 +182,20 @@ describe('HttpService', () => {
     expect(urlsOf(fetchMock)).toEqual(['/api/v1/sessions/s%201/browse?ref=LD0%2FMMXU1', '/api/v1/sessions/s%201/read']);
     expect((fetchMock.mock.calls[1] as [string, RequestInit])[1]).toMatchObject({ method: 'POST', body: '{"refs":["LD0/MMXU1.Hz[MX]"]}' });
   });
+
+  it('reads and saves the settings at /settings', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => json({ default_proxy: 'direct', default_proxy_locked: false }));
+    vi.stubGlobal('fetch', fetchMock);
+    const service = new HttpService(TOKEN, platform);
+
+    expect(await service.settings()).toEqual({ default_proxy: 'direct', default_proxy_locked: false });
+    await service.saveSettings({ default_proxy: 'direct', default_proxy_locked: false });
+
+    expect(urlsOf(fetchMock)).toEqual(['/api/v1/settings', '/api/v1/settings']);
+    expect((fetchMock.mock.calls[0] as [string, RequestInit])[1]).toMatchObject({ method: 'GET' });
+    expect((fetchMock.mock.calls[1] as [string, RequestInit])[1]).toMatchObject({
+      method: 'PUT',
+      body: '{"default_proxy":"direct","default_proxy_locked":false}',
+    });
+  });
 });

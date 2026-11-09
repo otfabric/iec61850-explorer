@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -51,7 +52,22 @@ type Options struct {
 	MaxSessions int
 	// AllowTarget, when set, is asked before connecting; an error refuses the
 	// target. The daemon restricts targets with it; the desktop GUI does not.
+	// It is also asked for the host of a proxy that is not DefaultProxy, and
+	// with a proxy that resolves host names itself (socks5h, http) the
+	// target must then be an IP address.
 	AllowTarget func(ctx context.Context, host string) error
+	// AllowAddr, when set, is asked for the address a connection actually
+	// goes to, when it is opened: the IED's for a direct connection or a
+	// socks5 proxy that resolves locally, and that of a proxy that is not
+	// DefaultProxy. It closes the gap between AllowTarget's lookup and the
+	// dial (DNS rebinding).
+	AllowAddr func(addr netip.Addr) error
+	// DefaultProxy is the default proxy the operator chose (the daemon's
+	// --proxy or ALL_PROXY): "direct" or a proxy URL. When set it replaces
+	// the user's setting, cannot be changed through the Service and is not
+	// restricted by AllowTarget or AllowAddr. Empty leaves the default to
+	// the user's settings.
+	DefaultProxy string
 	// EventBuffer overrides DefaultEventBuffer.
 	EventBuffer int
 	// DataDir, when set, is where the engine keeps its files (profiles). It
@@ -72,6 +88,8 @@ type Engine struct {
 	store   *profileStore
 	ns      *nsRegistry
 	audit   *auditLog
+	// settings holds the user's default proxy.
+	settings *settingsStore
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -95,11 +113,15 @@ func New(opts Options) *Engine {
 	}
 	e := &Engine{
 		opts: opts, log: log, started: time.Now(), hub: newHub(opts.EventBuffer),
-		sessions: make(map[string]*session),
+		sessions: make(map[string]*session), settings: &settingsStore{},
 	}
 	if opts.DataDir != "" {
 		e.store = &profileStore{path: filepath.Join(opts.DataDir, "profiles.json")}
 		e.audit = newAuditLog(filepath.Join(opts.DataDir, "audit"), e.hub, log.Warn)
+		e.settings.path = filepath.Join(opts.DataDir, "settings.json")
+		if err := e.settings.load(); err != nil {
+			log.Warn("the settings were not loaded", "error", err)
+		}
 	}
 	e.ns = newNSRegistry(opts.DataDir, func(format string, args ...any) { log.Warn(fmt.Sprintf(format, args...)) })
 	return e
@@ -158,6 +180,10 @@ func validateTarget(cfg model.TargetConfig) (model.TargetConfig, time.Duration, 
 	if cfg.Port < 1 || cfg.Port > 65535 {
 		return cfg, 0, service.Errorf(service.CodeInvalidArgument, "port %d is out of range", cfg.Port)
 	}
+	cfg.Proxy = normalProxySetting(cfg.Proxy)
+	if _, err := parseProxySetting(cfg.Proxy); err != nil {
+		return cfg, 0, service.Errorf(service.CodeInvalidArgument, "proxy: %v", err)
+	}
 	timeout := DefaultTimeout
 	if cfg.TimeoutMS != 0 {
 		timeout = time.Duration(cfg.TimeoutMS) * time.Millisecond
@@ -174,10 +200,12 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	if err != nil {
 		return model.SessionInfo{}, err
 	}
-	if e.opts.AllowTarget != nil {
-		if err := e.opts.AllowTarget(ctx, cfg.Host); err != nil {
-			return model.SessionInfo{}, service.Errorf(service.CodeNotAllowed, "%v", err)
-		}
+	via, err := e.chooseProxy(cfg.Proxy)
+	if err != nil {
+		return model.SessionInfo{}, err
+	}
+	if err := e.allowTarget(ctx, cfg.Host, via); err != nil {
+		return model.SessionInfo{}, err
 	}
 	e.mu.Lock()
 	switch {
@@ -193,7 +221,9 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	s := &session{
 		id: newID(), target: cfg, timeout: timeout, openedAt: time.Now().UTC(),
 		rec: &recorder{}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
+		proxy: via,
 	}
+	s.target.Proxy = redactProxySetting(cfg.Proxy)
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	if err := applyAddressing(cfg.Addressing, &mms.DialOptions{}); err != nil {
 		return model.SessionInfo{}, err
@@ -248,7 +278,7 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	go e.watch(s)
 	info := s.info()
 	e.hub.publish(model.Event{Kind: model.EventSession, SessionID: s.id, Session: &info})
-	e.log.Info("session opened", "session", s.id, "addr", addr,
+	e.log.Info("session opened", "session", s.id, "addr", addr, "proxy", info.Proxy,
 		"lds", s.summary.LogicalDevices, "lns", s.summary.LogicalNodes)
 	return info, nil
 }
@@ -266,6 +296,7 @@ func (e *Engine) dial(ctx context.Context, s *session, allowed []mms.Service) (*
 		Logger: e.log.With("session", s.id),
 		Cache:  iec61850.CacheLazy,
 		MMS:    mmsOpts,
+		Dialer: e.dialer(s.proxy),
 	})
 }
 

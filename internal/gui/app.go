@@ -315,6 +315,14 @@ func (a *App) DeleteProfile(ctx context.Context, id string) error {
 	return a.svc.DeleteProfile(ctx, id)
 }
 
+// Settings returns the engine's settings (the default proxy).
+func (a *App) Settings(ctx context.Context) (model.Settings, error) { return a.svc.Settings(ctx) }
+
+// SaveSettings changes the engine's settings.
+func (a *App) SaveSettings(ctx context.Context, s model.Settings) (model.Settings, error) {
+	return a.svc.SaveSettings(ctx, s)
+}
+
 // SaveFile asks the user where to save text under the suggested name and
 // writes it there. It returns the chosen path, or "" when the user cancelled.
 // The path comes from the native dialog, never from the frontend.

@@ -26,6 +26,24 @@ export interface TargetConfig {
   /** Defaults to 10000; 100..120000. */
   timeout_ms?: number;
   addressing?: Addressing;
+  /**
+   * The proxy to reach the IED through: left out or '' uses the default
+   * proxy, 'direct' connects without one, else socks5://, socks5h:// or
+   * http://[user:password@]host:port. A session's target shows it with the
+   * password replaced.
+   */
+  proxy?: string;
+}
+
+/** The value of a proxy setting that asks for no proxy. */
+export const PROXY_DIRECT = 'direct';
+
+/** The engine's settings. */
+export interface Settings {
+  /** The proxy for a target that names none: '' or 'direct' for none, else a proxy URL. */
+  default_proxy: string;
+  /** Set by the daemon's operator (--proxy, ALL_PROXY): shown without its password, cannot be changed. */
+  default_proxy_locked: boolean;
 }
 
 /**
@@ -85,6 +103,8 @@ export interface SessionInfo {
   snapshot?: SnapshotOrigin;
   /** Set while the session holds a Commission grant (mode 'commission'). */
   grant?: Grant;
+  /** The proxy the session connected through, password replaced; absent for a direct connection. */
+  proxy?: string;
 }
 
 export interface SCLOrigin {

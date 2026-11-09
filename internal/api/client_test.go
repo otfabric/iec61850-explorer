@@ -282,6 +282,14 @@ func (c *httpService) DeleteProfile(ctx context.Context, id string) error {
 	return c.do(ctx, "DELETE", "/api/v1/profiles/"+url.PathEscape(id), nil, nil)
 }
 
+func (c *httpService) Settings(ctx context.Context) (v model.Settings, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/settings", nil, &v)
+}
+
+func (c *httpService) SaveSettings(ctx context.Context, s model.Settings) (v model.Settings, err error) {
+	return v, c.do(ctx, "PUT", "/api/v1/settings", s, &v)
+}
+
 // Subscribe reads the event stream until ctx ends or the server closes it.
 func (c *httpService) Subscribe(ctx context.Context, sinceSeq uint64) (<-chan model.Event, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.base+"/api/v1/events?since="+strconv.FormatUint(sinceSeq, 10), nil)

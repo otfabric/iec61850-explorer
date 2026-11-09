@@ -33,6 +33,7 @@ import type {
   SelectSGRequest,
   SessionInfo,
   SettingGroups,
+  Settings,
   SubscribeRequest,
   Subscription,
   TargetConfig,
@@ -147,6 +148,10 @@ export interface Service {
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;
   deleteProfile(id: string): Promise<void>;
+  /** The engine's settings: the default proxy. */
+  settings(): Promise<Settings>;
+  /** Changes the settings; refused (not_allowed) when the daemon's operator set the default proxy. */
+  saveSettings(settings: Settings): Promise<Settings>;
   /**
    * Delivers the event stream. Events above sinceSeq that the engine still
    * holds are replayed first; 0 delivers new events only. onLink, when given,

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -75,24 +74,7 @@ func (p *profileStore) save(list []model.Profile) error {
 	if err != nil {
 		return err
 	}
-	dir := filepath.Dir(p.path)
-	tmp, err := os.CreateTemp(dir, ".profiles-*.json")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
-	if err := tmp.Chmod(0o600); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(append(b, '\n')); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), p.path)
+	return writeFileAtomic(p.path, ".profiles-*.json", append(b, '\n'))
 }
 
 func (e *Engine) profiles() (*profileStore, error) {

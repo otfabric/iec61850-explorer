@@ -68,6 +68,18 @@ func (l *TargetAllowList) Allow(ctx context.Context, host string) error {
 	return nil
 }
 
+// AllowAddr reports whether an address is an allowed target. The engine asks
+// it for the address a connection actually goes to, when it is opened, so a
+// host name that resolves differently after Allow (DNS rebinding) is still
+// refused.
+func (l *TargetAllowList) AllowAddr(addr netip.Addr) error {
+	addr = addr.Unmap().WithZone("")
+	if !l.contains(addr) {
+		return fmt.Errorf("%s is outside the daemon's allowed targets (--allow-target)", addr)
+	}
+	return nil
+}
+
 func (l *TargetAllowList) contains(addr netip.Addr) bool {
 	for _, p := range l.prefixes {
 		if p.Contains(addr) {

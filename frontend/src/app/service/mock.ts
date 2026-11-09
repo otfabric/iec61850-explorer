@@ -27,6 +27,7 @@ import type {
   Operation,
   PollConfig,
   Profile,
+  Settings,
   RCB,
   ReadRequest,
   ReadResult,
@@ -101,6 +102,11 @@ export function itemID(ref: string): { domain: string; item_id: string } {
   return { domain, item_id: [ln, fc, ...rest].join('$') };
 }
 
+/** Replaces the password of a proxy URL, as the engine does. */
+function redactProxy(url: string): string {
+  return url.replace(/^([a-z0-9]+:\/\/[^:@/]+):[^@/]*@/i, '$1:xxxxx@');
+}
+
 export const MOCK_SCL = new TextEncoder().encode('<SCL>mock</SCL>');
 
 export class MockService implements Service {
@@ -112,6 +118,7 @@ export class MockService implements Service {
   private listeners = new Set<(event: ExplorerEvent) => void>();
   private pollers = new Map<string, ReturnType<typeof setInterval>>();
   private profileList: Profile[] = [];
+  private settingsValue: Settings = { default_proxy: '', default_proxy_locked: false };
   private auditLog: AuditRecord[] = [];
   private createdSets: DataSet[] = [];
   private actSG = 1;
@@ -148,10 +155,14 @@ export class MockService implements Service {
       this.operation(undefined, { action: 'connect', target: `${cfg.host}:102`, ok: false, error: detail });
       throw new ServiceError('connect_failed', 'cannot connect to unreachable:102: connection refused', detail);
     }
+    const requested = cfg.proxy?.trim() ?? '';
+    const used = requested === '' ? this.settingsValue.default_proxy : requested;
+    const proxy = used === '' || used.toLowerCase() === 'direct' ? undefined : redactProxy(used);
     const session = this.add({
-      target: { ...cfg, port: cfg.port ?? 102 },
+      target: { ...cfg, port: cfg.port ?? 102, ...(cfg.proxy !== undefined ? { proxy: redactProxy(requested) } : {}) },
       state: 'connected',
       identity: { vendor: 'OT Fabric', model: 'Mock IED', revision: '1' },
+      ...(proxy ? { proxy } : {}),
     });
     this.operation(session.id, { action: 'connect', target: `${cfg.host}:${cfg.port ?? 102}`, ok: true });
     return session;
@@ -781,6 +792,27 @@ export class MockService implements Service {
     const saved = { ...profile, id: profile.id || `p${++this.ids}`, updated_at: new Date().toISOString() };
     this.profileList = [...this.profileList.filter((p) => p.id !== saved.id), saved];
     return saved;
+  }
+
+  /** Sets the default proxy as the daemon's operator would (read-only to users). */
+  lockDefaultProxy(proxy: string) {
+    this.settingsValue = { default_proxy: proxy, default_proxy_locked: true };
+  }
+
+  async settings(): Promise<Settings> {
+    return { ...this.settingsValue };
+  }
+
+  async saveSettings(settings: Settings): Promise<Settings> {
+    if (this.settingsValue.default_proxy_locked) {
+      throw new ServiceError('not_allowed', "the default proxy is set by the daemon's operator (--proxy)");
+    }
+    const value = settings.default_proxy.trim();
+    if (value !== '' && value.toLowerCase() !== 'direct' && !/^(socks5h?|http):\/\/[^/?#]+\/?$/i.test(value)) {
+      throw new ServiceError('invalid_argument', 'default proxy: use socks5://, socks5h:// or http://host:port');
+    }
+    this.settingsValue = { default_proxy: value.toLowerCase() === 'direct' ? 'direct' : value, default_proxy_locked: false };
+    return { ...this.settingsValue };
   }
 
   async deleteProfile(id: string): Promise<void> {

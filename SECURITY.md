@@ -58,7 +58,14 @@ Commission mode lets a user change an IED. It is off unless asked for, per sessi
 - **Token.** Every API request needs a bearer token, compared in constant time and accepted in the `Authorization` header only. It is created on the first start, stored in a file with mode 0600, never logged, and shown only by `iec61850-explorerd url` and, when the daemon was started from a terminal, in one line at startup. A daemon under systemd or in a container does not write it: its journal and its logs hold no token. A URL with `#token=` is a credential: do not paste it into chats or tickets.
 - **In the browser** the token arrives in the URL fragment, which is not sent to any server; the page removes it from the address bar and keeps it in memory only: no cookie, no local storage, no query string.
 - **Host check.** Requests that name another host are refused, which stops DNS-rebinding attacks from web pages. No CORS headers are sent; the page's content security policy allows its own origin only.
-- **Targets.** The daemon connects only to the networks it is allowed to (`--allow-target`; by default private and link-local ranges), so that a token holder cannot use a gateway to probe other networks. A host name is checked when the session is opened; a name that later resolves elsewhere is not re-checked.
+- **Targets.** The daemon connects only to the networks it is allowed to (`--allow-target`; by default private and link-local ranges), so that a token holder cannot use a gateway to probe other networks. A host name is checked when the session is opened, for an early error, and the address actually connected to is checked again when the TCP connection is opened, so a name that resolves elsewhere in between (DNS rebinding) is refused.
+- **Proxies.** The allow-list applies to the IED also when it is reached through a proxy:
+  - the operator's default proxy (`--proxy`, `ALL_PROXY`) is trusted: it may lie outside the allow-list, and users of the daemon cannot change it;
+  - a proxy a user of the daemon names (per connection, or as the default when the operator set none) must itself be inside the allow-list, by its host when the session is opened and by its address when connecting; otherwise a token holder could reach any proxy, and through it any network;
+  - with `socks5://` the daemon resolves the IED's name and checks the address it sends to the proxy;
+  - with `socks5h://` and `http://` the proxy resolves the name, so the daemon cannot check where it leads: the IED must then be given as an IP address, and a host name is refused.
+
+  The desktop application has no allow-list.
 - **Other addresses.** Binding anything but loopback needs `--allow-remote-bind`. The listener is plain HTTP: on such an address the token is readable on the network. Use the SSH port forward instead.
 - **Data directory.** Created with mode 0700; a symbolic link, another owner or wider permissions are refused.
 
@@ -75,7 +82,7 @@ SCL files and snapshots come from users and other tools. The engine never opens 
 
 ### Profiles
 
-Connection profiles hold addresses, ISO selectors and notes, no passwords. They are stored in the data directory in a file with mode 0600.
+Connection profiles hold addresses, ISO selectors, notes and a proxy URL. A proxy URL may contain a user name and password; it is stored as given, like the rest of the profile, in a file with mode 0600 in the data directory, and the profile list returns it to whoever may use the engine (the daemon's token holders). The default proxy is kept the same way in `settings.json`. Everywhere else (sessions, events, logs, error messages, snapshots) a proxy password is replaced by `xxxxx`; the operator's default proxy is shown to users of the daemon with its password replaced.
 
 ### Data Read From Devices Is Untrusted Input
 
