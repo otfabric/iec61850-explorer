@@ -4,6 +4,7 @@ package engine
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/otfabric/go-iec61850/scl"
@@ -30,7 +31,18 @@ type sclValue struct {
 // Attributes without a value are left out, and so are arrays. It also
 // gives the active setting group per logical device and the CDC each data
 // object's type declares ("LD/LN.DO").
-func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclValue, map[string]uint8, map[string]string) {
+// sclModel is what an SCL session keeps besides its tree: the configured
+// values, the active setting group per logical device, the CDC of each data
+// object, and the namespaces the file declares (the values of ldNs, lnNs and
+// dataNs attributes, keyed by attribute path such as "LD/LLN0.NamPlt.ldNs").
+type sclModel struct {
+	values map[string]sclValue
+	actSG  map[string]uint8
+	cdcs   map[string]string
+	decls  map[string]string
+}
+
+func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) sclModel {
 	t := doc.DataTypeTemplates
 	lnTypes := map[string]scl.LNodeType{}
 	for _, x := range t.LNodeTypes {
@@ -56,7 +68,7 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclV
 	out := map[string]sclValue{}
 	actSG := map[string]uint8{}
 	cdcs := map[string]string{}
-	r := &valueResolver{doTypes: doTypes, daTypes: daTypes, enums: enums, out: out}
+	r := &valueResolver{doTypes: doTypes, daTypes: daTypes, enums: enums, out: out, decls: map[string]string{}}
 	for _, ld := range ap.Server.LDevices {
 		domain := ldDomain(ied, ld)
 		lns := ld.LNs
@@ -88,7 +100,7 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (map[string]sclV
 			}
 		}
 	}
-	return out, actSG, cdcs
+	return sclModel{values: out, actSG: actSG, cdcs: cdcs, decls: r.decls}
 }
 
 // override is the instance part of a data object or structure: its DAI
@@ -121,7 +133,11 @@ type valueResolver struct {
 	daTypes map[string]scl.DAType
 	enums   map[string]map[string]int
 	out     map[string]sclValue
+	decls   map[string]string
 }
+
+// nsAttributes are the attributes that declare a namespace (FC EX).
+var nsAttributes = []string{"ldNs", "lnNs", "dataNs"}
 
 // maxTypeDepth stops a recursive type definition.
 const maxTypeDepth = 16
@@ -132,7 +148,7 @@ func (r *valueResolver) dataObject(path, typeID string, o override, depth int) {
 		return
 	}
 	for _, da := range dot.DAs {
-		if da.Count > 0 || !isValueFC(da.FC) {
+		if da.Count > 0 || !isValueFC(da.FC) && da.FC != "EX" {
 			continue
 		}
 		r.attribute(path+"."+da.Name, da.FC, da.BType, da.Type, da.Vals, o, da.Name, depth)
@@ -164,6 +180,12 @@ func (r *valueResolver) attribute(path, fc, bType, typeID string, vals []scl.Val
 		vals = d.Vals
 	}
 	if len(vals) == 0 {
+		return
+	}
+	if fc == "EX" {
+		if slices.Contains(nsAttributes, name) {
+			r.decls[path] = trimSCLText(vals[0].Value)
+		}
 		return
 	}
 	v := sclValue{bType: bType, vals: vals}

@@ -10,6 +10,8 @@ import type {
   CompareRequest,
   Comparison,
   Conformance,
+  NamespacePackage,
+  Namespaces,
   Semantics,
   GrantRequest,
   ControlRequest,
@@ -116,6 +118,11 @@ export class HttpService implements Service {
   semantics = (id: string, ref: string) =>
     this.request<Semantics>('GET', `/sessions/${encodeURIComponent(id)}/semantics?ref=${encodeURIComponent(ref)}`);
   conformance = (id: string) => this.request<Conformance>('GET', `/sessions/${encodeURIComponent(id)}/conformance`);
+  namespaces = () => this.request<Namespaces>('GET', '/namespaces');
+  addNamespaces = (file: FileUpload) => this.upload<NamespacePackage>('/namespaces', file, {});
+  removeNamespaces = async (id: string) => {
+    await this.request<unknown>('DELETE', `/namespaces/${encodeURIComponent(id)}`);
+  };
   audit = (query: AuditQuery) =>
     this.request<AuditRecord[]>('GET', `/audit?session=${encodeURIComponent(query.session_id ?? '')}&limit=${query.limit ?? 0}`);
   settingGroups = (id: string, ld: string) =>

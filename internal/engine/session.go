@@ -55,6 +55,11 @@ type session struct {
 	sclActSG  map[string]uint8
 	// sclCDC is the CDC of each data object of an SCL session ("LD/LN.DO").
 	sclCDC map[string]string
+	// sclDecls are the namespaces an SCL session declares (ldNs, lnNs,
+	// dataNs by attribute path), sclSchema its schema version ("1.7" for
+	// a file of Edition 1).
+	sclDecls  map[string]string
+	sclSchema string
 	// snapshot, snapValues and snapAt are set for an offline session opened
 	// from a snapshot.
 	snapshot   *model.SnapshotOrigin

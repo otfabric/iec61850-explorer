@@ -9,6 +9,8 @@ import type {
   CompareRequest,
   Comparison,
   Conformance,
+  NamespacePackage,
+  Namespaces,
   Semantics,
   CreateDataSetRequest,
   DataSet,
@@ -102,6 +104,7 @@ export function itemID(ref: string): { domain: string; item_id: string } {
 export const MOCK_SCL = new TextEncoder().encode('<SCL>mock</SCL>');
 
 export class MockService implements Service {
+  private nsPackages: NamespacePackage[] = [];
   private sessionsById = new Map<string, SessionInfo>();
   private seq = 0;
   private ids = 0;
@@ -722,6 +725,16 @@ export class MockService implements Service {
     this.session(id);
     return {
       namespaces: ['IEC 61850-7-4:2007B6'],
+      declared: [
+        {
+          ref: LD,
+          declared: 'IEC 61850-7-4:2003',
+          source: 'ldNs',
+          checked_against: ['IEC 61850-7-4:2007B6'],
+          edition1: true,
+          note: 'IEC 61850-7-4 Edition 1 (2003): checked against Edition 2',
+        },
+      ],
       findings: [
         { code: 'missing-mandatory-do', severity: 'error', ref: `${LD}/XCBR1.Loc`, message: 'XCBR requires the data object Loc (SPS, presence M)' },
         { code: 'unknown-do', severity: 'info', ref: `${LD}/MMXU1.Private1`, message: 'MMXU does not define the data object Private1' },
@@ -731,6 +744,30 @@ export class MockService implements Service {
       truncated: false,
       duration_ms: 1,
     };
+  }
+
+  async namespaces(): Promise<Namespaces> {
+    return { embedded: ['IEC 61850-7-4:2007B6'], profiles: [], loaded: [...this.nsPackages] };
+  }
+
+  async addNamespaces(file: FileUpload): Promise<NamespacePackage> {
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.nsd')) {
+      throw new ServiceError('invalid_argument', `${file.name}: not an NSD package`);
+    }
+    const pkg: NamespacePackage = {
+      id: `ns${++this.ids}`,
+      file: file.name,
+      sha256: '00',
+      added_at: new Date().toISOString(),
+      namespaces: ['OTF ACME:2026A1'],
+      docs: file.name.endsWith('.zip'),
+    };
+    this.nsPackages.push(pkg);
+    return pkg;
+  }
+
+  async removeNamespaces(id: string): Promise<void> {
+    this.nsPackages = this.nsPackages.filter((p) => p.id !== id);
   }
 
   async profiles(): Promise<Profile[]> {

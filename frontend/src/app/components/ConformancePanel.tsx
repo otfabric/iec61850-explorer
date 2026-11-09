@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { CheckIcon, ErrorIcon } from '../icons';
 import { toServiceError, type Service } from '../service/service';
 import type { Conformance, FindingSeverity, SessionInfo } from '../service/types';
+import { NamespacePackages } from './NamespacePackages';
 import { Button, Chip, Field } from './ui';
 
 const SEVERITIES: FindingSeverity[] = ['error', 'warning', 'info'];
@@ -47,6 +48,7 @@ export function ConformancePanel({ service, session }: { service: Service; sessi
         Mandatory data objects (presence M), logical node classes and data objects the namespace defines, and, for an SCL file, the CDC of each
         data object. Conditional presence is not evaluated.
       </p>
+      <NamespacePackages service={service} onChange={() => setResult(null)} />
       {error && (
         <p className="mt-2 flex items-center gap-2 text-danger" role="alert">
           <ErrorIcon size={16} />
@@ -56,8 +58,22 @@ export function ConformancePanel({ service, session }: { service: Service; sessi
       {result && (
         <>
           <p className="mt-3 text-muted">
-            {result.logical_nodes} logical nodes, {result.data_objects} data objects against {result.namespaces.join(', ')} · {result.duration_ms} ms
+            {result.logical_nodes} logical nodes, {result.data_objects} data objects · {result.duration_ms} ms
           </p>
+          <ul className="mt-2 flex flex-col gap-1 text-[13px]" aria-label="Declared namespaces">
+            {result.declared.map((d) => (
+              <li key={d.ref} className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-fg-strong">{d.ref}</span>
+                <span className="text-muted">
+                  {d.declared ? `declares ${d.declared} (${d.source === 'scl-schema' ? 'from the SCL schema version' : d.source})` : 'declares no namespace'}
+                </span>
+                {d.edition1 && <Chip tone="wire">Edition 1</Chip>}
+                {d.unknown && <Chip tone="wire">not loaded</Chip>}
+                <span className="text-muted">checked against {d.checked_against.join(', ')}</span>
+                {d.note && <span className="w-full pl-4 text-muted">{d.note}</span>}
+              </li>
+            ))}
+          </ul>
           <div className="mt-2 flex flex-wrap items-end gap-3" aria-label="Summary">
             {result.findings.length === 0 && <Chip tone="accent">no findings</Chip>}
             {SEVERITIES.filter((s) => count(s) > 0).map((s) => (

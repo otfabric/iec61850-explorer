@@ -22,8 +22,8 @@ github.com/otfabric/go-cotp v1.3.0 h1:IXfqzdt86GPg6+il9g2GIWLFFmtNuVBMiE2ceLrXJp
 github.com/otfabric/go-cotp v1.3.0/go.mod h1:0XVoeSHnOPj8XWI484tUC2U6dbaKCtVk0z18MipM37s=
 github.com/otfabric/go-iec61850 v1.14.0 h1:rwNH4rxouEWW4Gz+rv9/Ym07keqY18QRmNG2eqLOwEs=
 github.com/otfabric/go-iec61850 v1.14.0/go.mod h1:NEr4IkWGxCeHJgENVjmse6cV+BakfjFJmnhiPp3bHRI=
-github.com/otfabric/go-iec61850-model v0.6.0 h1:fiIBAry52YEmXdUsgMcujC8eL10i5zjfiZJVmJPk7qI=
-github.com/otfabric/go-iec61850-model v0.6.0/go.mod h1:jek8N2XjIQkyIe+nTh292Mzk8oLyoRGOtu2/QObKkwk=
+github.com/otfabric/go-iec61850-model v0.8.2 h1:g0yGeCKDx8LySPUHF2UDvMvYUIKbVCI3CnXxb+qAFW0=
+github.com/otfabric/go-iec61850-model v0.8.2/go.mod h1:jek8N2XjIQkyIe+nTh292Mzk8oLyoRGOtu2/QObKkwk=
 github.com/otfabric/go-mms v1.5.0 h1:JlZ8Q9aOMOiHDzZ98iWkSyeNA86ZJrks40Wd3JRlfO0=
 github.com/otfabric/go-mms v1.5.0/go.mod h1:jnTh0K95bqNCQtdTBkBG/rMmGPeooYoABQa9Sqq3Zio=
 github.com/otfabric/go-tpkt v1.1.0 h1:KTCQePVqqnvDB0A3O4ReRqfa5jJ3jnsEYNUdS91vD4o=

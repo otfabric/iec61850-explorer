@@ -6,6 +6,8 @@ import type {
   CompareRequest,
   Comparison,
   Conformance,
+  NamespacePackage,
+  Namespaces,
   Semantics,
   CreateDataSetRequest,
   DataSet,
@@ -136,6 +138,11 @@ export interface Service {
   semantics(id: string, ref: string): Promise<Semantics>;
   /** The session's model against the namespace: missing mandatory data objects, unknown classes, CDC mismatches. */
   conformance(id: string): Promise<Conformance>;
+  /** The embedded namespace releases and the packages the user loaded. */
+  namespaces(): Promise<Namespaces>;
+  /** Loads a package of namespace definitions (an NSD ZIP archive or one NSD document) and keeps it. */
+  addNamespaces(file: FileUpload): Promise<NamespacePackage>;
+  removeNamespaces(id: string): Promise<void>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

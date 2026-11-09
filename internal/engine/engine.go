@@ -70,6 +70,7 @@ type Engine struct {
 	started time.Time
 	hub     *hub
 	store   *profileStore
+	ns      *nsRegistry
 	audit   *auditLog
 
 	mu       sync.Mutex
@@ -100,6 +101,7 @@ func New(opts Options) *Engine {
 		e.store = &profileStore{path: filepath.Join(opts.DataDir, "profiles.json")}
 		e.audit = newAuditLog(filepath.Join(opts.DataDir, "audit"), e.hub, log.Warn)
 	}
+	e.ns = newNSRegistry(opts.DataDir, func(format string, args ...any) { log.Warn(fmt.Sprintf(format, args...)) })
 	return e
 }
 

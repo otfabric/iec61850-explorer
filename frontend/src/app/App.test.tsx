@@ -269,6 +269,19 @@ describe('App', () => {
     expect(within(panel).getByText(/XCBR requires the data object Loc/)).toBeInTheDocument();
     await user.selectOptions(within(panel).getByLabelText('Severity'), 'info');
     expect(within(panel).queryByText(/XCBR requires/)).not.toBeInTheDocument();
+    const declared = within(panel).getByRole('list', { name: 'Declared namespaces' });
+    expect(within(declared).getByText('Edition 1')).toBeInTheDocument();
+    expect(within(declared).getByText(/declares IEC 61850-7-4:2003 \(ldNs\)/)).toBeInTheDocument();
+
+    // Load a vendor's namespace package, then remove it.
+    const defs = within(panel).getByRole('region', { name: 'Namespace definitions' });
+    await user.upload(within(defs).getByLabelText('NSD package'), new File(['PK'], 'acme.zip'));
+    const loaded = await within(defs).findByRole('list', { name: 'Loaded packages' });
+    expect(within(loaded).getByText('OTF ACME:2026A1')).toBeInTheDocument();
+    await user.upload(within(defs).getByLabelText('NSD package'), new File(['x'], 'notes.xml'));
+    expect(await within(defs).findByRole('alert')).toHaveTextContent('not an NSD package');
+    await user.click(within(defs).getByRole('button', { name: 'Remove acme.zip' }));
+    await waitFor(() => expect(within(defs).queryByRole('list', { name: 'Loaded packages' })).not.toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Model' }));
 
     await user.selectOptions(screen.getByLabelText('Quantity'), 'frequency');

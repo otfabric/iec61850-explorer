@@ -26,24 +26,24 @@ import (
 // sets. A live session's data sets and report control blocks are read from
 // the IED (Observe mode); a snapshot holds none.
 func (e *Engine) exportPoints(ctx context.Context, s *session, format string) (model.ExportFile, error) {
-	p, err := namespace()
-	if err != nil {
+	if _, err := embedded(); err != nil {
 		return model.ExportFile{}, err
 	}
 	nodes := compareNodes(s)
+	profiles := e.newLNProfiles(e.declarationsOf(ctx, s, nodes))
 	lds := valueLDsOf(nodes)
 	dsets, dsReason := definitions(ctx, s, lds, e.DataSets)
 	rcbs, rcbReason := definitions(ctx, s, lds, e.Reports)
 	members, reportsOf := membership(dsets, rcbs)
 
-	res := resolver.New(p)
 	points := []model.Point{}
 	for _, n := range nodes {
 		if !n.leaf || (n.kind != model.NodeDO && n.kind != model.NodeChild) {
 			continue
 		}
 		for _, fc := range n.fcs {
-			points = append(points, point(p, res, n.ref, fc, members, reportsOf))
+			lp := profiles.forRef(n.ref)
+			points = append(points, point(lp.profile, lp.resolver, n.ref, fc, members, reportsOf))
 		}
 	}
 

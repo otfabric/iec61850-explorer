@@ -2,6 +2,8 @@
 
 package model
 
+import "time"
+
 // Semantics is what the IEC 61850 namespace (the NSD of IEC 61850-7-4 and
 // the other standards in go-iec61850-model's default profile) says about a
 // node: its logical node class, data object, common data class (CDC),
@@ -42,6 +44,15 @@ type Semantics struct {
 	// DataObjects lists, for a logical node, the class's data objects and
 	// whether the node has them.
 	DataObjects []NSDDataObject `json:"data_objects,omitempty"`
+	// Declared is the namespace the node's logical device or node
+	// declares, and CheckedAgainst the releases its definitions come from.
+	Declared       string   `json:"declared,omitempty"`
+	CheckedAgainst []string `json:"checked_against,omitempty"`
+	Edition1       bool     `json:"edition1,omitempty"`
+	// Title and Description are the documentation texts of the class or
+	// data object, from a loaded package with NSDoc; not exported.
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
 	// Note says why something is not known.
 	Note string `json:"note,omitempty"`
 }
@@ -74,8 +85,12 @@ const (
 
 // Conformance checks a session's model against the namespace.
 type Conformance struct {
-	Namespaces []string  `json:"namespaces"`
-	Findings   []Finding `json:"findings"`
+	// Namespaces are all releases used; Declared says, per logical device
+	// (and logical node that declares its own), what was declared and
+	// checked.
+	Namespaces []string            `json:"namespaces"`
+	Declared   []DeclaredNamespace `json:"declared"`
+	Findings   []Finding           `json:"findings"`
 	// LogicalNodes and DataObjects count what was checked.
 	LogicalNodes int   `json:"logical_nodes"`
 	DataObjects  int   `json:"data_objects"`
@@ -133,3 +148,67 @@ type PointList struct {
 
 // PointListSchema identifies the JSON point list.
 const PointListSchema = "otfabric.iec61850-explorer.points/v1"
+
+// NamespacePackage is a package of namespace definitions (NSD, IEC
+// 61850-7-7) a user loaded: official releases the Explorer does not embed,
+// or a vendor's extension namespaces. Its documentation texts, when it has
+// them, are shown but never exported.
+type NamespacePackage struct {
+	// ID identifies the package: the start of its SHA-256.
+	ID      string    `json:"id"`
+	File    string    `json:"file"`
+	SHA256  string    `json:"sha256"`
+	AddedAt time.Time `json:"added_at"`
+	// Namespaces are the releases the package defines, such as
+	// "IEC 61850-7-4:2007B4" or a vendor's "ABB:2016A".
+	Namespaces []string `json:"namespaces"`
+	// Docs says the package has documentation texts (NSDoc).
+	Docs bool `json:"docs"`
+}
+
+// Namespaces lists what the engine checks models against.
+type Namespaces struct {
+	// Embedded are the releases built into the Explorer
+	// (go-iec61850-model), Profiles its named selections of them.
+	Embedded []string           `json:"embedded"`
+	Profiles []NamespaceProfile `json:"profiles"`
+	Loaded   []NamespacePackage `json:"loaded"`
+}
+
+// NamespaceProfile is a named selection of embedded releases.
+type NamespaceProfile struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Namespaces  []string `json:"namespaces"`
+}
+
+// MaxNamespaceBytes bounds a namespace package.
+const MaxNamespaceBytes = 32 << 20
+
+// MaxNamespacePackages bounds the loaded packages.
+const MaxNamespacePackages = 64
+
+// DeclaredNamespace is the namespace a logical device (LLN0.NamPlt.ldNs)
+// or a logical node (NamPlt.lnNs, overriding it) declares, and what the
+// check used for it.
+type DeclaredNamespace struct {
+	Ref string `json:"ref"`
+	// Declared is the declaration, empty when there is none.
+	Declared string `json:"declared,omitempty"`
+	// Source is "ldNs", "lnNs", "scl-schema" (no declaration; the SCL
+	// file's schema version) or "none".
+	Source string `json:"source"`
+	// CheckedAgainst lists the releases used.
+	CheckedAgainst []string `json:"checked_against"`
+	// Edition1 marks a device of IEC 61850-7-4 Edition 1 (2003), for which
+	// IEC publishes no namespace definitions: it is checked against
+	// Edition 2, and what Edition 2 added is reported as a warning.
+	Edition1 bool `json:"edition1,omitempty"`
+	// Unknown marks a declaration that is neither embedded nor loaded.
+	Unknown bool   `json:"unknown,omitempty"`
+	Note    string `json:"note,omitempty"`
+}
+
+// FindingNamespaceNotLoaded is a declared namespace that is neither
+// embedded nor loaded.
+const FindingNamespaceNotLoaded = "namespace-not-loaded"

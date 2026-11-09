@@ -264,10 +264,10 @@ func TestNamespaceUnavailable(t *testing.T) {
 	e := newEngine(t)
 	ctx := t.Context()
 	id := openICD(t, e, simied.ICD()).ID
-	saved := loadNamespace
-	reset := func() { nsdOnce, nsdProfile, nsdErr = sync.Once{}, nil, nil }
-	t.Cleanup(func() { loadNamespace = saved; reset() })
-	loadNamespace = func() (*catalog.Profile, error) { return nil, errors.New("broken") }
+	saved := loadEmbedded
+	reset := func() { embeddedOnce, embeddedCat, embeddedErr = sync.Once{}, nil, nil }
+	t.Cleanup(func() { loadEmbedded = saved; reset() })
+	loadEmbedded = func() (*catalog.Catalog, error) { return nil, errors.New("broken") }
 	reset()
 
 	if _, err := e.Semantics(ctx, id, simied.Domain+"/MMXU1"); service.CodeOf(err) != service.CodeInternal {
@@ -282,13 +282,16 @@ func TestNamespaceUnavailable(t *testing.T) {
 	if _, err := e.Export(ctx, id, model.ExportRequest{Format: model.ExportPointsCSV}); service.CodeOf(err) != service.CodeInternal {
 		t.Errorf("Export = %v", err)
 	}
+	if _, err := e.AddNamespaces(ctx, model.File{Name: "acme.nsd", Data: []byte(vendorNSD)}); service.CodeOf(err) != service.CodeInternal {
+		t.Errorf("AddNamespaces = %v", err)
+	}
 	if h, _ := e.Health(ctx); len(h.Quantities) == 0 {
 		t.Error("Health lists no quantities")
 	}
 }
 
 func TestConformanceHelpers(t *testing.T) {
-	p, err := namespace()
+	p, _, err := newEngine(t).ns.profileFor("")
 	if err != nil {
 		t.Fatal(err)
 	}

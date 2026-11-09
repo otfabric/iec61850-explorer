@@ -120,6 +120,7 @@
     <DOType id="LPL_T" cdc="LPL">
       <DA name="vendor" fc="DC" bType="VisString255"><Val>OT Fabric</Val></DA>
       <DA name="swRev" fc="DC" bType="VisString255"><Val>1.0</Val></DA>
+      <DA name="ldNs" fc="EX" bType="VisString255"><Val>IEC 61850-7-4:2007B</Val></DA>
     </DOType>
     <DOType id="SPS_T" cdc="SPS">
       <DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>

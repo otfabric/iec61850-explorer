@@ -34,6 +34,8 @@ export function NamespaceView({ service, sessionId, nodeRef }: { service: Servic
     return null;
   }
   const rows: [string, string | undefined][] = [
+    ['Declared', sem.declared],
+    ['Checked against', sem.checked_against?.join(', ')],
     ['Class', sem.ln_class && `${sem.ln_class}${sem.base ? ` (from ${sem.base})` : ''}${sem.deprecated ? ', deprecated' : ''}`],
     ['Namespace', sem.namespace],
     ['Data object', sem.data_object && `${sem.data_object}${sem.declared_in && sem.declared_in !== sem.ln_class ? ` (declared in ${sem.declared_in})` : ''}`],
@@ -47,7 +49,18 @@ export function NamespaceView({ service, sessionId, nodeRef }: { service: Servic
   return (
     <section aria-label="Namespace" className="mt-4">
       <h3 className="ot-label">Namespace</h3>
+      {sem.edition1 && (
+        <p className="mt-1">
+          <Chip tone="wire">Edition 1</Chip>
+        </p>
+      )}
       {sem.note && <p className="mt-1 text-muted">{sem.note}</p>}
+      {(sem.title || sem.description) && (
+        <p className="mt-1">
+          {sem.title && <span className="font-medium text-fg-strong">{sem.title}. </span>}
+          {sem.description}
+        </p>
+      )}
       <dl className="mt-1 grid grid-cols-[8rem_1fr] gap-x-3 gap-y-0.5 text-[13px]">
         {rows
           .filter(([, v]) => v)

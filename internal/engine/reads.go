@@ -10,7 +10,6 @@ import (
 	"time"
 
 	iec61850 "github.com/otfabric/go-iec61850"
-	"github.com/otfabric/go-iec61850-model/catalog"
 	"github.com/otfabric/go-mms"
 
 	"github.com/otfabric/iec61850-explorer/internal/model"
@@ -205,11 +204,16 @@ func (e *Engine) Search(_ context.Context, id string, q model.SearchQuery) (mode
 	if text == "" && class == "" && fc == "" && q.Kind == "" && quantity == "" {
 		return model.SearchResult{}, service.Errorf(service.CodeInvalidArgument, "an empty search")
 	}
-	var nsd *catalog.Profile
+	// A quantity is matched by the semantic rules of the namespace each
+	// logical node declares in an SCL file; a live session's declarations
+	// would need reads, so it uses the default profile (the rules do not
+	// change between editions).
+	var profiles *lnProfiles
 	if quantity != "" {
-		if nsd, err = namespace(); err != nil {
+		if _, err := embedded(); err != nil {
 			return model.SearchResult{}, err
 		}
+		profiles = e.newLNProfiles(declarations{attrs: s.sclDecls, schema: s.sclSchema})
 	}
 
 	s.mu.Lock()
@@ -223,7 +227,7 @@ func (e *Engine) Search(_ context.Context, id string, q model.SearchQuery) (mode
 			if node.Kind == model.NodeLN {
 				cls = node.LNClass
 			}
-			if matches(node, cls, text, class, fc, q.Kind) && (quantity == "" || node.Kind == model.NodeDO && quantityOf(nsd, node.Ref) == quantity) {
+			if matches(node, cls, text, class, fc, q.Kind) && (quantity == "" || node.Kind == model.NodeDO && quantityOf(profiles.forRef(node.Ref).profile, node.Ref) == quantity) {
 				if len(res.Hits) == limit {
 					res.Truncated = true
 					return false
