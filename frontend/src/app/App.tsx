@@ -146,7 +146,7 @@ export function App({ service, platform }: AppProps) {
                     onSearch={(q) => void explorer.search(view.info.id, q)}
                     onPick={(node) => explorer.select(view.info.id, node)}
                   />
-                  <div className="min-h-0 flex-1 overflow-auto">
+                  <div className="flex min-h-0 flex-1 flex-col">
                     <DeviceTree
                       childrenOf={view.children}
                       expanded={view.expanded}

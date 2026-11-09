@@ -2,6 +2,23 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.6.2
+
+**Date:** 2026-11-09
+**Previous release:** v0.6.1
+
+### Changed
+
+- The device tree is virtualized: only the rows in view are rendered. Expanding a large model completely (34,465 rows for a 2.8 MB vendor CID) no longer blocks the user interface; before, expanding all data objects of that file took one task of 2.2 s.
+- A node picked in the search results is scrolled into view in the tree.
+- Tree rows carry `aria-level`, `aria-setsize` and `aria-posinset` (the flat form of the ARIA tree pattern).
+
+### Dependencies
+
+go-iec61850 v1.12.1, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.6.1
 
 **Date:** 2026-11-09
