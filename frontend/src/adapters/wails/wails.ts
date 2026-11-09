@@ -6,21 +6,27 @@ import type { Mode, Platform } from '../../app/platform/platform';
 import { loadTheme, persistTheme } from '../../app/platform/themeStorage';
 import { ServiceError, toServiceError, type ErrorCode, type Service } from '../../app/service/service';
 import type {
+  DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
+  FileEntry,
   Health,
+  JournalRequest,
+  JournalResult,
   ModelNode,
   OpError,
   PollConfig,
   Profile,
+  RCB,
   ReadRequest,
   ReadResult,
   SCLInfo,
   SearchQuery,
   SearchResult,
   SessionInfo,
+  SettingGroups,
   TargetConfig,
 } from '../../app/service/types';
 
@@ -84,6 +90,15 @@ export class WailsService implements Service {
   inspectSCL = (file: FileUpload) => call<SCLInfo>('InspectSCL', toGoFile(file));
   openSCL = (file: FileUpload, ied: string, accessPoint: string) =>
     call<SessionInfo>('OpenSCL', { file: toGoFile(file), ied, access_point: accessPoint });
+  dataSets = (id: string, ld: string) => call<DataSet[]>('DataSets', id, ld);
+  readDataSet = (id: string, ref: string) => call<ReadResult>('ReadDataSet', id, ref);
+  reports = (id: string, ld: string) => call<RCB[]>('Reports', id, ld);
+  files = (id: string, dir: string) => call<FileEntry[]>('Files', id, dir);
+  // The Go side downloads, shows the native Save dialog and writes the file.
+  saveDeviceFile = async (id: string, name: string) => (await call<string>('SaveDeviceFile', id, name)) !== '';
+  journals = (id: string, ld: string) => call<string[]>('Journals', id, ld);
+  readJournal = (id: string, req: JournalRequest) => call<JournalResult>('ReadJournal', id, req);
+  settingGroups = (id: string, ld: string) => call<SettingGroups>('SettingGroups', id, ld);
   profiles = () => call<Profile[]>('Profiles');
   saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);
   deleteProfile = (id: string) => call<void>('DeleteProfile', id);
@@ -104,6 +119,10 @@ export class WailsPlatform implements Platform {
   /** The Go side shows the native Save dialog and returns the path, or "" when cancelled. */
   async saveFile(name: string, mime: string, text: string): Promise<boolean> {
     return (await call<string>('SaveFile', name, mime, text)) !== '';
+  }
+
+  async saveBlob(name: string, blob: Blob): Promise<boolean> {
+    return this.saveFile(name, blob.type, await blob.text());
   }
 
   openExternal(url: string): void {

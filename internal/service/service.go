@@ -55,6 +55,25 @@ type Service interface {
 	// OpenSnapshot opens an offline session from a snapshot; its reads
 	// return the snapshot's values.
 	OpenSnapshot(ctx context.Context, f model.File) (model.SessionInfo, error)
+	// DataSets lists the data sets of a logical device with their members:
+	// from the IED, or from the SCL file of an offline session.
+	DataSets(ctx context.Context, id, ld string) ([]model.DataSet, error)
+	// ReadDataSet reads all members of a data set with one request.
+	ReadDataSet(ctx context.Context, id, ref string) (model.ReadResult, error)
+	// Reports lists the report control blocks of a logical device with
+	// their configuration.
+	Reports(ctx context.Context, id, ld string) ([]model.RCB, error)
+	// Files lists the IED's files under a directory ("" is the root).
+	Files(ctx context.Context, id, dir string) ([]model.FileEntry, error)
+	// ReadFile downloads a file, at most model.MaxFileBytes.
+	ReadFile(ctx context.Context, id, name string) (model.FileContent, error)
+	// Journals lists the journals (logs) of a logical device.
+	Journals(ctx context.Context, id, ld string) ([]string, error)
+	// ReadJournal reads journal entries in a time range.
+	ReadJournal(ctx context.Context, id string, req model.JournalRequest) (model.JournalResult, error)
+	// SettingGroups reads the setting group control block of a logical
+	// device.
+	SettingGroups(ctx context.Context, id, ld string) (model.SettingGroups, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.
@@ -79,6 +98,9 @@ const (
 	// CodeDiscoveryFailed means the association stood but the model could
 	// not be listed.
 	CodeDiscoveryFailed = "discovery_failed"
+	// CodeIEDError means the IED answered a request with an error, or the
+	// exchange failed. Detail holds the classified error.
+	CodeIEDError = "ied_error"
 	// CodeSessionLost means the session's association ended.
 	CodeSessionLost = "session_lost"
 	// CodeUnauthorized means the request carried no valid bearer token, or a

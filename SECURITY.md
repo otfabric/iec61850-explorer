@@ -26,13 +26,13 @@ We will acknowledge your report within 48 hours and aim to provide a fix or miti
 
 ### Observe Mode: The Explorer Does Not Change the IED
 
-In this version the Explorer only discovers and reads. It never sends a Write, a control (Select, Operate, Cancel), a report control block change, a dataset definition or deletion, a setting-group change or a file operation. This is enforced, not a convention:
+In this version the Explorer only discovers and reads. It never sends a Write, a control (Select, Operate, Cancel), a report control block change, a data set definition or deletion, a setting-group change, or a file rename, deletion or transfer. This is enforced, not a convention:
 
-- every MMS client the engine creates is restricted by go-mms's service allow-list (`DialOptions.AllowedServices`) to Identify, Status, GetNameList, Read, GetVariableAccessAttributes and GetNamedVariableListAttributes: the client refuses anything else before it reaches the wire (`internal/readonly`);
+- every MMS client the engine creates is restricted by go-mms's service allow-list (`DialOptions.AllowedServices`) to Identify, Status, GetNameList, Read, GetVariableAccessAttributes, GetNamedVariableListAttributes, FileDirectory, FileOpen, FileRead, FileClose and ReadJournal: the client refuses anything else before it reaches the wire (`internal/readonly`). FileOpen and FileClose only open and release a read state for one download;
 - the linter fails the build when non-test code calls a state-changing go-iec61850 or go-mms method or creates an MMS server (`.golangci.yml`);
 - a test runs every workflow against a simulated IED that counts the services it receives, and asserts that only those services arrive.
 
-Reading still costs the IED some work, and it opens one MMS association per session: an IED that accepts few associations may refuse other clients while the Explorer is connected.
+Reading still costs the IED some work (a large log or file download most of all), and it opens one MMS association per session: an IED that accepts few associations may refuse other clients while the Explorer is connected.
 
 No interface of the Explorer accepts a raw MMS PDU, a service name, a value to write or a file path.
 

@@ -2,6 +2,32 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.2.0
+
+**Date:** 2026-11-08
+**Previous release:** v0.1.0
+
+Inspection: everything a logical device defines can be seen, still without changing the IED.
+
+### Added
+
+- **Data sets** of a logical device with their members (FC-qualified references and MMS names); read a data set with one request, or pin all its members to the watch table.
+- **Report control blocks** with their configuration: RptID, DatSet, ConfRev, TrgOps, OptFlds, BufTm, IntgPd, and from the IED RptEna, Resv or ResvTms, SqNum, GI, Owner, EntryID. An enabled one is marked as possibly owned by another client.
+- **Logs** (journals): entries in the last hour, day or week.
+- **Setting groups**: the setting group control block (number of groups, active and edit group).
+- **Files** of the IED: list and download, at most 64 MiB (desktop: native Save dialog; browser: a download).
+- From an **SCL file**, data sets and report control blocks as the file defines them, marked as such and without IED-only state.
+
+### Changed
+
+- Observe mode now allows the read services FileDirectory, FileOpen, FileRead, FileClose and ReadJournal. FileOpen and FileClose open and release a read state for one download; FileRename, FileDelete and ObtainFile stay refused.
+
+### Known limitations
+
+- No Commission mode yet (M2b): no report subscription, writes, controls or setting group changes.
+
+---
+
 ## v0.1.0
 
 **Date:** 2026-11-08

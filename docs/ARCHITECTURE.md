@@ -52,6 +52,14 @@ type Service interface {
     OpenSnapshot(ctx, model.File) (model.SessionInfo, error)        // offline session from a snapshot
     InspectSCL(ctx, model.File) (model.SCLInfo, error)              // IEDs, access points with their address, findings
     OpenSCL(ctx, model.OpenSCLRequest) (model.SessionInfo, error)   // offline session from an SCL data model
+    DataSets(ctx, id, ld) ([]model.DataSet, error)                  // IED, or the SCL of an offline session
+    ReadDataSet(ctx, id, ref) (model.ReadResult, error)             // one MMS Read of the named variable list
+    Reports(ctx, id, ld) ([]model.RCB, error)                       // RCB configuration, IED or SCL
+    Files(ctx, id, dir) ([]model.FileEntry, error)
+    ReadFile(ctx, id, name) (model.FileContent, error)              // at most 64 MiB
+    Journals(ctx, id, ld) ([]string, error)
+    ReadJournal(ctx, id, model.JournalRequest) (model.JournalResult, error)
+    SettingGroups(ctx, id, ld) (model.SettingGroups, error)
     Profiles(ctx) ([]model.Profile, error)
     SaveProfile(ctx, model.Profile) (model.Profile, error)
     DeleteProfile(ctx, id) error
@@ -72,6 +80,7 @@ A live session = target + one go-iec61850 client (one MMS association) + the mod
 - **SCL.** `InspectSCL` lists the IEDs and access points of a file the user chose, with the address the Communication section gives (IP, OSI selectors, AP-title, AE-qualifier) as a ready `TargetConfig`, and the parser's findings. `OpenSCL` builds an offline session from one access point's data model (go-iec61850 `scl.Flatten`): logical devices by their MMS domain names (`LDevice@ldName` or IED name + inst), logical nodes, data objects and attributes with their FCs. Control blocks (reports, logs, GOOSE, setting groups) are not built from SCL: their attributes depend on edition and server. `TestOpenSCLMatchesDiscovery` checks that the data model equals the live discovery of the simulated IED. The engine never reads a path: the window reads the file the user chose and hands over its bytes (at most 64 MiB).
 - **Snapshots** (`otfabric.iec61850-explorer.snapshot/1`): target, identity, discovery summary, the whole model tree and the values read for the export, each with its MMS name. `OpenSnapshot` opens one as an offline session; reads answer from the stored values and say `source: "snapshot"`.
 - **CSV** export: one row per leaf value (`read_at, ref, component, mms_domain, mms_item_id, type, value, validity, error`); text that a spreadsheet would take for a formula is prefixed with `'`.
+- **Inspection** (M2a) of a logical device: data sets with their members, report control blocks with their configuration (RptID, DatSet, ConfRev, TrgOps, OptFlds, BufTm, IntgPd; from the IED also RptEna, Resv or ResvTms, SqNum, GI, Owner, EntryID), logs (journals) read by time range, the setting group control block, and the IED's file store with downloads. Each is one operation. For an offline SCL session, data sets and report control blocks come from the file (`source: "scl"`) and claim nothing only the IED knows (no RptEna, no Owner); `TestDataSetsLiveMatchSCL` and `TestReportsLiveMatchSCL` check that the simulated IED reports what its SCL defines. An enabled RCB is shown as possibly owned by another client: the Explorer does not subscribe in Observe mode.
 - **Profiles** are kept by the engine in `<data-dir>/profiles.json` (0600, written atomically). The desktop application's data directory is the user's configuration directory (`iec61850-explorer`); the daemon's is its `--data-dir`.
 
 Connecting:
@@ -83,7 +92,7 @@ Connecting:
 
 ## 5. Observe mode
 
-Every MMS client the engine creates sets `mms.DialOptions.AllowedServices` to `internal/readonly.Services`: Identify, Status, GetNameList, Read, GetVariableAccessAttributes, GetNamedVariableListAttributes. go-mms checks the list in `sendConfirmed`, the one function every confirmed request passes through, and refuses anything else before the transport (`mms.ErrServiceNotAllowed`); the association stays usable. Association control (Initiate, Conclude, Abort) is not a confirmed service.
+Every MMS client the engine creates sets `mms.DialOptions.AllowedServices` to `internal/readonly.Services`: Identify, Status, GetNameList, Read, GetVariableAccessAttributes, GetNamedVariableListAttributes, FileDirectory, FileOpen, FileRead, FileClose, ReadJournal. FileOpen and FileClose open and release a file read state machine for one download (ISO 9506-2 annex D); they change nothing the IED stores. FileRename, FileDelete and ObtainFile stay out. go-mms checks the list in `sendConfirmed`, the one function every confirmed request passes through, and refuses anything else before the transport (`mms.ErrServiceNotAllowed`); the association stays usable. Association control (Initiate, Conclude, Abort) is not a confirmed service.
 
 Defense in depth:
 
@@ -114,6 +123,11 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `PUT /api/v1/sessions/{id}/polling`, `DELETE ...` | Start (`{refs, interval_ms}`, replaces) or stop polling |
 | `POST /api/v1/sessions/{id}/export` | `{format: snapshot or csv, refs}` -> `{name, mime, text}`; the client saves the text |
 | `POST /api/v1/snapshots/open?name=` | Raw snapshot body -> offline session |
+| `GET /api/v1/sessions/{id}/datasets?ld=`, `POST .../datasets/read` (`{ref}`) | Data sets with members; read one |
+| `GET /api/v1/sessions/{id}/reports?ld=` | Report control blocks with their configuration |
+| `GET /api/v1/sessions/{id}/files?dir=`, `GET .../files/download?name=` | The IED's files; a download as `application/octet-stream` |
+| `GET /api/v1/sessions/{id}/journals?ld=`, `POST .../journals/read` | Logs; entries in a time range |
+| `GET /api/v1/sessions/{id}/setting-groups?ld=` | The setting group control block |
 | `POST /api/v1/scl/inspect?name=`, `POST /api/v1/scl/open?name=&ied=&ap=` | Raw SCL body -> description, or an offline session |
 | `GET /api/v1/profiles`, `POST`, `PUT /profiles/{id}`, `DELETE /profiles/{id}` | Connection profiles |
 | `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`); replay from `since` or `Last-Event-ID` |
@@ -134,10 +148,10 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | Connect failure stages | Typed errors per layer (COTP rejection with reason, `ProtocolError.Phase`, ACSE rejection, negotiation) | Done for what the types tell; an undifferentiated error gets no stage |
 | Self-description, browse, typed reads | `TreeWithOptions{IncludeFCs}`, `ReadRaw`, `GetVariableType`, `ReadMultiple` | Batched reads since M1 |
 | Model cache across runs | Gap: in-memory only | Snapshots (M1) are the Explorer's own versioned files |
-| Datasets | `ListDataSets`, `GetDataSet`, `ReadDataSet`; create/delete | M2 dataset explorer; create/delete in Commission mode |
+| Datasets | `ListDataSets`, `GetDataSet`, `ReadDataSet`; create/delete | Inspection since M2a; create/delete in Commission mode (M2b) |
 | Reports | RCB read/write, subscription; gap: single-client ownership assumed | M2: ownership-aware, conservative RCB workflows |
 | Enhanced-security controls | Gap: the client does not wait for or surface CommandTermination; no time-activated operate | Close in go-iec61850 before advanced controls are offered |
-| Setting groups, files, journals | Client APIs present | M2; file and journal reads join `readonly.Services` deliberately |
+| Setting groups, files, journals | Client APIs present | Reading since M2a (file and journal reads joined `readonly.Services`); changes in Commission mode (M2b) |
 | SCL | Parser, `Flatten`, semantic validation; gaps: `Inputs`, `ExtRef`, `ClientLN` not normalised, no XSD validation | Import and offline browsing since M1; flow analysis waits for the normalisation |
 | GOOSE/SV live capture | Linux and macOS raw Ethernet; gap: Windows `ErrUnsupportedPlatform` | PCAP import first |
 | Semantics | go-iec61850-model: NSD catalog, reference resolution, search | M3 semantic view and search |
@@ -150,7 +164,8 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 |---|---|---|
 | M0 (done) | The foundation: engine, Observe mode in the library, daemon and desktop, contract suite, diagnostics groundwork | One service against a simulated IED, identical in desktop and daemon (contract suite) |
 | M1 (done) | Read-only browser: connection profiles and ISO addressing, batched reads, polling and a watch table across IEDs, search, SCL import, snapshots, CSV, the first release | A user connects, finds meaningful points, monitors and exports them without the CLI |
-| M2 | Commission tools: datasets, RCBs, files, journals, controls, setting groups, explicit Commission mode, audit trail | Practical MMS workflows with predictable safety and cleanup |
+| M2a (done) | Inspection in Observe mode: data sets, report control blocks, logs, setting groups, the file store; SCL definitions alongside | Everything an IED defines can be seen without changing it |
+| M2b | Commission mode: explicit per-session grant, audit trail; report subscription, dynamic data sets, writes with readback, controls (after the CommandTermination gap is closed), setting group changes | Practical MMS workflows with predictable safety and cleanup |
 | M3 | Diagnostics and semantics: SCL/live/snapshot comparison, NSD descriptions, semantic search, integration exports | Introduced mismatches can be diagnosed from visible evidence |
 | M4 | Trace analysis: PCAP/PCAPNG, timelines, application-to-wire correlation | A capture is analysed offline, gaps identified |
 | M5 | Laboratory: evidence bundles, constrained replay on the go-iec61850 server | Repeatable scenarios; unsupported behaviour is not fabricated |

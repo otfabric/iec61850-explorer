@@ -14,7 +14,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io/fs"
 	"maps"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,8 +67,9 @@ func Start() (*IED, error) {
 	}
 	counter := &serviceCounter{counts: make(map[mms.Service]int)}
 	srv, err := iec61850.NewServer(model, iec61850.ServerOptions{
-		Identity: &iec61850.ServerIdentity{Vendor: "OT Fabric", Model: "Explorer demo IED", Revision: "1"},
-		MMS:      mms.ServerOptions{Metrics: counter},
+		Identity:     &iec61850.ServerIdentity{Vendor: "OT Fabric", Model: "Explorer demo IED", Revision: "1"},
+		FileProvider: Files,
+		MMS:          mms.ServerOptions{Metrics: counter, JournalProvider: iec61850.NewMemoryJournalProvider()},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("simied: server: %w", err)
@@ -89,6 +93,12 @@ func Start() (*IED, error) {
 	set("LLN0$ST$Mod$stVal", mms.NewInteger(1))
 	set("LLN0$ST$Beh$stVal", mms.NewInteger(1))
 	set("LLN0$ST$Health$stVal", mms.NewInteger(1))
+	srv.EnableReports()
+	srv.EnableJournals()
+	srv.EnableSettingGroups(iec61850.SettingGroupHandler{})
+	// Two changes of the frequency: the log holds them.
+	set("MMXU1$MX$Hz$mag$f", mms.NewFloat(49.998))
+	set("MMXU1$MX$Hz$mag$f", mms.NewFloat(Frequency))
 
 	ln, err := iso.Listen("127.0.0.1:0")
 	if err != nil {
@@ -158,3 +168,70 @@ func (c *serviceCounter) snapshot() map[mms.Service]int {
 
 // ICD returns the SCL document the simulated IED serves.
 func ICD() []byte { return append([]byte(nil), icd...) }
+
+// Files is the IED's file store: a disturbance record and the ICD.
+var Files = fileStore{
+	"COMTRADE/fault1.cfg": []byte("Explorer demo IED,1,1999\n2,1A,1D\n"),
+	"COMTRADE/fault1.dat": []byte("1,0,10,0\n2,500,12,1\n"),
+	"demo.icd":            icd,
+}
+
+// fileStore is a read-only mms.FileProvider over names and contents.
+type fileStore map[string][]byte
+
+type fileHandle struct {
+	data []byte
+	off  int
+}
+
+var filesTime = time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC)
+
+// List implements mms.FileProvider: the files whose name starts with the
+// FileSpec, in name order.
+func (f fileStore) List(_ context.Context, req mms.FileListRequest) (*mms.FileListResult, error) {
+	names := make([]string, 0, len(f))
+	for name := range f {
+		if strings.HasPrefix(name, req.FileSpec) && name > req.ContinueAfter {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	res := &mms.FileListResult{}
+	for _, name := range names {
+		if req.MaxEntries > 0 && len(res.Entries) == req.MaxEntries {
+			res.MoreFollows = true
+			break
+		}
+		res.Entries = append(res.Entries, mms.FileEntry{Name: name, Size: int64(len(f[name])), LastModified: filesTime})
+	}
+	return res, nil
+}
+
+// Open implements mms.FileProvider.
+func (f fileStore) Open(_ context.Context, path string) (mms.FileHandle, mms.FileAttributes, error) {
+	data, ok := f[path]
+	if !ok {
+		return nil, mms.FileAttributes{}, fs.ErrNotExist
+	}
+	return &fileHandle{data: data}, mms.FileAttributes{Size: int64(len(data)), LastModified: filesTime}, nil
+}
+
+// Read implements mms.FileProvider.
+func (fileStore) Read(_ context.Context, h mms.FileHandle, maxBytes int) ([]byte, bool, error) {
+	fh, ok := h.(*fileHandle)
+	if !ok {
+		return nil, false, fmt.Errorf("simied: bad file handle %T", h)
+	}
+	n := min(maxBytes, len(fh.data)-fh.off)
+	chunk := fh.data[fh.off : fh.off+n]
+	fh.off += n
+	return chunk, fh.off < len(fh.data), nil
+}
+
+// Close implements mms.FileProvider.
+func (fileStore) Close(context.Context, mms.FileHandle) error { return nil }
+
+// Delete, Rename and ObtainFile are refused: the files are read-only.
+func (fileStore) Delete(context.Context, string) error             { return fs.ErrPermission }
+func (fileStore) Rename(context.Context, string, string) error     { return fs.ErrPermission }
+func (fileStore) ObtainFile(context.Context, string, string) error { return fs.ErrPermission }

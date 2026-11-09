@@ -237,6 +237,40 @@ func contract(t *testing.T, svc service.Service) {
 		t.Errorf("stop twice = %v", err)
 	}
 
+	// Inspection: data sets, reports, files, journals, setting groups.
+	sets, err := svc.DataSets(ctx, info.ID, simied.Domain)
+	if err != nil || len(sets) != 1 || len(sets[0].Members) != 2 {
+		t.Fatalf("DataSets = %+v, %v", sets, err)
+	}
+	if res, err := svc.ReadDataSet(ctx, info.ID, sets[0].Ref); err != nil || len(res.Values) != 2 || res.Values[0].Value == nil {
+		t.Errorf("ReadDataSet = %+v, %v", res, err)
+	}
+	if _, err := svc.ReadDataSet(ctx, info.ID, simied.Domain+"/LLN0.Nope"); service.CodeOf(err) != service.CodeIEDError {
+		t.Errorf("ReadDataSet unknown = %v", err)
+	}
+	if rcbs, err := svc.Reports(ctx, info.ID, simied.Domain); err != nil || len(rcbs) != 1 || rcbs[0].RptEna == nil {
+		t.Errorf("Reports = %+v, %v", rcbs, err)
+	}
+	if files, err := svc.Files(ctx, info.ID, ""); err != nil || len(files) != 3 {
+		t.Errorf("Files = %+v, %v", files, err)
+	}
+	if f, err := svc.ReadFile(ctx, info.ID, "COMTRADE/fault1.cfg"); err != nil || !strings.HasPrefix(string(f.Data), "Explorer demo IED") {
+		t.Errorf("ReadFile = %q, %v", f.Data, err)
+	}
+	if _, err := svc.ReadFile(ctx, info.ID, "nope"); service.CodeOf(err) != service.CodeIEDError {
+		t.Errorf("ReadFile missing = %v", err)
+	}
+	logs, err := svc.Journals(ctx, info.ID, simied.Domain)
+	if err != nil || len(logs) != 1 {
+		t.Fatalf("Journals = %v, %v", logs, err)
+	}
+	if j, err := svc.ReadJournal(ctx, info.ID, model.JournalRequest{LD: simied.Domain, Journal: logs[0]}); err != nil || len(j.Entries) == 0 {
+		t.Errorf("ReadJournal = %+v, %v", j, err)
+	}
+	if sg, err := svc.SettingGroups(ctx, info.ID, simied.Domain); err != nil || sg.NumOfSGs != 2 {
+		t.Errorf("SettingGroups = %+v, %v", sg, err)
+	}
+
 	// Export a snapshot and open it again.
 	exp, err := svc.Export(ctx, info.ID, model.ExportRequest{Format: model.ExportSnapshot, Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}})
 	if err != nil || !strings.Contains(exp.Text, model.SnapshotSchema) {

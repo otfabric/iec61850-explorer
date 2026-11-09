@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: MIT -->
 <!-- The simulated IED of the Explorer's tests: a small feeder IED with
-     measurements, a breaker, a generic status input and a data set.
+     measurements, a breaker, a generic status input, a data set with a
+     report and a log, and two setting groups.
      Values are set by simied.Start; nothing here describes a real device. -->
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" version="2007" revision="B">
   <Header id="ExplorerDemo" version="1" revision="0"/>
@@ -39,6 +40,11 @@
               <TrgOps dchg="true" period="true" gi="true"/>
               <OptFields seqNum="true" timeStamp="true" reasonCode="true"/>
             </ReportControl>
+            <LogControl name="EventLog" datSet="Meas" logName="EventLog" logEna="true">
+              <TrgOps dchg="true" qchg="true"/>
+            </LogControl>
+            <SettingControl numOfSGs="2" actSG="1"/>
+            <Log name="EventLog"/>
           </LN0>
           <LN lnClass="LPHD" inst="1" lnType="LPHD_T"/>
           <LN lnClass="MMXU" inst="1" lnType="MMXU_T" desc="Feeder measurements"/>

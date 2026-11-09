@@ -93,6 +93,14 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/polling", s.stopPolling)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/export", s.export)
 	api.HandleFunc("POST "+prefix+"/snapshots/open", s.openSnapshot)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/datasets", s.dataSets)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/datasets/read", s.readDataSet)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/reports", s.reports)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/files", s.files)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/files/download", s.downloadFile)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/journals", s.journals)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/journals/read", s.readJournal)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/setting-groups", s.settingGroups)
 	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
 	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
@@ -251,6 +259,87 @@ func (s *server) export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.svc.Export(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) dataSets(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.DataSets(r.Context(), r.PathValue("id"), r.URL.Query().Get("ld"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) readDataSet(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Ref string `json:"ref"`
+	}
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.ReadDataSet(r.Context(), r.PathValue("id"), req.Ref)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) reports(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Reports(r.Context(), r.PathValue("id"), r.URL.Query().Get("ld"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) files(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Files(r.Context(), r.PathValue("id"), r.URL.Query().Get("dir"))
+	s.reply(w, r, v, err)
+}
+
+// downloadFile streams a file of the IED. The name is the IED's; what the
+// browser saves it as is its base name, cleaned.
+func (s *server) downloadFile(w http.ResponseWriter, r *http.Request) {
+	f, err := s.svc.ReadFile(r.Context(), r.PathValue("id"), r.URL.Query().Get("name"))
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	h := w.Header()
+	h.Set("Content-Type", "application/octet-stream")
+	h.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", downloadName(f.Name)))
+	h.Set("Content-Length", strconv.Itoa(len(f.Data)))
+	_, _ = w.Write(f.Data)
+}
+
+// downloadName is the base name of a file of the IED, with anything but
+// letters, digits, dot, dash and underscore replaced.
+func downloadName(name string) string {
+	if i := strings.LastIndexAny(name, "/\\"); i >= 0 {
+		name = name[i+1:]
+	}
+	out := []rune{}
+	for _, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '.', c == '-', c == '_':
+			out = append(out, c)
+		default:
+			out = append(out, '_')
+		}
+	}
+	if s := strings.Trim(string(out), "."); s != "" {
+		return s
+	}
+	return "file"
+}
+
+func (s *server) journals(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Journals(r.Context(), r.PathValue("id"), r.URL.Query().Get("ld"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) readJournal(w http.ResponseWriter, r *http.Request) {
+	var req model.JournalRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.ReadJournal(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) settingGroups(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.SettingGroups(r.Context(), r.PathValue("id"), r.URL.Query().Get("ld"))
 	s.reply(w, r, v, err)
 }
 
@@ -462,7 +551,7 @@ func statusOf(code string) int {
 		return http.StatusNotFound
 	case service.CodeLimitExceeded:
 		return http.StatusTooManyRequests
-	case service.CodeConnectFailed, service.CodeDiscoveryFailed:
+	case service.CodeConnectFailed, service.CodeDiscoveryFailed, service.CodeIEDError:
 		return http.StatusBadGateway
 	case service.CodeSessionLost:
 		return http.StatusConflict

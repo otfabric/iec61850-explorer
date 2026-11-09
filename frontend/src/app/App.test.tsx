@@ -12,6 +12,7 @@ function platform() {
   const host = {
     mode: { kind: 'browser' } as const,
     saveFile: vi.fn(async (_name: string, _mime: string, _text: string) => true),
+    saveBlob: vi.fn(async (_name: string, _blob: Blob) => true),
     openExternal: vi.fn(),
     persistTheme: vi.fn(),
     loadTheme: () => 'dark' as const,
@@ -189,6 +190,55 @@ describe('App', () => {
     expect(await within(watch).findByText('DemoIEDLD0/MMXU1.Hz[MX]')).toBeInTheDocument();
     expect(within(watch).getByRole('button', { name: 'Stop polling' })).toBeInTheDocument();
     await service.stopPolling(session.id);
+  });
+
+  it('inspects a logical device: data sets, reports, logs, setting groups', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await connect(user);
+    await user.click(await screen.findByText('DemoIEDLD0'));
+    const panel = screen.getByRole('region', { name: 'Logical device' });
+    expect(await within(panel).findByText('DemoIEDLD0/LLN0.Meas')).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: 'Read' }));
+    expect(await within(panel).findByText('questionable, old-data')).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: 'Watch all' }));
+    expect(within(screen.getByRole('region', { name: 'Watch' })).getByText('DemoIEDLD0/MMXU1.TotW[MX]')).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('tab', { name: 'Report control blocks' }));
+    expect(await within(panel).findByText('enabled: another client may own it')).toBeInTheDocument();
+    expect(within(panel).getByText('data-changed, GI')).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('tab', { name: 'Logs' }));
+    await user.click(await within(panel).findByRole('button', { name: 'Read log' }));
+    expect(await within(panel).findByText('49.998')).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole('tab', { name: 'Setting groups' }));
+    expect(await within(panel).findByText('Active group')).toBeInTheDocument();
+  });
+
+  it('lists and downloads the files of the IED', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const save = vi.spyOn(service, 'saveDeviceFile');
+    render(<App service={service} platform={platform()} />);
+    await connect(user);
+    await user.click(await screen.findByRole('button', { name: 'Files' }));
+    const files = screen.getByRole('region', { name: 'Files' });
+    await user.click(await within(files).findByRole('button', { name: 'Download COMTRADE/fault1.cfg' }));
+    expect(save).toHaveBeenCalledWith(expect.any(String), 'COMTRADE/fault1.cfg');
+  });
+
+  it('shows the data sets an SCL file defines, without live tabs', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await user.upload(screen.getByLabelText('SCL file'), new File([MOCK_SCL], 'station.scd'));
+    const dialog = await screen.findByRole('dialog', { name: 'SCL file' });
+    await user.click(within(dialog).getAllByRole('button', { name: 'Browse offline' })[0] as HTMLElement);
+    await user.click(await screen.findByText('DemoIEDLD0'));
+    const panel = screen.getByRole('region', { name: 'Logical device' });
+    expect(await within(panel).findByText('from SCL')).toBeInTheDocument();
+    expect(within(panel).queryByRole('tab', { name: 'Logs' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Read' })).not.toBeInTheDocument();
   });
 
   it('builds the equivalent iec61850ctl command', () => {

@@ -3,7 +3,9 @@ import { ActivityPanel } from './components/ActivityPanel';
 import { ConnectError } from './components/ConnectError';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { DeviceTree } from './components/DeviceTree';
+import { FilesPanel } from './components/FilesPanel';
 import { Header } from './components/Header';
+import { LDPanel } from './components/LDPanel';
 import { LinkBanner, NoToken } from './components/LinkStatus';
 import { NodePanel } from './components/NodePanel';
 import { SCLDialog } from './components/SCLDialog';
@@ -34,6 +36,7 @@ export function App({ service, platform }: AppProps) {
   const [initialTarget, setInitialTarget] = useState<TargetConfig | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [bottom, setBottom] = useState<BottomTab>('watch');
+  const [filesOpen, setFilesOpen] = useState<Record<string, boolean>>({});
   const offline = state.link !== 'up';
 
   if (state.link === 'unauthorized') {
@@ -117,7 +120,12 @@ export function App({ service, platform }: AppProps) {
           )}
           {view && (
             <div className="flex h-full min-h-0 flex-col">
-              <SessionBar info={view.info} onClose={() => void explorer.close(view.info.id)} />
+              <SessionBar
+                info={view.info}
+                filesOpen={filesOpen[view.info.id] === true}
+                onToggleFiles={() => setFilesOpen((f) => ({ ...f, [view.info.id]: !f[view.info.id] }))}
+                onClose={() => void explorer.close(view.info.id)}
+              />
               {view.info.state === 'lost' && view.info.error && (
                 <div className="flex shrink-0 items-center gap-2 border-b border-wire px-4 py-2 text-wire" role="alert">
                   <ErrorIcon />
@@ -143,7 +151,19 @@ export function App({ service, platform }: AppProps) {
                     />
                   </div>
                 </div>
-                {view.selected ? (
+                {filesOpen[view.info.id] && view.info.state === 'connected' ? (
+                  <FilesPanel service={service} session={view.info} disabled={offline} />
+                ) : view.selected?.kind === 'ld' ? (
+                  <LDPanel
+                    key={`${view.info.id}|${view.selected.ref}`}
+                    service={service}
+                    session={view.info}
+                    ld={view.selected.ref}
+                    disabled={offline || view.info.state === 'lost'}
+                    watched={(ref) => state.watch.some((w) => watchKey(w) === watchKey({ sessionId: view.info.id, ref }))}
+                    onWatch={(ref, on) => void explorer.watch({ sessionId: view.info.id, ref }, on)}
+                  />
+                ) : view.selected ? (
                   <NodePanel
                     session={view.info}
                     node={view.selected}

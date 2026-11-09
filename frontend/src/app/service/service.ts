@@ -1,21 +1,27 @@
 // TypeScript mirror of internal/service/service.go.
 
 import type {
+  DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
+  FileEntry,
   Health,
+  JournalRequest,
+  JournalResult,
   ModelNode,
   OpError,
   PollConfig,
   Profile,
+  RCB,
   ReadRequest,
   ReadResult,
   SCLInfo,
   SearchQuery,
   SearchResult,
   SessionInfo,
+  SettingGroups,
   TargetConfig,
 } from './types';
 
@@ -79,6 +85,16 @@ export interface Service {
   openSnapshot(file: FileUpload): Promise<SessionInfo>;
   inspectSCL(file: FileUpload): Promise<SCLInfo>;
   openSCL(file: FileUpload, ied: string, accessPoint: string): Promise<SessionInfo>;
+  /** Data sets of a logical device: from the IED, or from the SCL of an offline session. */
+  dataSets(id: string, ld: string): Promise<DataSet[]>;
+  readDataSet(id: string, ref: string): Promise<ReadResult>;
+  reports(id: string, ld: string): Promise<RCB[]>;
+  files(id: string, dir: string): Promise<FileEntry[]>;
+  /** Downloads a file of the IED and saves it where the user wants. Resolves to false when cancelled. */
+  saveDeviceFile(id: string, name: string): Promise<boolean>;
+  journals(id: string, ld: string): Promise<string[]>;
+  readJournal(id: string, req: JournalRequest): Promise<JournalResult>;
+  settingGroups(id: string, ld: string): Promise<SettingGroups>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

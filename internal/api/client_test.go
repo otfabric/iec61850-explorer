@@ -145,6 +145,52 @@ func (c *httpService) OpenSnapshot(ctx context.Context, f model.File) (v model.S
 	return v, c.sclRequest(ctx, "/api/v1/snapshots/open", f, url.Values{}, &v)
 }
 
+func (c *httpService) DataSets(ctx context.Context, id, ld string) (v []model.DataSet, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/datasets?ld="+url.QueryEscape(ld), nil, &v)
+}
+
+func (c *httpService) ReadDataSet(ctx context.Context, id, ref string) (v model.ReadResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/datasets/read", map[string]string{"ref": ref}, &v)
+}
+
+func (c *httpService) Reports(ctx context.Context, id, ld string) (v []model.RCB, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/reports?ld="+url.QueryEscape(ld), nil, &v)
+}
+
+func (c *httpService) Files(ctx context.Context, id, dir string) (v []model.FileEntry, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/files?dir="+url.QueryEscape(dir), nil, &v)
+}
+
+func (c *httpService) ReadFile(ctx context.Context, id, name string) (model.FileContent, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.base+"/api/v1/sessions/"+id+"/files/download?name="+url.QueryEscape(name), nil)
+	if err != nil {
+		return model.FileContent{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	res, err := c.http.Do(req)
+	if err != nil {
+		return model.FileContent{}, err
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode >= 400 {
+		return model.FileContent{}, decodeError(res)
+	}
+	data, err := io.ReadAll(res.Body)
+	return model.FileContent{Name: name, Size: int64(len(data)), Data: data}, err
+}
+
+func (c *httpService) Journals(ctx context.Context, id, ld string) (v []string, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/journals?ld="+url.QueryEscape(ld), nil, &v)
+}
+
+func (c *httpService) ReadJournal(ctx context.Context, id string, r model.JournalRequest) (v model.JournalResult, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/journals/read", r, &v)
+}
+
+func (c *httpService) SettingGroups(ctx context.Context, id, ld string) (v model.SettingGroups, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/setting-groups?ld="+url.QueryEscape(ld), nil, &v)
+}
+
 func (c *httpService) InspectSCL(ctx context.Context, f model.File) (v model.SCLInfo, err error) {
 	return v, c.sclRequest(ctx, "/api/v1/scl/inspect", f, url.Values{}, &v)
 }

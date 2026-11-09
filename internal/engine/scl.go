@@ -168,6 +168,7 @@ func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.Ses
 		s.target = *t
 	}
 	s.setTree(root, time.Since(start))
+	s.sclDataSets, s.sclReports = sclControls(ied, ap)
 	e.sessions[s.id] = s
 	e.order = append(e.order, s.id)
 	info := s.info()
@@ -277,4 +278,121 @@ func sclTree(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) *iec61850.ModelNod
 	}
 	sortTree(root)
 	return root
+}
+
+// ldDomain is the MMS domain of a logical device (IEC 61850-8-1): its
+// ldName, or the IED name followed by its inst.
+func ldDomain(ied *scl.IED, ld scl.LDevice) string {
+	if ld.LdName != "" {
+		return ld.LdName
+	}
+	return ied.Name + ld.Inst
+}
+
+// sclControls reads the data sets and report control blocks an access
+// point's SCL defines, by logical device. An FCDA names its logical device
+// by inst; one of another logical device of the same IED is resolved
+// through the access point.
+func sclControls(ied *scl.IED, ap *scl.AccessPoint) (map[string][]model.DataSet, map[string][]model.RCB) {
+	domains := map[string]string{}
+	for _, ld := range ap.Server.LDevices {
+		domains[ld.Inst] = ldDomain(ied, ld)
+	}
+	dataSets := map[string][]model.DataSet{}
+	reports := map[string][]model.RCB{}
+	for _, ld := range ap.Server.LDevices {
+		domain := ldDomain(ied, ld)
+		lns := []struct {
+			name string
+			ln   *scl.LN
+		}{}
+		if ld.LN0 != nil {
+			lns = append(lns, struct {
+				name string
+				ln   *scl.LN
+			}{"LLN0", ld.LN0})
+		}
+		for i := range ld.LNs {
+			ln := &ld.LNs[i]
+			lns = append(lns, struct {
+				name string
+				ln   *scl.LN
+			}{ln.Prefix + ln.LNClass + ln.Inst, ln})
+		}
+		for _, l := range lns {
+			for _, ds := range l.ln.DataSets {
+				item := l.name + "$" + ds.Name
+				out := model.DataSet{
+					Ref: dataSetRef(domain, item), MMS: model.MMSName{Domain: domain, ItemID: item},
+					Desc: ds.Desc, Source: model.SourceSCL, Members: []model.DataSetMember{},
+				}
+				for _, f := range ds.FCDAs {
+					memberDomain, ok := domains[f.LDInst]
+					if !ok {
+						memberDomain = ied.Name + f.LDInst
+					}
+					path := f.DOName
+					if f.DAName != "" {
+						path += "." + f.DAName
+					}
+					lnName := f.Prefix + f.LNClass + f.LNInst
+					ref := fmt.Sprintf("%s/%s.%s[%s]", memberDomain, lnName, path, f.FC)
+					mmsItem := lnName + "$" + f.FC + "$" + strings.ReplaceAll(path, ".", "$")
+					out.Members = append(out.Members, model.DataSetMember{Ref: ref, MMS: model.MMSName{Domain: memberDomain, ItemID: mmsItem}})
+				}
+				dataSets[domain] = append(dataSets[domain], out)
+			}
+			for _, rc := range l.ln.Reports {
+				fc := "RP"
+				if rc.Buffered {
+					fc = "BR"
+				}
+				item := l.name + "$" + fc + "$" + rc.Name
+				datSet := ""
+				if rc.DatSet != "" {
+					datSet = domain + "/" + l.name + "$" + rc.DatSet
+				}
+				reports[domain] = append(reports[domain], model.RCB{
+					Ref: dataSetRef(domain, item), MMS: model.MMSName{Domain: domain, ItemID: item}, Source: model.SourceSCL,
+					Buffered: rc.Buffered, RptID: rc.RptID, DatSet: datSet, ConfRev: rc.ConfRev,
+					BufTmMS: rc.BufTime, IntgPdMS: rc.IntgPd, OptFlds: sclOptFields(rc.OptFields), TrgOps: sclTrgOps(rc.TrgOps),
+				})
+			}
+		}
+	}
+	return dataSets, reports
+}
+
+// sclOptFields names the optional fields as go-iec61850 names those it
+// reads from an IED, in the same order, so that SCL and IED compare.
+func sclOptFields(o scl.OptFields) []string {
+	out := []string{}
+	for _, f := range []struct {
+		on   bool
+		name string
+	}{
+		{o.SeqNum, "seq-num"}, {o.TimeStamp, "timestamp"}, {o.ReasonCode, "reason-code"}, {o.DataSet, "data-set"},
+		{o.DataRef, "data-ref"}, {o.BufOvfl, "buf-ovfl"}, {o.EntryID, "entry-id"}, {o.ConfigRef, "conf-rev"},
+	} {
+		if f.on {
+			out = append(out, f.name)
+		}
+	}
+	return out
+}
+
+// sclTrgOps names the trigger options as go-iec61850 does.
+func sclTrgOps(t scl.TrgOps) []string {
+	out := []string{}
+	for _, f := range []struct {
+		on   bool
+		name string
+	}{
+		{t.Dchg, "data-changed"}, {t.Qchg, "quality-changed"}, {t.Dupd, "data-update"}, {t.Period, "integrity"}, {t.GI, "GI"},
+	} {
+		if f.on {
+			out = append(out, f.name)
+		}
+	}
+	return out
 }

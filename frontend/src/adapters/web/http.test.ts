@@ -6,6 +6,8 @@ import { takeToken } from './token';
 
 const TOKEN = 's3cr3t-token-0123456789';
 
+const platform = { saveBlob: vi.fn(async (_name: string, _blob: Blob) => true) };
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const frame = (event: Partial<ExplorerEvent>) => `id: ${event.seq}\nevent: ${event.kind}\ndata: ${JSON.stringify(event)}\n\n`;
 
@@ -36,7 +38,7 @@ describe('HttpService', () => {
     const fetchMock = vi.fn(async (url: string) => (url.includes('/events') ? stream(': keep-alive\n\n', true) : json({ status: 'ok' })));
     vi.stubGlobal('fetch', fetchMock);
 
-    const service = new HttpService(takeToken(window));
+    const service = new HttpService(takeToken(window), platform);
     const unsubscribe = service.subscribe(0, () => {});
     await service.health();
     await service.sessions();
@@ -68,7 +70,7 @@ describe('HttpService', () => {
     const events: number[] = [];
     const link: LinkStatus[] = [];
 
-    const unsubscribe = new HttpService(TOKEN).subscribe(0, (event) => events.push(event.seq), (status) => link.push(status));
+    const unsubscribe = new HttpService(TOKEN, platform).subscribe(0, (event) => events.push(event.seq), (status) => link.push(status));
     await vi.advanceTimersByTimeAsync(10_000);
     unsubscribe();
 
@@ -88,7 +90,7 @@ describe('HttpService', () => {
     const link: LinkStatus[] = [];
     const abortSpy = vi.spyOn(AbortController.prototype, 'abort');
 
-    const unsubscribe = new HttpService(TOKEN).subscribe(0, () => {}, (status) => link.push(status));
+    const unsubscribe = new HttpService(TOKEN, platform).subscribe(0, () => {}, (status) => link.push(status));
     await vi.advanceTimersByTimeAsync(44_000);
     expect(abortSpy).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(2_000);
@@ -106,7 +108,7 @@ describe('HttpService', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     const link: LinkStatus[] = [];
-    const service = new HttpService(TOKEN);
+    const service = new HttpService(TOKEN, platform);
     const unsubscribe = service.subscribe(0, () => {}, (status) => link.push(status));
     await vi.advanceTimersByTimeAsync(0);
 
@@ -119,7 +121,7 @@ describe('HttpService', () => {
     const fetchMock = vi.fn(async () => json({ error: { code: 'unauthorized', message: 'invalid token' } }, 401));
     vi.stubGlobal('fetch', fetchMock);
     const link: LinkStatus[] = [];
-    const service = new HttpService('wrong');
+    const service = new HttpService('wrong', platform);
     service.subscribe(0, () => {}, (status) => link.push(status));
 
     await expect(service.health()).rejects.toMatchObject({ code: 'unauthorized', message: 'invalid token' });
@@ -132,7 +134,7 @@ describe('HttpService', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const link: LinkStatus[] = [];
-    const service = new HttpService(null);
+    const service = new HttpService(null, platform);
     service.subscribe(0, () => {}, (status) => link.push(status));
 
     await expect(service.sessions()).rejects.toMatchObject({ code: 'unauthorized' });
@@ -149,15 +151,30 @@ describe('HttpService', () => {
         .mockResolvedValueOnce(json({ error: { code: 'connect_failed', message: 'cannot connect', detail } }, 502))
         .mockResolvedValueOnce(new Response(null, { status: 204 })),
     );
-    const service = new HttpService(TOKEN);
+    const service = new HttpService(TOKEN, platform);
     await expect(service.openSession({ host: '10.0.0.1' })).rejects.toMatchObject({ code: 'connect_failed', detail });
     await expect(service.closeSession('s1')).resolves.toBeUndefined();
+  });
+
+  it('downloads a file of the IED with the token in the header and hands it to the platform', async () => {
+    const fetchMock = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response('cfg', { status: 200, headers: { 'Content-Disposition': 'attachment; filename="fault1.cfg"' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(new HttpService(TOKEN, platform).saveDeviceFile('s1', 'COMTRADE/fault1.cfg')).resolves.toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/sessions/s1/files/download?name=COMTRADE%2Ffault1.cfg');
+    expect(init.headers).toMatchObject({ Authorization: `Bearer ${TOKEN}` });
+    const [name, blob] = platform.saveBlob.mock.calls.at(-1) as [string, Blob];
+    expect(name).toBe('fault1.cfg');
+    expect(await blob.text()).toBe('cfg');
   });
 
   it('browses with the reference as a query parameter and reads with a JSON body', async () => {
     const fetchMock = vi.fn(async (url: string, _init: RequestInit) => json(url.includes('/browse') ? [] : { at: '', duration_ms: 1, values: [] }));
     vi.stubGlobal('fetch', fetchMock);
-    const service = new HttpService(TOKEN);
+    const service = new HttpService(TOKEN, platform);
 
     await service.browse('s 1', 'LD0/MMXU1');
     await service.read('s 1', { refs: ['LD0/MMXU1.Hz[MX]'] });

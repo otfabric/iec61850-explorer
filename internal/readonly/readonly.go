@@ -15,8 +15,14 @@ import (
 )
 
 // Services are the confirmed MMS services of Observe mode. None of them
-// changes the state of the server. Association control (Initiate, Conclude,
-// Abort) is not a confirmed service and is not affected.
+// changes the configuration or the process state of the server.
+// Association control (Initiate, Conclude, Abort) is not a confirmed service
+// and is not affected.
+//
+// FileOpen and FileClose open and release a file read state machine (FRSM)
+// on the server for one download; they are part of reading a file (ISO
+// 9506-2 annex D) and change nothing the IED stores. FileRename, FileDelete
+// and ObtainFile are not here.
 var Services = []mms.Service{
 	mms.ServiceIdentify,
 	mms.ServiceStatus,
@@ -24,6 +30,11 @@ var Services = []mms.Service{
 	mms.ServiceRead,
 	mms.ServiceGetVariableAccessAttributes,
 	mms.ServiceGetNamedVariableListAttributes,
+	mms.ServiceFileDirectory,
+	mms.ServiceFileOpen,
+	mms.ServiceFileRead,
+	mms.ServiceFileClose,
+	mms.ServiceReadJournal,
 }
 
 // Allowed reports whether s is one of Services.

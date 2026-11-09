@@ -71,3 +71,13 @@ func TestM1RequestErrors(t *testing.T) {
 		t.Errorf("huge snapshot = %d", status)
 	}
 }
+
+func TestDownloadName(t *testing.T) {
+	for in, want := range map[string]string{
+		"COMTRADE/fault1.cfg": "fault1.cfg", `C:\\x\\a b.dat`: "a_b.dat", "../..": "file", "": "file", "rel\"ay.txt": "rel_ay.txt",
+	} {
+		if got := api.DownloadName(in); got != want {
+			t.Errorf("DownloadName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
