@@ -15,8 +15,8 @@ import (
 
 // corpusBudget bounds the offline workflow on one IED of a corpus file:
 // open, browse every node, search, list data sets and report control
-// blocks, export a snapshot, open the IED a second time and compare the
-// two. The largest corpus files (2-3 MB vendor CIDs) take well under a
+// blocks, export a snapshot, check conformance, export the point list,
+// open the IED a second time and compare the two. The largest corpus files (2-3 MB vendor CIDs) take well under a
 // second.
 const corpusBudget = 5 * time.Second
 
@@ -104,11 +104,17 @@ func TestSCLCorpusOffline(t *testing.T) {
 					if _, err := e.Export(ctx, s.ID, model.ExportRequest{Format: model.ExportSnapshot}); err != nil {
 						t.Errorf("Export: %v", err)
 					}
+					if _, err := e.Conformance(ctx, s.ID); err != nil {
+						t.Errorf("Conformance: %v", err)
+					}
+					if _, err := e.Export(ctx, s.ID, model.ExportRequest{Format: model.ExportPointsCSV}); err != nil {
+						t.Errorf("points: %v", err)
+					}
 					// The same IED opened twice compares equal.
 					if twin, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: file, IED: ied.Name, AccessPoint: ap.Name}); err != nil {
 						t.Errorf("OpenSCL twin: %v", err)
 					} else {
-						if c, err := e.Compare(ctx, model.CompareRequest{A: s.ID, B: twin.ID}); err != nil || len(c.Differences) != 0 {
+						if c, err := e.Compare(ctx, model.CompareRequest{A: s.ID, B: twin.ID, Values: true}); err != nil || len(c.Differences) != 0 {
 							t.Errorf("Compare with itself: %v, %d differences", err, len(c.Differences))
 						}
 						_ = e.CloseSession(ctx, twin.ID)

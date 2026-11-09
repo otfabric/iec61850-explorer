@@ -8,6 +8,9 @@ package model
 type CompareRequest struct {
 	A string `json:"a"`
 	B string `json:"b"`
+	// Values adds the values of configuration and setting attributes (FC
+	// CF, DC, SP, SG). For a live session this reads them from the IED.
+	Values bool `json:"values,omitempty"`
 }
 
 // Comparison categories.
@@ -15,6 +18,7 @@ const (
 	CompareModel    = "model"
 	CompareDataSets = "datasets"
 	CompareReports  = "reports"
+	CompareValues   = "values"
 )
 
 // Difference kinds.

@@ -49,6 +49,9 @@ func (e *Engine) Compare(ctx context.Context, req model.CompareRequest) (model.C
 	out.Categories = append(out.Categories,
 		c.dataSets(ctx, e, sa, sb, shared),
 		c.reports(ctx, e, sa, sb, shared))
+	if req.Values {
+		out.Categories = append(out.Categories, c.values(ctx, e, sa, sb))
+	}
 
 	out.Differences, out.Truncated = c.diffs, c.truncated
 	if out.Differences == nil {
@@ -93,6 +96,7 @@ type cmpNode struct {
 	kind   string
 	class  string
 	fcs    []string
+	leaf   bool
 }
 
 // compareNodes lists a session's model, depth first, without control
@@ -110,7 +114,7 @@ func compareNodes(s *session) []cmpNode {
 				continue
 			}
 			slices.Sort(fcs)
-			out = append(out, cmpNode{ref: node.Ref, parent: parent, kind: node.Kind, class: node.LNClass, fcs: fcs})
+			out = append(out, cmpNode{ref: node.Ref, parent: parent, kind: node.Kind, class: node.LNClass, fcs: fcs, leaf: len(c.Children) == 0})
 			walk(c, node.Ref)
 		}
 	}

@@ -157,6 +157,31 @@ func (a *App) Compare(ctx context.Context, req model.CompareRequest) (model.Comp
 	return a.svc.Compare(ctx, req)
 }
 
+// Semantics says what the IEC 61850 namespace defines for a node.
+func (a *App) Semantics(ctx context.Context, id, ref string) (model.Semantics, error) {
+	return a.svc.Semantics(ctx, id, ref)
+}
+
+// Conformance checks a session's model against the namespace.
+func (a *App) Conformance(ctx context.Context, id string) (model.Conformance, error) {
+	return a.svc.Conformance(ctx, id)
+}
+
+// Namespaces lists the embedded and loaded namespace definitions.
+func (a *App) Namespaces(ctx context.Context) (model.Namespaces, error) {
+	return a.svc.Namespaces(ctx)
+}
+
+// AddNamespaces loads a package of namespace definitions the user chose.
+func (a *App) AddNamespaces(ctx context.Context, f model.File) (model.NamespacePackage, error) {
+	return a.svc.AddNamespaces(ctx, f)
+}
+
+// RemoveNamespaces removes a loaded package of namespace definitions.
+func (a *App) RemoveNamespaces(ctx context.Context, id string) error {
+	return a.svc.RemoveNamespaces(ctx, id)
+}
+
 // ReadDataSet reads all members of a data set.
 func (a *App) ReadDataSet(ctx context.Context, id, ref string) (model.ReadResult, error) {
 	return a.svc.ReadDataSet(ctx, id, ref)

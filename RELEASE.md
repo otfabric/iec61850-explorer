@@ -2,6 +2,27 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.8.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.7.0
+
+### Added
+
+- **Namespace view (M3c).** The node panel shows what the IEC 61850 namespace defines for the selected node: its logical node class and base class, the data object's CDC and presence, the attribute's type and FC, and for a measurement the quantity, phase and unit. For a logical node it lists the class's data objects, which the node has, and which mandatory ones are missing. From go-iec61850-model's embedded namespaces (every release IEC publishes); identifiers and structure only, no documentation texts unless a loaded package brings them. API: `GET /api/v1/sessions/{id}/semantics?ref=`.
+- **Conformance check (M3c).** Check, in the session bar, lists missing mandatory data objects (error), logical node classes the namespace does not define (warning), data objects a class does not define (information), and, for an SCL file, data objects whose CDC differs from the namespace's (warning). API: `GET /api/v1/sessions/{id}/conformance`.
+- **Checked against what the device declares.** Each logical node is checked against the namespace its logical device declares (`LLN0.NamPlt.ldNs`) or it declares itself (`lnNs`), and an extension data object against its `dataNs`; the check shows what was declared and checked against. A device of IEC 61850-7-4 Edition 1 (declared as 2003, or an SCL file of schema 1.7 without a declaration), for which IEC publishes no namespace definitions, is checked against Edition 2, and a mandatory data object it lacks is a warning ("since Edition 2"). A declared namespace that is neither built in nor loaded is reported.
+- **Namespace packages, vendor extensions.** Load NSD packages (a ZIP archive or one NSD document) in the Check view: official releases not built in, or a vendor's extension namespaces, so that logical nodes and data objects declared in them are checked against their definitions. An extension data object a vendor adds to a standard logical node without its own `dataNs` is found in the vendor namespace the device declares elsewhere. Their documentation texts, when the package has them, show in the Namespace view (never in exports). Packages are kept in the data directory. API: `GET`, `POST /api/v1/namespaces`, `DELETE /api/v1/namespaces/{id}`.
+- **Search by quantity (M3c).** The search can ask for a measured quantity (frequency, voltage, current, power, ...): it finds the data objects that measure it by the namespace's semantic rules. The engine lists the quantities in its health (`quantities`).
+- **Point lists (M3d).** Points CSV and Points JSON export every attribute of the open tab with its FC, the namespace's CDC, type and presence, the quantity and unit, and the data sets and report control blocks that carry it, for SCADA and gateway engineering. API: `points-csv` and `points-json` export formats.
+- **Compare values (M3b).** The Compare view has a Values option: it adds the values of configuration, description, set point and setting attributes (FC CF, DC, SP, SG) to the comparison. An SCL file gives its configured values (instance values, or the type's defaults), an IED the values read now, a snapshot the values it holds. Enumerations compare by ordinal and show the SCL literal; floats compare at FLOAT32 precision. Settings compare per setting group between two SCL files, and in the IED's active group against an IED. API: `values` in `POST /api/v1/compare`.
+
+### Dependencies
+
+go-iec61850 v1.14.0, go-iec61850-model v0.8.2 (new: every published NSD release, embedded compressed), go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-11-09

@@ -3,10 +3,13 @@ import type { ModelNode, SessionInfo } from '../service/types';
 import type { ReadEntry } from '../state/useExplorer';
 import type { ControlRequest, ControlResult, WriteResult } from '../service/types';
 import { ControlForm, WriteForm } from './Commission';
+import { NamespaceView } from './NamespaceView';
+import type { Service } from '../service/service';
 import { Button, Chip } from './ui';
 import { ValueView } from './ValueView';
 
 interface NodePanelProps {
+  service: Service;
   session: SessionInfo;
   node: ModelNode;
   reads: Record<string, ReadEntry>;
@@ -33,7 +36,7 @@ export function cliCommand(session: SessionInfo, ref: string, fc: string): strin
   return `iec61850ctl get object --host ${session.target.host}${port} --object ${ref} --fc ${fc}`;
 }
 
-export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy, onWrite, onControl }: NodePanelProps) {
+export function NodePanel({ service, session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy, onWrite, onControl }: NodePanelProps) {
   const sclOnly = session.state === 'offline' && !session.snapshot;
   const readable = node.kind !== 'ld' && node.fcs.length > 0;
   return (
@@ -138,6 +141,7 @@ export function NodePanel({ session, node, reads, reading, disabled, watched, on
             </div>
           );
         })}
+      {node.kind !== 'ld' && <NamespaceView service={service} sessionId={session.id} nodeRef={node.ref} />}
     </section>
   );
 }

@@ -8,6 +8,10 @@ import type {
   AuditRecord,
   CompareRequest,
   Comparison,
+  Conformance,
+  NamespacePackage,
+  Namespaces,
+  Semantics,
   CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
@@ -100,6 +104,7 @@ export function itemID(ref: string): { domain: string; item_id: string } {
 export const MOCK_SCL = new TextEncoder().encode('<SCL>mock</SCL>');
 
 export class MockService implements Service {
+  private nsPackages: NamespacePackage[] = [];
   private sessionsById = new Map<string, SessionInfo>();
   private seq = 0;
   private ids = 0;
@@ -128,6 +133,7 @@ export class MockService implements Service {
       mode: 'observe',
       time: new Date().toISOString(),
       features: ['profiles', 'commission'],
+      quantities: ['frequency', 'voltage', 'current', 'active-power'],
     };
   }
 
@@ -193,7 +199,8 @@ export class MockService implements Service {
         n.ref.toLowerCase().includes(text) &&
         (!query.kind || n.kind === query.kind) &&
         (!query.fc || n.fcs.includes(query.fc)) &&
-        (!query.ln_class || n.ref.includes(query.ln_class.toUpperCase())),
+        (!query.ln_class || n.ref.includes(query.ln_class.toUpperCase())) &&
+        (!query.quantity || (query.quantity === 'frequency' && n.kind === 'do' && n.name === 'Hz')),
     );
     return { hits, truncated: false };
   }
@@ -240,6 +247,12 @@ export class MockService implements Service {
 
   async exportSession(id: string, format: ExportFormat, refs: string[]): Promise<ExportFile> {
     const session = this.session(id);
+    if (format === 'points-csv' || format === 'points-json') {
+      const point = { ref: `${LD}/MMXU1.Hz.mag.f[MX]`, ln_class: 'MMXU', cdc: 'MV', type: 'FLOAT32', quantity: 'frequency', unit: 'Hz' };
+      return format === 'points-csv'
+        ? { name: 'iec61850-mock-points.csv', mime: 'text/csv', text: `ref,ln_class,cdc,type,quantity,unit\n${Object.values(point).join(',')}\n` }
+        : { name: 'iec61850-mock-points.json', mime: 'application/json', text: JSON.stringify({ points: [point] }) };
+    }
     if (format === 'csv') {
       const rows = refs.map((r) => `${r},${this.value(r).value?.text ?? ''}`);
       return { name: 'iec61850-mock.csv', mime: 'text/csv', text: ['ref,value', ...rows].join('\n') };
@@ -635,6 +648,7 @@ export class MockService implements Service {
         { name: 'model', compared: true, items: 40, same: 38, only_a: 1, only_b: 0, changed: 1 },
         { name: 'datasets', compared: true, items: 2, same: 1, only_a: 0, only_b: 0, changed: 1 },
         { name: 'reports', compared: true, items: 3, same: 3, only_a: 0, only_b: 0, changed: 0 },
+        ...(req.values ? [{ name: 'values' as const, compared: true, items: 12, same: 11, only_a: 0, only_b: 0, changed: 1 }] : []),
       ],
       differences: [
         { category: 'model', kind: 'only_a', ref: `${LD}/LPHD9`, note: 'ln' },
@@ -648,10 +662,112 @@ export class MockService implements Service {
           b: `${LD}/MMXU1.Hz[MX]\n${LD}/MMXU1.TotW[MX]`,
           note: '1 members / 2 members',
         },
+        ...(req.values
+          ? [
+              {
+                category: 'values' as const,
+                kind: 'changed' as const,
+                ref: `${LD}/GGIO1.SPCSO2.ctlModel[CF]`,
+                field: 'value',
+                a: 'direct-with-normal-security (1)',
+                b: 'sbo-with-normal-security (2)',
+              },
+            ]
+          : []),
       ],
       truncated: false,
       duration_ms: 3,
     };
+  }
+
+  async semantics(id: string, ref: string): Promise<Semantics> {
+    this.session(id);
+    const node = allNodes().find((n) => n.ref === ref);
+    if (!node) {
+      throw new ServiceError('not_found', `"${ref}" is not in the discovered model`);
+    }
+    if (node.kind === 'ld') {
+      return { ref, kind: 'ld', known: false, note: 'a logical device has no class in the namespace' };
+    }
+    const lnClass = node.kind === 'ln' ? (node.ln_class ?? '') : 'MMXU';
+    if (node.kind === 'ln') {
+      return {
+        ref,
+        kind: 'ln',
+        ln_class: lnClass,
+        known: true,
+        namespace: 'IEC 61850-7-4:2007B6',
+        base: 'FunctionLN',
+        data_objects: [
+          { name: 'Beh', cdc: 'ENS', presence: 'M', mandatory: true, present: 1 },
+          { name: 'Hz', cdc: 'MV', presence: 'O', mandatory: false, present: 1 },
+          { name: 'PhV', cdc: 'WYE', presence: 'O', mandatory: false, present: 0 },
+        ],
+      };
+    }
+    return {
+      ref,
+      kind: node.kind,
+      ln_class: lnClass,
+      known: true,
+      namespace: 'IEC 61850-7-4:2007B6',
+      data_object: 'Hz',
+      declared_in: 'MMXU',
+      cdc: 'MV',
+      presence: 'O',
+      ...(node.kind === 'child' ? { attribute: 'mag.f', type: 'FLOAT32', fc: 'MX' } : {}),
+      quantity: 'frequency',
+      unit: 'Hz',
+    };
+  }
+
+  async conformance(id: string): Promise<Conformance> {
+    this.session(id);
+    return {
+      namespaces: ['IEC 61850-7-4:2007B6'],
+      declared: [
+        {
+          ref: LD,
+          declared: 'IEC 61850-7-4:2003',
+          source: 'ldNs',
+          checked_against: ['IEC 61850-7-4:2007B6'],
+          edition1: true,
+          note: 'IEC 61850-7-4 Edition 1 (2003): checked against Edition 2',
+        },
+      ],
+      findings: [
+        { code: 'missing-mandatory-do', severity: 'error', ref: `${LD}/XCBR1.Loc`, message: 'XCBR requires the data object Loc (SPS, presence M)' },
+        { code: 'unknown-do', severity: 'info', ref: `${LD}/MMXU1.Private1`, message: 'MMXU does not define the data object Private1' },
+      ],
+      logical_nodes: 5,
+      data_objects: 18,
+      truncated: false,
+      duration_ms: 1,
+    };
+  }
+
+  async namespaces(): Promise<Namespaces> {
+    return { embedded: ['IEC 61850-7-4:2007B6'], profiles: [], loaded: [...this.nsPackages] };
+  }
+
+  async addNamespaces(file: FileUpload): Promise<NamespacePackage> {
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.nsd')) {
+      throw new ServiceError('invalid_argument', `${file.name}: not an NSD package`);
+    }
+    const pkg: NamespacePackage = {
+      id: `ns${++this.ids}`,
+      file: file.name,
+      sha256: '00',
+      added_at: new Date().toISOString(),
+      namespaces: ['OTF ACME:2026A1'],
+      docs: file.name.endsWith('.zip'),
+    };
+    this.nsPackages.push(pkg);
+    return pkg;
+  }
+
+  async removeNamespaces(id: string): Promise<void> {
+    this.nsPackages = this.nsPackages.filter((p) => p.id !== id);
   }
 
   async profiles(): Promise<Profile[]> {

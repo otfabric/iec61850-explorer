@@ -157,6 +157,26 @@ func (c *httpService) Compare(ctx context.Context, req model.CompareRequest) (v 
 	return v, c.do(ctx, "POST", "/api/v1/compare", req, &v)
 }
 
+func (c *httpService) Semantics(ctx context.Context, id, ref string) (v model.Semantics, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/semantics?ref="+url.QueryEscape(ref), nil, &v)
+}
+
+func (c *httpService) Conformance(ctx context.Context, id string) (v model.Conformance, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/conformance", nil, &v)
+}
+
+func (c *httpService) Namespaces(ctx context.Context) (v model.Namespaces, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/namespaces", nil, &v)
+}
+
+func (c *httpService) AddNamespaces(ctx context.Context, f model.File) (v model.NamespacePackage, err error) {
+	return v, c.sclRequest(ctx, "/api/v1/namespaces", f, url.Values{}, &v)
+}
+
+func (c *httpService) RemoveNamespaces(ctx context.Context, id string) error {
+	return c.do(ctx, "DELETE", "/api/v1/namespaces/"+url.PathEscape(id), nil, nil)
+}
+
 func (c *httpService) Reports(ctx context.Context, id, ld string) (v []model.RCB, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/reports?ld="+url.QueryEscape(ld), nil, &v)
 }

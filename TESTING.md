@@ -71,4 +71,6 @@ Measured on 2026-11-09 with the corpus's largest file (an ABB REX640 CID, 2.8 MB
 
 `frontend/src/app/components/DeviceTree.test.tsx` covers the flattening, the windowing on a 15,001-row tree, the ARIA attributes, and scrolling a row selected through search into view.
 
-The engine handles the whole corpus easily (`make corpus`): 170 IED sessions and about 537,000 nodes. Each IED is also opened a second time and compared with the first (no differences); the slowest session (34,465 nodes) takes about 250 ms with the comparison.
+Conformance over the corpus (170 IEDs, 2026-11-09, no namespace packages loaded): logical nodes declare IEC 61850-7-4 releases from 2003 to 2007B4, ABB's own namespaces (`REx615:2014`, `REx620:2015`, `1MRS189725`) and others (`IEC 62271-3:2006`); 68 logical devices are Edition 1 (declared, or by the SCL schema). Findings: 338 missing mandatory data objects (errors) and 108 for Edition 1 (warnings), 490 classes and about 25,700 data objects the declared namespace does not define (most of them ABB extension data objects in standard logical nodes, which ABB's namespace package would define), 47 declared namespaces that are not loaded, 503 CDC differences (3,165 more for Edition 1, as information).
+
+The engine handles the whole corpus easily (`make corpus`): 170 IED sessions and about 537,000 nodes. Each IED is also checked for conformance, exported as a point list, and opened a second time and compared with the first, values included (no differences); the slowest session (34,465 nodes) takes about 440 ms with all of that.

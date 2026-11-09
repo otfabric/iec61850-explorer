@@ -15,6 +15,8 @@ export interface Health {
   mode: Mode;
   time: Timestamp;
   features: string[];
+  /** Measured quantities a search can ask for (SearchQuery.quantity). */
+  quantities: string[];
 }
 
 export interface TargetConfig {
@@ -125,6 +127,8 @@ export interface SearchQuery {
   ln_class?: string;
   fc?: string;
   kind?: NodeKind;
+  /** Data objects measuring this quantity, by the namespace's semantic rules. */
+  quantity?: string;
   limit?: number;
 }
 
@@ -169,7 +173,7 @@ export interface SCLInfo {
   diagnostics_dropped?: number;
 }
 
-export type ExportFormat = 'snapshot' | 'csv';
+export type ExportFormat = 'snapshot' | 'csv' | 'points-csv' | 'points-json';
 
 export interface ExportFile {
   name: string;
@@ -571,9 +575,11 @@ export interface SelectSGRequest {
 export interface CompareRequest {
   a: string;
   b: string;
+  /** Adds the values of configuration and setting attributes (CF, DC, SP, SG); reads them from a live IED. */
+  values?: boolean;
 }
 
-export type CompareCategoryName = 'model' | 'datasets' | 'reports';
+export type CompareCategoryName = 'model' | 'datasets' | 'reports' | 'values';
 export type DifferenceKind = 'only_a' | 'only_b' | 'changed';
 
 export interface CompareSide {
@@ -609,6 +615,90 @@ export interface Comparison {
   b: CompareSide;
   categories: CompareCategory[];
   differences: Difference[];
+  truncated: boolean;
+  duration_ms: number;
+}
+
+/** What the IEC 61850 namespace (go-iec61850-model's default profile) defines for a node. */
+export interface Semantics {
+  ref: string;
+  kind: NodeKind;
+  ln_class?: string;
+  known: boolean;
+  namespace?: string;
+  base?: string;
+  deprecated?: boolean;
+  data_object?: string;
+  declared_in?: string;
+  cdc?: string;
+  presence?: string;
+  instance_cdc?: string;
+  attribute?: string;
+  type?: string;
+  fc?: string;
+  quantity?: string;
+  phase?: string;
+  unit?: string;
+  data_objects?: NSDDataObject[];
+  /** What the node's logical device or node declares, and the releases its definitions come from. */
+  declared?: string;
+  checked_against?: string[];
+  edition1?: boolean;
+  /** Documentation texts from a loaded package (NSDoc). */
+  title?: string;
+  description?: string;
+  note?: string;
+}
+
+export interface NSDDataObject {
+  name: string;
+  cdc: string;
+  presence: string;
+  mandatory: boolean;
+  present: number;
+}
+
+export type FindingSeverity = 'error' | 'warning' | 'info';
+
+export interface Finding {
+  code: 'unknown-ln-class' | 'missing-mandatory-do' | 'unknown-do' | 'cdc-mismatch' | 'namespace-not-loaded';
+  severity: FindingSeverity;
+  ref: string;
+  message: string;
+}
+
+export interface DeclaredNamespace {
+  ref: string;
+  declared?: string;
+  source: 'ldNs' | 'lnNs' | 'dataNs' | 'scl-schema' | 'none';
+  checked_against: string[];
+  edition1?: boolean;
+  unknown?: boolean;
+  note?: string;
+}
+
+/** A package of namespace definitions (NSD) the user loaded: official releases not embedded, or vendor extensions. */
+export interface NamespacePackage {
+  id: string;
+  file: string;
+  sha256: string;
+  added_at: Timestamp;
+  namespaces: string[];
+  docs: boolean;
+}
+
+export interface Namespaces {
+  embedded: string[];
+  profiles: { name: string; description: string; namespaces: string[] }[];
+  loaded: NamespacePackage[];
+}
+
+export interface Conformance {
+  namespaces: string[];
+  declared: DeclaredNamespace[];
+  findings: Finding[];
+  logical_nodes: number;
+  data_objects: number;
   truncated: boolean;
   duration_ms: number;
 }

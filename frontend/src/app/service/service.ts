@@ -5,6 +5,10 @@ import type {
   AuditRecord,
   CompareRequest,
   Comparison,
+  Conformance,
+  NamespacePackage,
+  Namespaces,
+  Semantics,
   CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
@@ -130,6 +134,15 @@ export interface Service {
   audit(query: AuditQuery): Promise<AuditRecord[]>;
   /** Compares two open sessions: the model, the data sets and the report control blocks. Reads only. */
   compare(req: CompareRequest): Promise<Comparison>;
+  /** What the IEC 61850 namespace defines for a node (reference without FC). */
+  semantics(id: string, ref: string): Promise<Semantics>;
+  /** The session's model against the namespace: missing mandatory data objects, unknown classes, CDC mismatches. */
+  conformance(id: string): Promise<Conformance>;
+  /** The embedded namespace releases and the packages the user loaded. */
+  namespaces(): Promise<Namespaces>;
+  /** Loads a package of namespace definitions (an NSD ZIP archive or one NSD document) and keeps it. */
+  addNamespaces(file: FileUpload): Promise<NamespacePackage>;
+  removeNamespaces(id: string): Promise<void>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

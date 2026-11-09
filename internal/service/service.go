@@ -113,6 +113,17 @@ type Service interface {
 	// Compare compares two open sessions (live, SCL or snapshot): the
 	// model, the data sets and the report control blocks. It only reads.
 	Compare(ctx context.Context, req model.CompareRequest) (model.Comparison, error)
+	// Semantics says what the IEC 61850 namespace defines for a node.
+	Semantics(ctx context.Context, id, ref string) (model.Semantics, error)
+	// Conformance checks a session's model against the namespace.
+	Conformance(ctx context.Context, id string) (model.Conformance, error)
+	// Namespaces lists the embedded and the loaded namespace definitions.
+	Namespaces(ctx context.Context) (model.Namespaces, error)
+	// AddNamespaces loads a package of namespace definitions (an NSD ZIP
+	// archive or one NSD document) the user chose, and keeps it.
+	AddNamespaces(ctx context.Context, f model.File) (model.NamespacePackage, error)
+	// RemoveNamespaces removes a loaded package.
+	RemoveNamespaces(ctx context.Context, id string) error
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

@@ -311,6 +311,46 @@ func contract(t *testing.T, svc service.Service) {
 	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 3 || cmp.A.Source != model.SourceSCL || cmp.B.Source != model.SourceIED {
 		t.Errorf("Compare = %+v, %v", cmp, err)
 	}
+	cmp, err = svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: info.ID, Values: true})
+	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 4 || cmp.Categories[3].Items == 0 {
+		t.Errorf("Compare with values = %+v, %v", cmp, err)
+	}
+	// Semantics, conformance and the point list (M3c, M3d).
+	if sem, err := svc.Semantics(ctx, info.ID, simied.Domain+"/MMXU1.Hz.mag.f"); err != nil || sem.CDC != "MV" || sem.Type != "FLOAT32" || sem.Quantity != "frequency" {
+		t.Errorf("Semantics = %+v, %v", sem, err)
+	}
+	if _, err := svc.Semantics(ctx, info.ID, simied.Domain+"/MMXU1.Hz[MX]"); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("Semantics with FC = %v", err)
+	}
+	if conf, err := svc.Conformance(ctx, offline.ID); err != nil || len(conf.Findings) != 4 || conf.LogicalNodes != 5 {
+		t.Errorf("Conformance = %+v, %v", conf, err)
+	}
+	if pts, err := svc.Export(ctx, info.ID, model.ExportRequest{Format: model.ExportPointsCSV}); err != nil || !strings.Contains(pts.Text, "MMXU1.Hz.mag.f[MX]") {
+		t.Errorf("points = %v", err)
+	}
+	if ns, err := svc.Namespaces(ctx); err != nil || len(ns.Embedded) < 20 || len(ns.Loaded) != 0 {
+		t.Errorf("Namespaces = %+v, %v", ns, err)
+	}
+	vendor := `<?xml version="1.0"?><NS xmlns="http://www.iec.ch/61850/2016/NSD" id="OTF ACME" version="2026" revision="A" release="1"><DependsOn id="IEC 61850-7-4" version="2007" revision="B"/><LNClasses><LNClass name="ZACM" base="DomainLN"><DataObject name="Load" type="MV" presCond="M"/></LNClass></LNClasses></NS>`
+	pkg, err := svc.AddNamespaces(ctx, model.File{Name: "acme.nsd", Data: []byte(vendor)})
+	if err != nil || len(pkg.Namespaces) != 1 {
+		t.Errorf("AddNamespaces = %+v, %v", pkg, err)
+	}
+	if _, err := svc.AddNamespaces(ctx, model.File{Name: "x.nsd", Data: []byte("<nope/>")}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("AddNamespaces garbage = %v", err)
+	}
+	if err := svc.RemoveNamespaces(ctx, pkg.ID); err != nil {
+		t.Errorf("RemoveNamespaces = %v", err)
+	}
+	if err := svc.RemoveNamespaces(ctx, pkg.ID); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("RemoveNamespaces twice = %v", err)
+	}
+	if conf, err := svc.Conformance(ctx, info.ID); err != nil || len(conf.Declared) != 1 || conf.Declared[0].Declared != "IEC 61850-7-4:2007B" {
+		t.Errorf("Conformance declared = %+v, %v", conf.Declared, err)
+	}
+	if hits, err := svc.Search(ctx, info.ID, model.SearchQuery{Quantity: "frequency"}); err != nil || len(hits.Hits) != 1 {
+		t.Errorf("Search by quantity = %+v, %v", hits, err)
+	}
 	if _, err := svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: offline.ID}); service.CodeOf(err) != service.CodeInvalidArgument {
 		t.Errorf("Compare with itself = %v", err)
 	}

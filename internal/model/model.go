@@ -43,6 +43,9 @@ type Health struct {
 	Time time.Time `json:"time"`
 	// Features lists optional capabilities, see the Feature constants.
 	Features []string `json:"features"`
+	// Quantities are the measured quantities a search can ask for
+	// (SearchQuery.Quantity).
+	Quantities []string `json:"quantities"`
 }
 
 // TargetConfig names an IED.
@@ -308,6 +311,10 @@ type SearchQuery struct {
 	FC string `json:"fc,omitempty"`
 	// Kind matches the node kind.
 	Kind string `json:"kind,omitempty"`
+	// Quantity matches data objects that measure this quantity by the
+	// namespace's semantic rules, such as "voltage" or "frequency"
+	// (go-iec61850-model semantic.Quantities).
+	Quantity string `json:"quantity,omitempty"`
 	// Limit bounds the hits; zero is MaxSearchHits.
 	Limit int `json:"limit,omitempty"`
 }

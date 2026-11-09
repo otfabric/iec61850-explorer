@@ -9,6 +9,10 @@ import type {
   AuditRecord,
   CompareRequest,
   Comparison,
+  Conformance,
+  NamespacePackage,
+  Namespaces,
+  Semantics,
   GrantRequest,
   ControlRequest,
   ControlResult,
@@ -111,6 +115,14 @@ export class HttpService implements Service {
   deleteDataSet = (id: string, ref: string) => this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/datasets?ref=${encodeURIComponent(ref)}`);
   selectActiveSG = (id: string, req: SelectSGRequest) => this.request<SettingGroups>('PUT', `/sessions/${encodeURIComponent(id)}/setting-groups/active`, req);
   compare = (req: CompareRequest) => this.request<Comparison>('POST', '/compare', req);
+  semantics = (id: string, ref: string) =>
+    this.request<Semantics>('GET', `/sessions/${encodeURIComponent(id)}/semantics?ref=${encodeURIComponent(ref)}`);
+  conformance = (id: string) => this.request<Conformance>('GET', `/sessions/${encodeURIComponent(id)}/conformance`);
+  namespaces = () => this.request<Namespaces>('GET', '/namespaces');
+  addNamespaces = (file: FileUpload) => this.upload<NamespacePackage>('/namespaces', file, {});
+  removeNamespaces = async (id: string) => {
+    await this.request<unknown>('DELETE', `/namespaces/${encodeURIComponent(id)}`);
+  };
   audit = (query: AuditQuery) =>
     this.request<AuditRecord[]>('GET', `/audit?session=${encodeURIComponent(query.session_id ?? '')}&limit=${query.limit ?? 0}`);
   settingGroups = (id: string, ld: string) =>

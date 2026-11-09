@@ -107,6 +107,11 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/control", s.control)
 	api.HandleFunc("GET "+prefix+"/audit", s.audit)
 	api.HandleFunc("POST "+prefix+"/compare", s.compare)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/semantics", s.semantics)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/conformance", s.conformance)
+	api.HandleFunc("GET "+prefix+"/namespaces", s.namespaces)
+	api.HandleFunc("POST "+prefix+"/namespaces", s.addNamespaces)
+	api.HandleFunc("DELETE "+prefix+"/namespaces/{id}", s.removeNamespaces)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions", s.subscribeReport)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/reports/subscriptions/{sub}", s.unsubscribe)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions/{sub}/gi", s.triggerGI)
@@ -297,6 +302,35 @@ func (s *server) compare(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := s.svc.Compare(r.Context(), req)
 	s.reply(w, r, v, err)
+}
+
+func (s *server) semantics(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Semantics(r.Context(), r.PathValue("id"), r.URL.Query().Get("ref"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) conformance(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Conformance(r.Context(), r.PathValue("id"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) namespaces(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Namespaces(r.Context())
+	s.reply(w, r, v, err)
+}
+
+// addNamespaces takes a package as the raw request body; ?name= names it.
+func (s *server) addNamespaces(w http.ResponseWriter, r *http.Request) {
+	f, ok := s.rawFile(w, r, model.MaxNamespaceBytes)
+	if !ok {
+		return
+	}
+	v, err := s.svc.AddNamespaces(r.Context(), f)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) removeNamespaces(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.RemoveNamespaces(r.Context(), r.PathValue("id")))
 }
 
 func (s *server) reports(w http.ResponseWriter, r *http.Request) {
