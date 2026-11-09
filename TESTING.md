@@ -67,7 +67,7 @@ go-mms and go-iec61850 fuzz their own decoders. A failing input lands in `testda
 Measured on 2026-11-09 with the corpus's largest file (an ABB REX640 CID, 2.8 MB: 3 logical devices, 299 logical nodes, 4,502 data objects), daemon and web UI, in a browser:
 - **Opening the file:** 82 ms in the daemon.
 - **Expanding all logical devices, or searching the whole model:** no main-thread task over 50 ms.
-- **Expanding everything at once:** before v0.6.2, expanding all 299 logical nodes and then all 4,502 data objects (about 63,000 DOM nodes) caused one task of 2.2 s. Since v0.6.2 the tree is virtualized: only the rows in view, plus a margin, are in the DOM. With every level expanded (34,465 rows), the page holds about 230 elements, and no main-thread task exceeds 50 ms while expanding. Collapsing or expanding a logical device with 1,349 rows below it takes about 10 ms; jumping to a random scroll position re-renders in about 17 ms.
+- **Expanding everything at once:** before v0.7.0, expanding all 299 logical nodes and then all 4,502 data objects (about 63,000 DOM nodes) caused one task of 2.2 s. Since v0.7.0 the tree is virtualized: only the rows in view, plus a margin, are in the DOM. With every level expanded (34,465 rows), the page holds about 230 elements, and no main-thread task exceeds 50 ms while expanding. Collapsing or expanding a logical device with 1,349 rows below it takes about 10 ms; jumping to a random scroll position re-renders in about 17 ms.
 
 `frontend/src/app/components/DeviceTree.test.tsx` covers the flattening, the windowing on a 15,001-row tree, the ARIA attributes, and scrolling a row selected through search into view.
 
