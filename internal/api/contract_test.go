@@ -306,6 +306,14 @@ func contract(t *testing.T, svc service.Service) {
 	if _, err := svc.Read(ctx, offline.ID, model.ReadRequest{Refs: []string{simied.Domain + "/MMXU1.Hz[MX]"}}); service.CodeOf(err) != service.CodeNotAllowed {
 		t.Errorf("Read offline = %v", err)
 	}
+	// Compare: the IED serves the file, so they agree.
+	cmp, err := svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: info.ID})
+	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 3 || cmp.A.Source != model.SourceSCL || cmp.B.Source != model.SourceIED {
+		t.Errorf("Compare = %+v, %v", cmp, err)
+	}
+	if _, err := svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: offline.ID}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("Compare with itself = %v", err)
+	}
 	if err := svc.CloseSession(ctx, offline.ID); err != nil {
 		t.Fatal(err)
 	}

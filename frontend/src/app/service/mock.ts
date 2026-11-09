@@ -6,6 +6,8 @@ import { ServiceError, type Service } from './service';
 import type {
   AuditQuery,
   AuditRecord,
+  CompareRequest,
+  Comparison,
   CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
@@ -612,6 +614,44 @@ export class MockService implements Service {
     return this.auditLog
       .filter((r) => !query.session_id || r.session_id === query.session_id)
       .slice(0, query.limit || 500);
+  }
+
+  async compare(req: CompareRequest): Promise<Comparison> {
+    if (!req.a || !req.b || req.a === req.b) {
+      throw new ServiceError('invalid_argument', 'compare needs two different sessions');
+    }
+    const side = (id: string) => {
+      const s = this.session(id);
+      return s.snapshot
+        ? { session_id: id, source: 'snapshot' as const, label: s.snapshot.file }
+        : s.scl
+          ? { session_id: id, source: 'scl' as const, label: `${s.scl.file} (${s.scl.ied}/${s.scl.access_point})` }
+          : { session_id: id, source: 'ied' as const, label: `${s.target.host}:${s.target.port ?? 102}` };
+    };
+    return {
+      a: side(req.a),
+      b: side(req.b),
+      categories: [
+        { name: 'model', compared: true, items: 40, same: 38, only_a: 1, only_b: 0, changed: 1 },
+        { name: 'datasets', compared: true, items: 2, same: 1, only_a: 0, only_b: 0, changed: 1 },
+        { name: 'reports', compared: true, items: 3, same: 3, only_a: 0, only_b: 0, changed: 0 },
+      ],
+      differences: [
+        { category: 'model', kind: 'only_a', ref: `${LD}/LPHD9`, note: 'ln' },
+        { category: 'model', kind: 'changed', ref: `${LD}/MMXU1.Hz`, field: 'fcs', a: 'CF,MX', b: 'MX' },
+        {
+          category: 'datasets',
+          kind: 'changed',
+          ref: `${LD}/LLN0.Meas`,
+          field: 'members',
+          a: `${LD}/MMXU1.Hz[MX]`,
+          b: `${LD}/MMXU1.Hz[MX]\n${LD}/MMXU1.TotW[MX]`,
+          note: '1 members / 2 members',
+        },
+      ],
+      truncated: false,
+      duration_ms: 3,
+    };
   }
 
   async profiles(): Promise<Profile[]> {

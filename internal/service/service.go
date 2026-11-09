@@ -110,6 +110,9 @@ type Service interface {
 	SelectActiveSG(ctx context.Context, id string, req model.SelectSGRequest) (model.SettingGroups, error)
 	// Audit returns recent audit records, newest first.
 	Audit(ctx context.Context, q model.AuditQuery) ([]model.AuditRecord, error)
+	// Compare compares two open sessions (live, SCL or snapshot): the
+	// model, the data sets and the report control blocks. It only reads.
+	Compare(ctx context.Context, req model.CompareRequest) (model.Comparison, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

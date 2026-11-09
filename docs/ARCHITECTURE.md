@@ -125,6 +125,8 @@ A session stays in Observe mode for its whole life. `GrantCommission` adds a gra
 
 ## 6. Diagnostics
 
+- **Comparison (M3a).** `Compare` reads both sessions as the user sees them: the model as discovered or imported, data sets and report control blocks as the session lists them (from the IED, or from the SCL file). Control blocks are left out of the model comparison, because an IED's MMS model lists them as nodes and an SCL file defines them apart; report control blocks are compared as such, an SCL `ReportControl` against the indexed instances the IED serves (`brcbA` against `brcbA01`, `brcbA02`). Run-time attributes (enabled, reserved, sequence number, owner) are not configuration and are not compared; an SCL report ID left empty is assigned by the IED. A node missing on one side is reported once, not with everything below it. A snapshot holds no data set or report control block definitions, so those categories say so instead of reporting differences. Logical devices are matched by name: two IEDs with different IED names compare as different devices.
+
 - **Operations.** Every user action (`connect`, `discover`, `read`, `close`) is published as an `operation` event with its duration, result and the MMS requests it caused (service, invoke ID, duration, error), from go-mms `Metrics` events. The UI shows them in the activity panel.
 - **Connect stages.** `internal/engine/classify.go` places a failure in its layer only from the error type: `*net.OpError` (dial) is TCP; `*cotp.RejectionError` is COTP, with reason 3 explained as the T-selector; `*mms.ProtocolError` gives session, presentation, ACSE or MMS phase; `mms.ErrConnectionRejected` is ACSE; `mms.ErrNegotiationFailed` is MMS Initiate. Anything else gets no stage. Response errors map data-access errors, ConfirmedError and Reject.
 - **Values.** Structures are named from the variable's type; a 13-bit bit string named `q` is decoded as an IEC 61850-7-3 quality; a UTC time carries its time quality; integers beyond 2^53 cross JSON as strings; NaN and infinities have no JSON value. Every read shows the MMS domain and item ID next to the IEC 61850 reference.
@@ -156,6 +158,7 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `POST /api/v1/sessions/{id}/datasets` (`{ref, members}`), `DELETE .../datasets?ref=` | Create, delete a data set; needs `datasets` |
 | `PUT /api/v1/sessions/{id}/setting-groups/active` (`{ld, sg}`) | Select the active setting group; needs `setting-groups` |
 | `GET /api/v1/audit?session=&limit=` | Recent audit records, newest first |
+| `POST /api/v1/compare` | `{a, b}` -> the comparison of two open sessions: model, data sets, report control blocks (reads only) |
 | `POST /api/v1/scl/inspect?name=`, `POST /api/v1/scl/open?name=&ied=&ap=` | Raw SCL body -> description, or an offline session |
 | `GET /api/v1/profiles`, `POST`, `PUT /profiles/{id}`, `DELETE /profiles/{id}` | Connection profiles |
 | `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`, `audit`, `report`); replay from `since` or `Last-Event-ID` |
@@ -196,6 +199,9 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | M2b1 (done) | Commission mode foundation: per-session grant on a second association, audit trail, writes with readback | A user changes a set point or configuration value with a verified, recorded write |
 | M2b2 (done) | Report subscription (reserve, enable, GI, cleanup on revoke), dynamic data sets, active setting group selection | Practical MMS workflows with predictable safety and cleanup |
 | M2b3 (done) | Controls (direct, SBO, enhanced security), after go-iec61850's client waits for CommandTermination | A control's outcome, including its termination, is shown and audited |
-| M3 | Diagnostics and semantics: SCL/live/snapshot comparison, NSD descriptions, semantic search, integration exports | Introduced mismatches can be diagnosed from visible evidence |
+| M3a | Comparison of definitions: any two sessions (IED, SCL, snapshot); the model (logical devices, nodes, data, FCs, LN classes), data sets (members in order), report control blocks (configuration; indexed instances matched to their SCL definition) | A mismatch introduced into an SCL file shows up against the IED serving the original, with both sides (`TestCompareSCLWithIED`) |
+| M3b | Comparison of values: the configured values of an SCL file, a snapshot's values and the IED's, for configuration and setting FCs (CF, DC, SP, SG) | A changed configuration value is found with its two values and where each came from |
+| M3c | Semantics from go-iec61850-model: the NSD definition of a logical node class, data object and CDC beside the node; conformance findings (a mandatory data object missing, a data object or CDC the namespace does not define); search by semantics | A non-conformant model is diagnosed against the namespace it claims |
+| M3d | Integration exports: point lists (reference, FC, type, CDC, description, data set and report membership) as CSV and JSON for SCADA and gateway engineering | A point list for a feeder IED is produced without the CLI |
 | M4 | Trace analysis: PCAP/PCAPNG, timelines, application-to-wire correlation | A capture is analysed offline, gaps identified |
 | M5 | Laboratory: evidence bundles, constrained replay on the go-iec61850 server | Repeatable scenarios; unsupported behaviour is not fabricated |

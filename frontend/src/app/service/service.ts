@@ -3,6 +3,8 @@
 import type {
   AuditQuery,
   AuditRecord,
+  CompareRequest,
+  Comparison,
   CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
@@ -126,6 +128,8 @@ export interface Service {
   selectActiveSG(id: string, req: SelectSGRequest): Promise<SettingGroups>;
   /** Recent audit records, newest first. */
   audit(query: AuditQuery): Promise<AuditRecord[]>;
+  /** Compares two open sessions: the model, the data sets and the report control blocks. Reads only. */
+  compare(req: CompareRequest): Promise<Comparison>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

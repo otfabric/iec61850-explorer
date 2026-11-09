@@ -197,6 +197,47 @@ describe('App', () => {
     expect(within(tabs).getAllByRole('button', { name: /^Close / })).toHaveLength(1);
   });
 
+  it('compares the IED with an SCL file and filters the differences', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await user.upload(screen.getByLabelText('SCL file'), new File([MOCK_SCL], 'station.scd'));
+    const dialog = await screen.findByRole('dialog', { name: 'SCL file' });
+    await user.click(within(dialog).getAllByRole('button', { name: 'Browse offline' })[0] as HTMLElement);
+    await screen.findByText(/SCL station\.scd · DemoIED\/S1/);
+    await user.click(screen.getByRole('button', { name: 'New' }));
+    await connect(user, '10.0.0.5');
+    await screen.findByText(/OT Fabric · Mock IED/);
+
+    await user.click(screen.getByRole('button', { name: 'Compare' }));
+    const panel = screen.getByRole('region', { name: 'Compare' });
+    expect(within(panel).getByLabelText('A: reference')).toHaveDisplayValue(/station\.scd/);
+    await user.click(within(panel).getByRole('button', { name: 'Compare' }));
+    expect(await within(panel).findByText(/A: scl station\.scd/)).toBeInTheDocument();
+    const summary = within(panel).getByRole('list', { name: 'Summary' });
+    expect(within(summary).getByText('1 only in A')).toBeInTheDocument();
+    expect(within(panel).getByText('3 of 3 differences')).toBeInTheDocument();
+    expect(within(panel).getByText('1 members / 2 members')).toBeInTheDocument();
+
+    await user.selectOptions(within(panel).getByLabelText('Category'), 'model');
+    expect(within(panel).getByText('2 of 3 differences')).toBeInTheDocument();
+    await user.selectOptions(within(panel).getByLabelText('Difference'), 'changed');
+    expect(within(panel).getByText('1 of 3 differences')).toBeInTheDocument();
+    expect(within(panel).getByText('fcs')).toBeInTheDocument();
+
+    // Back to the model view of the session.
+    await user.click(screen.getByRole('button', { name: 'Model' }));
+    expect(screen.queryByRole('region', { name: 'Compare' })).not.toBeInTheDocument();
+  });
+
+  it('says what to open before a single session can be compared', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await connect(user, '10.0.0.5');
+    await screen.findByText(/OT Fabric · Mock IED/);
+    await user.click(screen.getByRole('button', { name: 'Compare' }));
+    expect(screen.getByText(/Open a second session/)).toBeInTheDocument();
+  });
+
   it('brings back the watched points of a session that already polls', async () => {
     const service = new MockService();
     const session = await service.openSession({ host: '10.0.0.5' });

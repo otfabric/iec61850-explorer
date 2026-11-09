@@ -94,4 +94,5 @@ export const FileIcon = icon(<path d="M7 3h7l4 4v14H7V3ZM14 3v4h4" />);
 export const WriteIcon = icon(<path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4" />);
 export const UnlockIcon = icon(<path d="M6 11h12v9H6v-9ZM9 11V8a3 3 0 0 1 5.8-1M12 15v2" />);
 export const CloseIcon = icon(<path d="M6 6l12 12M18 6 6 18" />);
+export const CompareIcon = icon(<path d="M8 4v16M16 4v16M4 8h4M4 16h4M16 12h4M11 7l-3 1M13 17l3-1" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);

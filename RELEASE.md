@@ -2,6 +2,27 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.7.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.6.1
+
+### Added
+
+- **Compare (M3a).** Any two open sessions can be compared: an SCL file with the IED, a snapshot with the IED, two IEDs, two SCL files. The comparison covers the model (logical devices, logical nodes, data objects and attributes, their functional constraints and LN classes), the data sets (members, in order) and the report control blocks (buffered, report ID, data set, configuration revision, optional fields, trigger options, buffer time, integrity period). An SCL report control block is matched to the indexed instances the IED serves. Every difference shows the reference and both values; a missing node is listed once, not with everything below it. The comparison only reads: in Observe mode it lists the data sets and report control blocks of a live session from the IED. API: `POST /api/v1/compare`.
+
+### Changed
+
+- The device tree is virtualized: only the rows in view are rendered. Expanding a large model completely (34,465 rows for a 2.8 MB vendor CID) no longer blocks the user interface; before, expanding all data objects of that file took one task of 2.2 s.
+- A node picked in the search results is scrolled into view in the tree.
+- Tree rows carry `aria-level`, `aria-setsize` and `aria-posinset` (the flat form of the ARIA tree pattern).
+
+### Dependencies
+
+go-iec61850 v1.12.1, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.6.1
 
 **Date:** 2026-11-09

@@ -566,3 +566,49 @@ export interface SelectSGRequest {
   ld: string;
   sg: number;
 }
+
+/** Compares two open sessions: A is the reference, B the subject. */
+export interface CompareRequest {
+  a: string;
+  b: string;
+}
+
+export type CompareCategoryName = 'model' | 'datasets' | 'reports';
+export type DifferenceKind = 'only_a' | 'only_b' | 'changed';
+
+export interface CompareSide {
+  session_id: string;
+  source: 'ied' | 'scl' | 'snapshot';
+  label: string;
+}
+
+export interface CompareCategory {
+  name: CompareCategoryName;
+  compared: boolean;
+  /** Why the category was not compared, or compared only in part. */
+  reason?: string;
+  items: number;
+  same: number;
+  only_a: number;
+  only_b: number;
+  changed: number;
+}
+
+export interface Difference {
+  category: CompareCategoryName;
+  kind: DifferenceKind;
+  ref: string;
+  field?: string;
+  a?: string;
+  b?: string;
+  note?: string;
+}
+
+export interface Comparison {
+  a: CompareSide;
+  b: CompareSide;
+  categories: CompareCategory[];
+  differences: Difference[];
+  truncated: boolean;
+  duration_ms: number;
+}
