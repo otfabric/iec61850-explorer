@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { toServiceError, type LinkStatus, type Service, type ServiceError } from '../service/service';
 import type {
   AuditRecord,
+  Report,
   ExplorerEvent,
   ExportFormat,
   FileUpload,
@@ -22,6 +23,14 @@ import type {
 export const MAX_ACTIVITY = 200;
 /** Audit records kept in the window. */
 export const MAX_AUDIT = 200;
+/** Reports kept in the window. */
+export const MAX_REPORTS = 200;
+
+export interface ReportEntryView {
+  seq: number;
+  sessionId?: string;
+  report: Report;
+}
 
 export interface ActivityEntry {
   seq: number;
@@ -71,6 +80,8 @@ export interface ExplorerState {
   activity: ActivityEntry[];
   /** Recent Commission audit records, newest first. */
   audit: AuditRecord[];
+  /** Recent reports of all subscriptions, newest first. */
+  reports: ReportEntryView[];
   error: string | null;
 }
 
@@ -88,6 +99,7 @@ export const initialState: ExplorerState = {
   profiles: [],
   activity: [],
   audit: [],
+  reports: [],
   error: null,
 };
 
@@ -199,6 +211,10 @@ export function reducer(state: ExplorerState, action: Action): ExplorerState {
       }
       if (event.kind === 'audit' && event.audit) {
         return reducer(state, { type: 'audit', records: [event.audit] });
+      }
+      if (event.kind === 'report' && event.report) {
+        const entry = { seq: event.seq, sessionId: event.session_id, report: event.report };
+        return { ...state, reports: [entry, ...state.reports].slice(0, MAX_REPORTS) };
       }
       if (event.kind === 'sample' && event.sample) {
         const { sample } = event;

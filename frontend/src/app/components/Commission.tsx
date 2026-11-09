@@ -11,10 +11,17 @@ import {
   type Value,
   type WriteResult,
 } from '../service/types';
+import type { ReportEntryView } from '../state/useExplorer';
+import { summarize } from './summary';
 import { Button, Chip, Field, TextInput, Toggle } from './ui';
 
 /** The capabilities this version of the Explorer uses; the engine knows more. */
-export const OFFERED_CAPABILITIES: { cap: Capability; label: string }[] = [{ cap: 'write', label: 'Write data attributes (SP, CF, DC, SV, BL), verified by readback' }];
+export const OFFERED_CAPABILITIES: { cap: Capability; label: string }[] = [
+  { cap: 'write', label: 'Write data attributes (SP, CF, DC, SV, BL), verified by readback' },
+  { cap: 'reports', label: 'Subscribe to report control blocks (reserve, enable, GI; released when the grant ends)' },
+  { cap: 'datasets', label: 'Create and delete data sets' },
+  { cap: 'setting-groups', label: 'Select the active setting group' },
+];
 
 interface GrantDialogProps {
   session: SessionInfo;
@@ -208,6 +215,38 @@ function WriteOutcome({ result }: { result: WriteResult }) {
   );
 }
 
+/** The reports of the subscriptions, newest first. */
+export function ReportsPanel({ reports, label }: { reports: ReportEntryView[]; label: (sessionId: string) => string }) {
+  return (
+    <section aria-label="Reports" className="flex h-full min-h-0 flex-col">
+      <ol className="min-h-0 flex-1 overflow-auto px-4 py-2 font-mono text-[12px]">
+        {reports.length === 0 && <li className="text-muted">No reports. Subscribe to a report control block in Commission mode to receive them here.</li>}
+        {reports.map(({ seq, sessionId, report }) => (
+          <li key={seq} className="border-b border-line py-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted">{new Date(report.received_at).toLocaleTimeString()}</span>
+              <span className="text-fg-strong">{report.rpt_id}</span>
+              <span className="text-muted">{sessionId ? label(sessionId) : ''}</span>
+              {report.seq_num !== undefined && <span className="text-muted">#{report.seq_num}</span>}
+              {report.buf_ovfl && <Chip tone="wire">buffer overflow</Chip>}
+              <span className="ml-auto text-muted">{report.entries.length} entries</span>
+            </div>
+            <ul className="pl-4">
+              {report.entries.map((en, i) => (
+                <li key={`${en.ref}${i}`} className="flex flex-wrap gap-2">
+                  <span>{en.ref}</span>
+                  <span className="text-fg-strong">{summarize(en.value).text}</span>
+                  {en.reasons && <span className="text-muted">{en.reasons.join(', ')}</span>}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 /** The Commission audit trail of this engine run, newest first. */
 export function AuditPanel({ records, label }: { records: AuditRecord[]; label: (sessionId: string) => string }) {
   return (
@@ -233,6 +272,12 @@ export function AuditPanel({ records, label }: { records: AuditRecord[]; label: 
               </span>
             )}
             {r.reason && <span className="text-muted">“{r.reason}”</span>}
+            {r.detail && <span className="text-muted">{r.detail}</span>}
+            {r.action === 'select-active-sg' && (
+              <span>
+                group {r.before} → {r.written} {r.after !== undefined && `(read back ${r.after})`}
+              </span>
+            )}
             {r.capabilities && r.action === 'grant' && <span className="text-muted">{r.capabilities.join(', ')}</span>}
             {r.error && <span className="text-danger">{r.error}</span>}
           </li>

@@ -125,6 +125,13 @@ func (d *IED) Close() {
 	})
 }
 
+// Set changes a value of the IED, as its process would: item is an MMS
+// item ID of the logical device, such as "MMXU1$MX$Hz$mag$f". A change
+// triggers the reports and logs that watch it.
+func (d *IED) Set(item string, v *mms.Value) {
+	d.srv.SetValue(context.Background(), Domain+"/"+item, v)
+}
+
 // Services returns how often the server received each confirmed service.
 func (d *IED) Services() map[mms.Service]int {
 	return d.m.snapshot()

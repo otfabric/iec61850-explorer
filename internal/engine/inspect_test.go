@@ -5,6 +5,7 @@ package engine
 import (
 	"bytes"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,12 +38,21 @@ func TestDataSetsLiveMatchSCL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(a) != 1 || len(b) != 1 || a[0].Ref != simied.Domain+"/LLN0.Meas" || a[0].Source != model.SourceIED || b[0].Source != model.SourceSCL {
+	byRef := func(x, y model.DataSet) int { return strings.Compare(x.Ref, y.Ref) }
+	slices.SortFunc(a, byRef)
+	slices.SortFunc(b, byRef)
+	if len(a) != 2 || len(b) != 2 || a[1].Ref != simied.Domain+"/LLN0.Meas" || a[0].Ref != simied.Domain+"/LLN0.Events" {
 		t.Fatalf("live %+v\nscl %+v", a, b)
 	}
-	if !slices.EqualFunc(a[0].Members, b[0].Members, func(x, y model.DataSetMember) bool { return x.Ref == y.Ref && x.MMS == y.MMS }) {
-		t.Errorf("members live %+v\nscl %+v", a[0].Members, b[0].Members)
+	for i := range a {
+		if a[i].Source != model.SourceIED || b[i].Source != model.SourceSCL || a[i].Ref != b[i].Ref {
+			t.Errorf("live %+v\nscl %+v", a[i], b[i])
+		}
+		if !slices.EqualFunc(a[i].Members, b[i].Members, func(x, y model.DataSetMember) bool { return x.Ref == y.Ref && x.MMS == y.MMS }) {
+			t.Errorf("members live %+v\nscl %+v", a[i].Members, b[i].Members)
+		}
 	}
+	a, b = a[1:], b[1:] // Meas
 	if a[0].MMS != (model.MMSName{Domain: simied.Domain, ItemID: "LLN0$Meas"}) || b[0].Desc != "Measurements" {
 		t.Errorf("names = %+v / %+v", a[0].MMS, b[0])
 	}
@@ -94,19 +104,30 @@ func TestReportsLiveMatchSCL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(a) != 1 || len(b) != 1 {
+	if len(a) != 3 || len(b) != 3 {
 		t.Fatalf("live %+v\nscl %+v", a, b)
 	}
-	l, s := a[0], b[0]
-	if l.Error != nil || l.RptEna == nil || *l.RptEna || l.Buffered || l.Resv == nil {
-		t.Errorf("live = %+v", l)
+	byRef := func(x, y model.RCB) int { return strings.Compare(x.Ref, y.Ref) }
+	slices.SortFunc(a, byRef)
+	slices.SortFunc(b, byRef)
+	for i := range a {
+		l, s := a[i], b[i]
+		if l.Error != nil || l.RptEna == nil || *l.RptEna {
+			t.Errorf("live = %+v", l)
+		}
+		if l.Buffered != (l.Resv == nil) || l.Buffered != (l.ResvTms != nil) {
+			t.Errorf("live %s: Resv %v, ResvTms %v", l.Ref, l.Resv, l.ResvTms)
+		}
+		if l.Ref != s.Ref || l.MMS != s.MMS || l.Buffered != s.Buffered || l.RptID != s.RptID || l.DatSet != s.DatSet || l.ConfRev != s.ConfRev ||
+			l.BufTmMS != s.BufTmMS || !slices.Equal(l.TrgOps, s.TrgOps) || !slices.Equal(l.OptFlds, s.OptFlds) {
+			t.Errorf("live %+v\nscl  %+v", l, s)
+		}
+		if s.RptEna != nil || s.Source != model.SourceSCL {
+			t.Errorf("SCL RCB claims IED state: %+v", s)
+		}
 	}
-	if l.Ref != s.Ref || l.MMS != s.MMS || l.RptID != s.RptID || l.DatSet != s.DatSet || l.ConfRev != s.ConfRev ||
-		!slices.Equal(l.TrgOps, s.TrgOps) || !slices.Equal(l.OptFlds, s.OptFlds) {
-		t.Errorf("live %+v\nscl  %+v", l, s)
-	}
-	if s.RptEna != nil || s.Source != model.SourceSCL {
-		t.Errorf("SCL RCB claims IED state: %+v", s)
+	if a[0].Ref != simied.Domain+"/LLN0.BR.brcbEvents" || !a[0].Buffered || a[2].Ref != simied.Domain+"/LLN0.RP.urcbMeas" {
+		t.Errorf("RCBs = %s, %s, %s", a[0].Ref, a[1].Ref, a[2].Ref)
 	}
 }
 

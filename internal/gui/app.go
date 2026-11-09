@@ -197,6 +197,36 @@ func (a *App) Write(ctx context.Context, id string, req model.WriteRequest) (mod
 	return a.svc.Write(ctx, id, req)
 }
 
+// SubscribeReport subscribes to a report control block.
+func (a *App) SubscribeReport(ctx context.Context, id string, req model.SubscribeRequest) (model.Subscription, error) {
+	return a.svc.SubscribeReport(ctx, id, req)
+}
+
+// Unsubscribe ends a report subscription.
+func (a *App) Unsubscribe(ctx context.Context, id, subscriptionID string) error {
+	return a.svc.Unsubscribe(ctx, id, subscriptionID)
+}
+
+// TriggerGI asks for a general interrogation on a subscription.
+func (a *App) TriggerGI(ctx context.Context, id, subscriptionID string) error {
+	return a.svc.TriggerGI(ctx, id, subscriptionID)
+}
+
+// CreateDataSet defines a data set on the IED.
+func (a *App) CreateDataSet(ctx context.Context, id string, req model.CreateDataSetRequest) (model.DataSet, error) {
+	return a.svc.CreateDataSet(ctx, id, req)
+}
+
+// DeleteDataSet deletes a deletable data set.
+func (a *App) DeleteDataSet(ctx context.Context, id, ref string) error {
+	return a.svc.DeleteDataSet(ctx, id, ref)
+}
+
+// SelectActiveSG selects the active setting group.
+func (a *App) SelectActiveSG(ctx context.Context, id string, req model.SelectSGRequest) (model.SettingGroups, error) {
+	return a.svc.SelectActiveSG(ctx, id, req)
+}
+
 // Audit returns recent audit records.
 func (a *App) Audit(ctx context.Context, q model.AuditQuery) ([]model.AuditRecord, error) {
 	return a.svc.Audit(ctx, q)

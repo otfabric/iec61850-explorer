@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityPanel } from './components/ActivityPanel';
-import { AuditPanel, CommissionBanner, GrantDialog } from './components/Commission';
+import { AuditPanel, CommissionBanner, GrantDialog, ReportsPanel } from './components/Commission';
 import { ConnectError } from './components/ConnectError';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { DeviceTree } from './components/DeviceTree';
@@ -27,7 +27,7 @@ interface AppProps {
   platform: Platform;
 }
 
-type BottomTab = 'watch' | 'activity' | 'audit';
+type BottomTab = 'watch' | 'activity' | 'reports' | 'audit';
 
 export function App({ service, platform }: AppProps) {
   const explorer = useExplorer(service);
@@ -167,6 +167,8 @@ export function App({ service, platform }: AppProps) {
                     disabled={offline || view.info.state === 'lost'}
                     watched={(ref) => state.watch.some((w) => watchKey(w) === watchKey({ sessionId: view.info.id, ref }))}
                     onWatch={(ref, on) => void explorer.watch({ sessionId: view.info.id, ref }, on)}
+                    watchedRefs={watchedRefs(state.watch, view.info.id)}
+                    onError={explorer.report}
                   />
                 ) : view.selected ? (
                   <NodePanel
@@ -195,7 +197,7 @@ export function App({ service, platform }: AppProps) {
 
         <div className="flex min-h-0 flex-col border-t border-line">
           <div role="tablist" className="flex shrink-0 gap-4 px-4 pt-2">
-            {(commission ? (['watch', 'activity', 'audit'] as const) : (['watch', 'activity'] as const)).map((tab) => (
+            {(commission ? (['watch', 'activity', 'reports', 'audit'] as const) : (['watch', 'activity'] as const)).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -204,7 +206,13 @@ export function App({ service, platform }: AppProps) {
                 className={`ot-label cursor-pointer pb-1 ${bottom === tab ? 'border-b-2 border-accent text-accent' : ''}`}
                 onClick={() => setBottom(tab)}
               >
-                {tab === 'watch' ? `Watch (${state.watch.length})` : tab === 'activity' ? 'Activity & diagnostics' : `Audit (${state.audit.length})`}
+                {tab === 'watch'
+                  ? `Watch (${state.watch.length})`
+                  : tab === 'activity'
+                    ? 'Activity & diagnostics'
+                    : tab === 'reports'
+                      ? `Reports (${state.reports.length})`
+                      : `Audit (${state.audit.length})`}
               </button>
             ))}
           </div>
@@ -225,6 +233,8 @@ export function App({ service, platform }: AppProps) {
               />
             ) : bottom === 'activity' ? (
               <ActivityPanel activity={state.activity} />
+            ) : bottom === 'reports' ? (
+              <ReportsPanel reports={state.reports} label={label} />
             ) : (
               <AuditPanel records={state.audit} label={label} />
             )}

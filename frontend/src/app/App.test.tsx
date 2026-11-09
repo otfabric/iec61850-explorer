@@ -206,7 +206,7 @@ describe('App', () => {
 
     await user.click(within(panel).getByRole('tab', { name: 'Report control blocks' }));
     expect(await within(panel).findByText('enabled: another client may own it')).toBeInTheDocument();
-    expect(within(panel).getByText('data-changed, GI')).toBeInTheDocument();
+    expect(within(panel).getAllByText('data-changed, GI')).toHaveLength(2);
 
     await user.click(within(panel).getByRole('tab', { name: 'Logs' }));
     await user.click(await within(panel).findByRole('button', { name: 'Read log' }));
@@ -214,6 +214,56 @@ describe('App', () => {
 
     await user.click(within(panel).getByRole('tab', { name: 'Setting groups' }));
     expect(await within(panel).findByText('Active group')).toBeInTheDocument();
+  });
+
+  it('subscribes to reports, creates a data set and switches the setting group in Commission mode', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    render(<App service={service} platform={platform()} />);
+    await connect(user);
+    await user.click(await screen.findByRole('button', { name: 'Commission…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Commission mode' });
+    await user.type(within(dialog).getByLabelText(/Reason/), 'WO-4712');
+    await user.click(within(dialog).getByLabelText(/Subscribe to report control blocks/));
+    await user.click(within(dialog).getByLabelText('Create and delete data sets'));
+    await user.click(within(dialog).getByLabelText('Select the active setting group'));
+    await user.click(within(dialog).getByRole('button', { name: 'Grant' }));
+    await screen.findByRole('status', { name: 'Commission grant' });
+
+    await user.click(await screen.findByText('DemoIEDLD0'));
+    const panel = screen.getByRole('region', { name: 'Logical device' });
+
+    // A data set from two references.
+    await user.click(await within(panel).findByRole('button', { name: 'New data set' }));
+    const form = within(panel).getByRole('form', { name: 'New data set' });
+    await user.type(within(form).getByLabelText('Data set name'), 'Explorer1');
+    await user.type(within(form).getByLabelText('Members'), 'DemoIEDLD0/MMXU1.Hz[MX]{enter}DemoIEDLD0/MMXU1.TotW[MX]');
+    await user.click(within(form).getByRole('button', { name: 'Create' }));
+    expect(await within(panel).findByText('DemoIEDLD0/LLN0.Explorer1')).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(within(panel).queryByText('DemoIEDLD0/LLN0.Explorer1')).not.toBeInTheDocument());
+
+    // Subscribe with a general interrogation; the report arrives in the Reports tab.
+    await user.click(within(panel).getByRole('tab', { name: 'Report control blocks' }));
+    await user.click(await within(panel).findByRole('button', { name: 'Subscribe' }));
+    expect(await within(panel).findByText(/subscribed since /)).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /^Reports/ }));
+    const reports = screen.getByRole('region', { name: 'Reports' });
+    expect(await within(reports).findByText('DemoIEDLD0/GGIO1.Ind1.stVal[ST]')).toBeInTheDocument();
+    await user.click(within(panel).getByRole('button', { name: 'Unsubscribe' }));
+    expect(await within(panel).findByRole('button', { name: 'Subscribe' })).toBeInTheDocument();
+
+    // Switch to setting group 2.
+    await user.click(within(panel).getByRole('tab', { name: 'Setting groups' }));
+    await user.click(await within(panel).findByRole('button', { name: 'Activate' }));
+    expect(await within(panel).findByText('2 (active)')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: /^Audit/ }));
+    const audit = screen.getByRole('region', { name: 'Audit trail' });
+    for (const action of ['create-dataset', 'delete-dataset', 'subscribe', 'unsubscribe', 'select-active-sg']) {
+      expect(within(audit).getByText(action)).toBeInTheDocument();
+    }
+    expect(within(audit).getByText(/group 1 → 2/)).toBeInTheDocument();
   });
 
   it('lists and downloads the files of the IED', async () => {

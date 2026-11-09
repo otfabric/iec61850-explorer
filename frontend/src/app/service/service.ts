@@ -3,6 +3,7 @@
 import type {
   AuditQuery,
   AuditRecord,
+  CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
   ExportFile,
@@ -23,8 +24,11 @@ import type {
   SCLInfo,
   SearchQuery,
   SearchResult,
+  SelectSGRequest,
   SessionInfo,
   SettingGroups,
+  SubscribeRequest,
+  Subscription,
   TargetConfig,
   WriteRequest,
   WriteResult,
@@ -106,6 +110,16 @@ export interface Service {
   revokeCommission(id: string): Promise<SessionInfo>;
   /** Writes one data attribute and reads it back; needs the write capability. */
   write(id: string, req: WriteRequest): Promise<WriteResult>;
+  /** Subscribes to a report control block (reserve, enable, GI); reports arrive as events. */
+  subscribeReport(id: string, req: SubscribeRequest): Promise<Subscription>;
+  /** Disables and releases the RCB of a subscription. */
+  unsubscribe(id: string, subscriptionId: string): Promise<void>;
+  triggerGI(id: string, subscriptionId: string): Promise<void>;
+  createDataSet(id: string, req: CreateDataSetRequest): Promise<DataSet>;
+  /** Deletes a data set the IED marks deletable. */
+  deleteDataSet(id: string, ref: string): Promise<void>;
+  /** Selects the active setting group and reads the control block back. */
+  selectActiveSG(id: string, req: SelectSGRequest): Promise<SettingGroups>;
   /** Recent audit records, newest first. */
   audit(query: AuditQuery): Promise<AuditRecord[]>;
   profiles(): Promise<Profile[]>;

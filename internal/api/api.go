@@ -105,6 +105,12 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/commission", s.revokeCommission)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/write", s.write)
 	api.HandleFunc("GET "+prefix+"/audit", s.audit)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions", s.subscribeReport)
+	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/reports/subscriptions/{sub}", s.unsubscribe)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions/{sub}/gi", s.triggerGI)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/datasets", s.createDataSet)
+	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/datasets", s.deleteDataSet)
+	api.HandleFunc("PUT "+prefix+"/sessions/{id}/setting-groups/active", s.selectActiveSG)
 	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
 	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
@@ -367,6 +373,45 @@ func (s *server) write(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.svc.Write(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) subscribeReport(w http.ResponseWriter, r *http.Request) {
+	var req model.SubscribeRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.SubscribeReport(r.Context(), r.PathValue("id"), req)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) unsubscribe(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.Unsubscribe(r.Context(), r.PathValue("id"), r.PathValue("sub")))
+}
+
+func (s *server) triggerGI(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.TriggerGI(r.Context(), r.PathValue("id"), r.PathValue("sub")))
+}
+
+func (s *server) createDataSet(w http.ResponseWriter, r *http.Request) {
+	var req model.CreateDataSetRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.CreateDataSet(r.Context(), r.PathValue("id"), req)
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) deleteDataSet(w http.ResponseWriter, r *http.Request) {
+	s.replyEmpty(w, r, s.svc.DeleteDataSet(r.Context(), r.PathValue("id"), r.URL.Query().Get("ref")))
+}
+
+func (s *server) selectActiveSG(w http.ResponseWriter, r *http.Request) {
+	var req model.SelectSGRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.SelectActiveSG(r.Context(), r.PathValue("id"), req)
 	s.reply(w, r, v, err)
 }
 

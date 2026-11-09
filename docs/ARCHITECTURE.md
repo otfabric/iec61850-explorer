@@ -110,6 +110,9 @@ A session stays in Observe mode for its whole life. `GrantCommission` adds a gra
 - **Audit trail.** `<data dir>/audit/audit-YYYY-MM-DD.jsonl`, mode 0600, appended and synced before the outcome is reported. The sequence continues across runs; the recent 500 records are kept in memory, returned by `Audit` and published as `audit` events. Without a data directory, or when the trail cannot be written, no grant is given.
 - **Writes.** `Write` takes a data attribute with FC SP, CF, DC, SV or BL and the value as text. The engine converts it with the attribute's MMS type (GetVariableAccessAttributes; a FLOAT32 is sent as a single float), reads the value before, writes, reads it back and reports `verified`. The setting group control block (`LLN0.SGCB`, FC SP) is refused: setting groups have their own capability.
 - **Where.** The desktop application offers Commission mode; the daemon only with `--allow-commission`. `Health.features` contains `commission` when it is offered.
+- **Reports** (`reports`). The engine runs the control block's lifecycle itself so that each step reaches the audit trail: it refuses an RCB that is enabled or reserved (another client may own it), registers a passive go-iec61850 subscription, reserves an unbuffered RCB, enables it and, if asked, triggers a general interrogation. Reports are published as `report` events; entries are named by the data set's members (or by the report's data references, converted from MMS form) and converted with their types. Unsubscribing, revoking or losing the grant disables and releases the RCB. At most 8 subscriptions per grant; a queue of 256 reports per subscription, overflow counted.
+- **Data sets** (`datasets`). Create a persistent data set in a logical node (`LD/LLN0.Name`, 1 to 100 FC-qualified members) and read it back; delete only what the IED marks deletable and no subscription of the grant uses. The Observe association's cached definitions are invalidated after each change.
+- **Setting groups** (`setting-groups`). Select the active setting group (1 to NumOfSGs) and read the control block back. Editing setting values (SelectEditSG, SE values, ConfirmEditSG) is not offered: go-iec61850's server keeps no SE values, so there is no peer to test it against.
 - **Lint.** forbidigo exempts the engine's `commission*.go` files, the only code that holds the Commission association.
 
 ## 6. Diagnostics
@@ -140,10 +143,13 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `GET /api/v1/sessions/{id}/setting-groups?ld=` | The setting group control block |
 | `PUT /api/v1/sessions/{id}/commission`, `DELETE ...` | Grant Commission mode (`{reason, minutes, capabilities}`), revoke it |
 | `POST /api/v1/sessions/{id}/write` | `{ref, value}` -> the write with the value before and read back; needs the `write` capability |
+| `POST /api/v1/sessions/{id}/reports/subscriptions` (`{rcb, gi}`), `DELETE .../{sub}`, `POST .../{sub}/gi` | Subscribe to an RCB, unsubscribe, general interrogation; needs `reports` |
+| `POST /api/v1/sessions/{id}/datasets` (`{ref, members}`), `DELETE .../datasets?ref=` | Create, delete a data set; needs `datasets` |
+| `PUT /api/v1/sessions/{id}/setting-groups/active` (`{ld, sg}`) | Select the active setting group; needs `setting-groups` |
 | `GET /api/v1/audit?session=&limit=` | Recent audit records, newest first |
 | `POST /api/v1/scl/inspect?name=`, `POST /api/v1/scl/open?name=&ied=&ap=` | Raw SCL body -> description, or an offline session |
 | `GET /api/v1/profiles`, `POST`, `PUT /profiles/{id}`, `DELETE /profiles/{id}` | Connection profiles |
-| `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`, `audit`); replay from `since` or `Last-Event-ID` |
+| `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`, `audit`, `report`); replay from `since` or `Last-Event-ID` |
 | `GET /` and assets | The web UI, unless `--no-ui` |
 
 No endpoint accepts a file path, an MMS PDU or a service name. The only value to write goes through `/write`, which needs a Commission grant. Files arrive as request bodies.
@@ -162,9 +168,9 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | Self-description, browse, typed reads | `TreeWithOptions{IncludeFCs}`, `ReadRaw`, `GetVariableType`, `ReadMultiple` | Batched reads since M1 |
 | Model cache across runs | Gap: in-memory only | Snapshots (M1) are the Explorer's own versioned files |
 | Datasets | `ListDataSets`, `GetDataSet`, `ReadDataSet`; create/delete | Inspection since M2a; create/delete in Commission mode (M2b) |
-| Reports | RCB read/write, subscription; gap: single-client ownership assumed | M2: ownership-aware, conservative RCB workflows |
+| Reports | RCB read/write, subscription; gap: single-client ownership assumed. Server gap: the report engine sends a data-object member (FCD, such as `MMXU1.Hz[MX]`) as `false` and does not trigger on changes below it; attribute-level members work | Since M2b2: the engine runs the RCB lifecycle itself, refuses RCBs another client enabled or reserved, audits each step. The simulated IED reports from an attribute-level data set until the server gap is closed in go-iec61850 |
 | Enhanced-security controls | Gap: the client does not wait for or surface CommandTermination; no time-activated operate | Close in go-iec61850 before advanced controls are offered |
-| Setting groups, files, journals | Client APIs present | Reading since M2a (file and journal reads joined `readonly.Services`); changes in Commission mode (M2b) |
+| Setting groups, files, journals | Client APIs present; server gap: no SE (edit) values | Reading since M2a (file and journal reads joined `readonly.Services`); active setting group selection since M2b2; SE editing waits for a peer that supports it |
 | SCL | Parser, `Flatten`, semantic validation; gaps: `Inputs`, `ExtRef`, `ClientLN` not normalised, no XSD validation | Import and offline browsing since M1; flow analysis waits for the normalisation |
 | GOOSE/SV live capture | Linux and macOS raw Ethernet; gap: Windows `ErrUnsupportedPlatform` | PCAP import first |
 | Semantics | go-iec61850-model: NSD catalog, reference resolution, search | M3 semantic view and search |
@@ -179,7 +185,7 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | M1 (done) | Read-only browser: connection profiles and ISO addressing, batched reads, polling and a watch table across IEDs, search, SCL import, snapshots, CSV, the first release | A user connects, finds meaningful points, monitors and exports them without the CLI |
 | M2a (done) | Inspection in Observe mode: data sets, report control blocks, logs, setting groups, the file store; SCL definitions alongside | Everything an IED defines can be seen without changing it |
 | M2b1 (done) | Commission mode foundation: per-session grant on a second association, audit trail, writes with readback | A user changes a set point or configuration value with a verified, recorded write |
-| M2b2 | Report subscription (reserve, enable, GI, cleanup on revoke), dynamic data sets, setting group changes | Practical MMS workflows with predictable safety and cleanup |
+| M2b2 (done) | Report subscription (reserve, enable, GI, cleanup on revoke), dynamic data sets, active setting group selection | Practical MMS workflows with predictable safety and cleanup |
 | M2b3 | Controls (direct, SBO, enhanced security), after go-iec61850's client waits for CommandTermination | A control's outcome, including its termination, is shown and audited |
 | M3 | Diagnostics and semantics: SCL/live/snapshot comparison, NSD descriptions, semantic search, integration exports | Introduced mismatches can be diagnosed from visible evidence |
 | M4 | Trace analysis: PCAP/PCAPNG, timelines, application-to-wire correlation | A capture is analysed offline, gaps identified |

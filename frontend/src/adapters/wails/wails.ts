@@ -6,6 +6,10 @@ import type { Mode, Platform } from '../../app/platform/platform';
 import { loadTheme, persistTheme } from '../../app/platform/themeStorage';
 import { ServiceError, toServiceError, type ErrorCode, type Service } from '../../app/service/service';
 import type {
+  CreateDataSetRequest,
+  SelectSGRequest,
+  SubscribeRequest,
+  Subscription,
   AuditQuery,
   AuditRecord,
   GrantRequest,
@@ -107,6 +111,12 @@ export class WailsService implements Service {
   revokeCommission = (id: string) => call<SessionInfo>('RevokeCommission', id);
   write = (id: string, req: WriteRequest) => call<WriteResult>('Write', id, req);
   audit = (query: AuditQuery) => call<AuditRecord[]>('Audit', query);
+  subscribeReport = (id: string, req: SubscribeRequest) => call<Subscription>('SubscribeReport', id, req);
+  unsubscribe = (id: string, sub: string) => call<void>('Unsubscribe', id, sub);
+  triggerGI = (id: string, sub: string) => call<void>('TriggerGI', id, sub);
+  createDataSet = (id: string, req: CreateDataSetRequest) => call<DataSet>('CreateDataSet', id, req);
+  deleteDataSet = (id: string, ref: string) => call<void>('DeleteDataSet', id, ref);
+  selectActiveSG = (id: string, req: SelectSGRequest) => call<SettingGroups>('SelectActiveSG', id, req);
   settingGroups = (id: string, ld: string) => call<SettingGroups>('SettingGroups', id, ld);
   profiles = () => call<Profile[]>('Profiles');
   saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);
