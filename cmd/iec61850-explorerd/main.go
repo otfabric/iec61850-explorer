@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -33,6 +34,8 @@ import (
 	"github.com/otfabric/iec61850-explorer/internal/buildinfo"
 	"github.com/otfabric/iec61850-explorer/internal/daemon"
 	"github.com/otfabric/iec61850-explorer/internal/engine"
+	"github.com/otfabric/iec61850-explorer/internal/model"
+	"github.com/otfabric/iec61850-explorer/internal/proxy"
 	"github.com/otfabric/iec61850-explorer/internal/web"
 )
 
@@ -109,6 +112,37 @@ type repeated []string
 func (r *repeated) String() string     { return fmt.Sprint([]string(*r)) }
 func (r *repeated) Set(v string) error { *r = append(*r, v); return nil }
 
+// operatorProxy is the default proxy the operator chose.
+type operatorProxy struct{ raw, redacted string }
+
+// daemonProxy returns the operator's default proxy: --proxy when given, else
+// $ALL_PROXY or $all_proxy. source names where it came from.
+func daemonProxy(flags *flag.FlagSet, flagValue string) (operatorProxy, string, error) {
+	value, source := flagValue, "--proxy"
+	given := false
+	flags.Visit(func(f *flag.Flag) { given = given || f.Name == "proxy" })
+	if !given {
+		for _, env := range []string{"ALL_PROXY", "all_proxy"} {
+			if v := strings.TrimSpace(os.Getenv(env)); v != "" {
+				value, source = v, "$"+env
+				break
+			}
+		}
+	}
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return operatorProxy{}, "", nil
+	}
+	if strings.EqualFold(value, model.ProxyDirect) {
+		return operatorProxy{raw: model.ProxyDirect, redacted: model.ProxyDirect}, source, nil
+	}
+	c, err := proxy.Parse(value)
+	if err != nil {
+		return operatorProxy{}, "", fmt.Errorf("%s: %w", source, err)
+	}
+	return operatorProxy{raw: value, redacted: c.Redacted()}, source, nil
+}
+
 // runServe runs the daemon until ctx ends. ready, when not nil, receives the
 // address the daemon bound.
 func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<- string) error {
@@ -130,6 +164,9 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	flags.Var(&allowHosts, "allow-host", "additional host name the daemon answers to (repeatable; for --allow-remote-bind)")
 	flags.Var(&allowTargets, "allow-target",
 		"CIDR or address of devices the daemon may connect to (repeatable; default: private and link-local ranges)")
+	proxyURL := flags.String("proxy", "",
+		"default proxy to reach IEDs through: socks5://, socks5h:// or http://[user:password@]host:port, or \"direct\"; "+
+			"default $ALL_PROXY or $all_proxy; users cannot change it")
 	maxSessions := flags.Int("max-sessions", engine.DefaultMaxSessions, "maximum number of open sessions")
 	allowCommission := flags.Bool("allow-commission", false,
 		"offer Commission mode: users may grant a session writes and other changes to the IED, recorded in <data-dir>/audit")
@@ -140,6 +177,10 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	}
 	if flags.NArg() > 0 {
 		return fmt.Errorf("unexpected argument %q (see --help)", flags.Arg(0))
+	}
+	defaultProxy, source, err := daemonProxy(flags, *proxyURL)
+	if err != nil {
+		return err
 	}
 
 	level := slog.LevelInfo
@@ -164,7 +205,16 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 		return err
 	}
 
-	eng := engine.New(engine.Options{Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow, DataDir: p.dataDir, Commission: *allowCommission})
+	if defaultProxy.raw != "" {
+		log.Info("default proxy set by the operator", "proxy", defaultProxy.redacted, "from", source)
+	} else {
+		log.Info("no default proxy set by the operator: users may choose one")
+	}
+
+	eng := engine.New(engine.Options{
+		Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow, AllowAddr: allow.AllowAddr,
+		DefaultProxy: defaultProxy.raw, DataDir: p.dataDir, Commission: *allowCommission,
+	})
 	if *allowCommission {
 		log.Warn("Commission mode is offered: users of this daemon may change IEDs (audit trail in " + filepath.Join(p.dataDir, "audit") + ")")
 	}

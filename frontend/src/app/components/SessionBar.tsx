@@ -24,6 +24,11 @@ export function SessionBar({ info, panel, onToggle, onCommission, onClose }: Ses
         </span>
       )}
       <Chip tone={tone}>{info.state}</Chip>
+      {info.proxy && (
+        <span className="font-mono text-muted" title="The proxy this session connected through">
+          via {info.proxy}
+        </span>
+      )}
       {info.scl && (
         <span className="text-muted" title="Offline: a model from an SCL file">
           SCL {info.scl.file} · {info.scl.ied}/{info.scl.access_point}

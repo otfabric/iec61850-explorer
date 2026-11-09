@@ -221,6 +221,7 @@ func (e *Engine) OpenSnapshot(_ context.Context, f model.File) (model.SessionInf
 		snapshot:   &model.SnapshotOrigin{File: displayName(f.Name), CapturedAt: snap.CapturedAt},
 		snapValues: values, snapAt: snap.ValuesAt,
 	}
+	s.target.Proxy = redactProxySetting(s.target.Proxy)
 	s.setTree(root, 0)
 	e.sessions[s.id] = s
 	e.order = append(e.order, s.id)

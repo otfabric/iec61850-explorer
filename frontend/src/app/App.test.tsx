@@ -151,6 +151,57 @@ describe('App', () => {
     expect(await service.profiles()).toHaveLength(1);
   });
 
+  it('connects through a proxy and shows it without the password', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const open = vi.spyOn(service, 'openSession');
+    render(<App service={service} platform={platform()} />);
+    expect(await screen.findByPlaceholderText('direct (no default proxy)')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Proxy'), 'socks5://op:s3cret@gw:1080');
+    await connect(user);
+    expect(await screen.findByText('via socks5://op:xxxxx@gw:1080')).toBeInTheDocument();
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ host: '10.0.0.5', proxy: 'socks5://op:s3cret@gw:1080' }));
+    expect(document.body.textContent).not.toContain('s3cret');
+  });
+
+  it('saves a default proxy that an empty Proxy field then uses', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const open = vi.spyOn(service, 'openSession');
+    render(<App service={service} platform={platform()} />);
+    const field = await screen.findByRole('textbox', { name: 'Default proxy' });
+    await user.type(field, 'ftp://nope');
+    await user.click(screen.getByRole('button', { name: 'Save default' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('default proxy');
+    await user.clear(field);
+    await user.type(field, 'http://gw:3128');
+    await user.click(screen.getByRole('button', { name: 'Save default' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+    expect(screen.getByLabelText('Proxy')).toHaveAttribute('placeholder', 'default: http://gw:3128');
+    await connect(user);
+    expect(await screen.findByText('via http://gw:3128')).toBeInTheDocument();
+    expect(open).toHaveBeenCalledWith(expect.not.objectContaining({ proxy: expect.anything() }));
+  });
+
+  it('shows a default proxy the operator set as read-only', async () => {
+    const service = new MockService();
+    service.lockDefaultProxy('socks5://op:xxxxx@gw:1080');
+    render(<App service={service} platform={platform()} />);
+    expect(await screen.findByText(/Set by the daemon's operator/)).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Default proxy' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Default proxy')).toHaveTextContent('socks5://op:xxxxx@gw:1080');
+    expect(screen.getByLabelText('Proxy')).toHaveAttribute('placeholder', 'default: socks5://op:xxxxx@gw:1080');
+  });
+
+  it('keeps a profile\'s proxy and fills the form with it', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    await service.saveProfile({ id: '', name: 'Behind gateway', target: { host: '10.2.2.2', proxy: 'direct' } });
+    render(<App service={service} platform={platform()} />);
+    await user.selectOptions(await screen.findByLabelText('Profile'), await screen.findByRole('option', { name: 'Behind gateway (10.2.2.2)' }));
+    expect(screen.getByLabelText('Proxy')).toHaveValue('direct');
+  });
+
   it('opens an SCL file offline: browse yes, read no', async () => {
     const user = userEvent.setup();
     render(<App service={new MockService()} platform={platform()} />);

@@ -35,6 +35,7 @@ internal/engine -> go-iec61850 -> go-mms -> go-cotp
 - `internal/gui`: the Wails binding; forwards events to the window.
 - `internal/web`: the embedded web UI handler (SPA fallback, CSP).
 - `internal/daemon`: token, state file, data directory, bind rules, target allow-list.
+- `internal/proxy`: SOCKS5 and HTTP CONNECT dialing (no dependency beyond the standard library); `internal/proxy/proxytest` holds test proxies, imported by tests only.
 - `internal/simied`: a simulated IED (go-iec61850's server on `demo.icd`) that counts the services it receives. Tests only.
 
 ```go
@@ -63,6 +64,8 @@ type Service interface {
     Profiles(ctx) ([]model.Profile, error)
     SaveProfile(ctx, model.Profile) (model.Profile, error)
     DeleteProfile(ctx, id) error
+    Settings(ctx) (model.Settings, error)                           // the default proxy
+    SaveSettings(ctx, model.Settings) (model.Settings, error)       // refused when the daemon's operator set it
     Subscribe(ctx, sinceSeq) (<-chan model.Event, error)
 }
 ```
@@ -73,6 +76,8 @@ The contract suite (`internal/api/contract_test.go`) runs the same tests against
 
 A live session = target + one go-iec61850 client (one MMS association) + the model discovered at open time + a recorder of MMS requests + at most one poller. An offline session has a model and no association: from an SCL file, or from a snapshot (which also holds values). The window shows sessions in tabs.
 
+- **Proxy.** `TargetConfig.Proxy` names how to reach the IED: empty uses the default proxy, `direct` none, else `socks5://`, `socks5h://` or `http://[user:password@]host[:port]` (ports 1080 and 8080 by default). The default is the daemon operator's (`engine.Options.DefaultProxy`, from `--proxy` or `ALL_PROXY`), else the user's setting (`Settings.DefaultProxy`, `<data-dir>/settings.json`, 0600). The engine parses it before dialling (a bad URL is `invalid_argument`) and hands go-iec61850 a dial function (`DialOptions.Dialer`, go-iec61850 v1.15) from `internal/proxy`, used for every attempt of the Observe association and of a Commission association. `internal/proxy` implements SOCKS5 CONNECT (RFC 1928) with username/password authentication (RFC 1929), IPv4, IPv6 and domain-name destinations (`socks5` resolves locally, `socks5h` sends the name), and HTTP CONNECT (RFC 9110, 9.3.6) with `Proxy-Authorization: Basic`, any 2xx accepted, the response header bounded to 8 KiB and bytes after it kept for the MMS connection. The dial context's deadline is set on the connection for the handshake and cleared afterwards; a cancelled context closes it. Failures are `*proxy.Error` with a stage (connect, resolve, not-allowed, handshake, auth, refused) and the SOCKS reply code or HTTP status; `classify` names the stage `proxy` from that type. A proxy URL's password never leaves the engine except in the profile or settings it was saved in: sessions (`SessionInfo.Proxy`, `Target.Proxy`), events, logs, errors and snapshots carry the redacted URL (`user:xxxxx@`).
+- **Allow-list hooks.** `Options.AllowTarget` (the daemon's allow-list) is asked for the IED's host before dialling, and for the host of a proxy that is not the operator's; with a proxy that resolves names (`socks5h`, `http`) the IED must be an IP address. `Options.AllowAddr` is asked when a connection is opened (`net.Dialer.Control`) for the address actually connected to: the IED's on a direct connection, a user's proxy, and the IED address a `socks5` proxy is sent. A refusal is `AddrRefusedError` (code `not_allowed`).
 - **Addressing.** `TargetConfig.Addressing` sets the T/S/P selectors, AP-titles and AE-qualifiers (the IED's SCL Address); a field left out takes the go-mms default, `""` omits the parameter. Selectors and AP-titles are validated before dialling.
 - **Reads** of several object references go out 32 per MMS Read (`ReadMultiple`), one operation per call; a batch that fails as a whole, short of a lost association, is read again one reference at a time. Logical-node reads are not batched.
 - **Polling** reads a session's references on an absolute start-to-start schedule (200 ms to 1 h). A cycle that ends after the next start skips the starts it missed and counts them as overruns; there is no catching up. Samples are events. A lost or closed session stops its poller. The window's watch table is the union of the polled references of all sessions; a reloaded page takes the references back from the engine's pollers.
@@ -81,7 +86,7 @@ A live session = target + one go-iec61850 client (one MMS association) + the mod
 - **Snapshots** (`otfabric.iec61850-explorer.snapshot/1`): target, identity, discovery summary, the whole model tree and the values read for the export, each with its MMS name. `OpenSnapshot` opens one as an offline session; reads answer from the stored values and say `source: "snapshot"`.
 - **CSV** export: one row per leaf value (`read_at, ref, component, mms_domain, mms_item_id, type, value, validity, error`); text that a spreadsheet would take for a formula is prefixed with `'`.
 - **Inspection** (M2a) of a logical device: data sets with their members, report control blocks with their configuration (RptID, DatSet, ConfRev, TrgOps, OptFlds, BufTm, IntgPd; from the IED also RptEna, Resv or ResvTms, SqNum, GI, Owner, EntryID), logs (journals) read by time range, the setting group control block, and the IED's file store with downloads. Each is one operation. For an offline SCL session, data sets and report control blocks come from the file (`source: "scl"`) and claim nothing only the IED knows (no RptEna, no Owner); `TestDataSetsLiveMatchSCL` and `TestReportsLiveMatchSCL` check that the simulated IED reports what its SCL defines. An enabled RCB is shown as possibly owned by another client: the Explorer does not subscribe in Observe mode.
-- **Profiles** are kept by the engine in `<data-dir>/profiles.json` (0600, written atomically). The desktop application's data directory is the user's configuration directory (`iec61850-explorer`); the daemon's is its `--data-dir`.
+- **Profiles** are kept by the engine in `<data-dir>/profiles.json` (0600, written atomically), the settings in `<data-dir>/settings.json` the same way. The desktop application's data directory is the user's configuration directory (`iec61850-explorer`); the daemon's is its `--data-dir`.
 
 Connecting:
 
@@ -132,7 +137,7 @@ A session stays in Observe mode for its whole life. `GrantCommission` adds a gra
 - **Values (M3b).** With `values`, the comparison adds the basic attributes of FC CF, DC, SP and SG that both sides have a value for. An SCL session gives the configured value: the instance's `DAI` values or the type's default, through `SDI`, structures and sub data objects (arrays are left out). A live session reads its data objects per FC (`LD/LN.DO[CF]`, at most 200 per read, in Observe mode) and a snapshot gives what it holds. Values are compared as booleans, numbers or strings: an enumeration's SCL literal by its ordinal (shown as `literal (ordinal)`), a float at FLOAT32 precision. Quality, time stamps and other types are counted as not compared. A setting (SG) has a value per setting group in SCL (`sGroup`, go-iec61850 v1.14.0): two SCL files compare every group, an IED gives the values of its active group, and that group is compared. Settings being edited (SE) are not compared: reading them needs an edit group, which is a Commission action.
 
 - **Operations.** Every user action (`connect`, `discover`, `read`, `close`) is published as an `operation` event with its duration, result and the MMS requests it caused (service, invoke ID, duration, error), from go-mms `Metrics` events. The UI shows them in the activity panel.
-- **Connect stages.** `internal/engine/classify.go` places a failure in its layer only from the error type: `*net.OpError` (dial) is TCP; `*cotp.RejectionError` is COTP, with reason 3 explained as the T-selector; `*mms.ProtocolError` gives session, presentation, ACSE or MMS phase; `mms.ErrConnectionRejected` is ACSE; `mms.ErrNegotiationFailed` is MMS Initiate. Anything else gets no stage. Response errors map data-access errors, ConfirmedError and Reject.
+- **Connect stages.** `internal/engine/classify.go` places a failure in its layer only from the error type: `*proxy.Error` is the proxy (with its own stage in the hint); `*engine.AddrRefusedError` is the allow-list at TCP; `*net.OpError` (dial) is TCP; `*cotp.RejectionError` is COTP, with reason 3 explained as the T-selector; `*mms.ProtocolError` gives session, presentation, ACSE or MMS phase; `mms.ErrConnectionRejected` is ACSE; `mms.ErrNegotiationFailed` is MMS Initiate. Anything else gets no stage. Response errors map data-access errors, ConfirmedError and Reject.
 - **Values.** Structures are named from the variable's type; a 13-bit bit string named `q` is decoded as an IEC 61850-7-3 quality; a UTC time carries its time quality; integers beyond 2^53 cross JSON as strings; NaN and infinities have no JSON value. Every read shows the MMS domain and item ID next to the IEC 61850 reference.
 
 ## 7. HTTP API
@@ -142,7 +147,7 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/v1/health` | Versions, API version, mode, features (`profiles`, `commission`), uptime, engine time |
-| `GET /api/v1/sessions`, `POST /api/v1/sessions` | List, open (`{host, port, timeout_ms, addressing}`) |
+| `GET /api/v1/sessions`, `POST /api/v1/sessions` | List, open (`{host, port, timeout_ms, addressing, proxy}`) |
 | `GET /api/v1/sessions/{id}`, `DELETE ...` | Get, close |
 | `GET /api/v1/sessions/{id}/browse?ref=` | Children of a node; no `ref` lists the logical devices |
 | `POST /api/v1/sessions/{id}/read` | `{refs: [...]}`, at most 200 FC-qualified references |
@@ -168,12 +173,13 @@ All `/api/v1` requests need `Authorization: Bearer <token>` and a Host the daemo
 | `POST /api/v1/compare` | `{a, b, values}` -> the comparison of two open sessions: model, data sets, report control blocks and, with `values`, the values of CF, DC, SP and SG attributes (reads only) |
 | `POST /api/v1/scl/inspect?name=`, `POST /api/v1/scl/open?name=&ied=&ap=` | Raw SCL body -> description, or an offline session |
 | `GET /api/v1/profiles`, `POST`, `PUT /profiles/{id}`, `DELETE /profiles/{id}` | Connection profiles |
+| `GET /api/v1/settings`, `PUT /api/v1/settings` | `{default_proxy, default_proxy_locked}`; `PUT` is `not_allowed` when the operator set the default (`--proxy`, `ALL_PROXY`) |
 | `GET /api/v1/events?since=<seq>` | SSE stream (`session`, `operation`, `sample`, `resync`, `audit`, `report`); replay from `since` or `Last-Event-ID` |
 | `GET /` and assets | The web UI, unless `--no-ui` |
 
 No endpoint accepts a file path, an MMS PDU or a service name. The only value to write goes through `/write`, which needs a Commission grant. Files arrive as request bodies.
 
-The daemon's security (token lifecycle, Host check, bind rules, target allow-list, data directory checks) is sunspec-explorer's, unchanged; see `SECURITY.md`.
+The daemon's security (token lifecycle, Host check, bind rules, target allow-list, data directory checks) is sunspec-explorer's; the target allow-list is also checked when a connection is opened, and applies to proxies a user names (see section 4 and `SECURITY.md`).
 
 ## 8. Capability audit of the libraries
 

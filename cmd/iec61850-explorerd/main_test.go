@@ -285,6 +285,90 @@ func TestEngineFlags(t *testing.T) {
 	}
 }
 
+// api sends a request with the daemon's token and returns status and body.
+func (d *started) api(t *testing.T, method, path, body string) (int, string) {
+	t.Helper()
+	token, err := daemon.ReadToken(filepath.Join(d.dir, daemon.TokenFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, _ := http.NewRequest(method, "http://"+d.addr+path, strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	b, _ := io.ReadAll(res.Body)
+	return res.StatusCode, string(b)
+}
+
+// The operator's --proxy (or $ALL_PROXY) is the default, logged and shown
+// without its password, and cannot be changed through the API.
+func TestDaemonProxy(t *testing.T) {
+	t.Setenv("ALL_PROXY", "")
+	t.Setenv("all_proxy", "")
+	d := start(t, "--proxy", "socks5://op:s3cret@127.0.0.1:1080")
+	if code, body := d.api(t, "GET", "/api/v1/settings", ""); code != http.StatusOK ||
+		body != `{"default_proxy":"socks5://op:xxxxx@127.0.0.1:1080","default_proxy_locked":true}`+"\n" {
+		t.Errorf("settings = %d %s", code, body)
+	}
+	if code, _ := d.api(t, "PUT", "/api/v1/settings", `{"default_proxy":"direct"}`); code != http.StatusForbidden {
+		t.Errorf("PUT settings = %d", code)
+	}
+	if log := d.stderr.String(); strings.Contains(log, "s3cret") || !strings.Contains(log, "socks5://op:xxxxx@127.0.0.1:1080") {
+		t.Errorf("log:\n%s", log)
+	}
+
+	t.Setenv("all_proxy", "http://127.0.0.1:3128")
+	env := start(t)
+	if _, body := env.api(t, "GET", "/api/v1/settings", ""); !strings.Contains(body, `"http://127.0.0.1:3128"`) || !strings.Contains(env.stderr.String(), "$all_proxy") {
+		t.Errorf("settings from $all_proxy = %s", body)
+	}
+	// --proxy direct overrides the environment.
+	direct := start(t, "--proxy", "direct")
+	if _, body := direct.api(t, "GET", "/api/v1/settings", ""); !strings.Contains(body, `"direct"`) {
+		t.Errorf("settings with --proxy direct = %s", body)
+	}
+
+	t.Setenv("all_proxy", "")
+	// Without an operator default, users choose one.
+	free := start(t)
+	if code, body := free.api(t, "PUT", "/api/v1/settings", `{"default_proxy":"socks5://127.0.0.1:1"}`); code != http.StatusOK {
+		t.Errorf("PUT settings = %d %s", code, body)
+	}
+	if !strings.Contains(free.stderr.String(), "no default proxy") {
+		t.Errorf("log:\n%s", free.stderr.String())
+	}
+
+	for _, bad := range []string{"ftp://x", "socks5://u:s3cret@h/path"} {
+		var log syncBuffer
+		err := runServe(t.Context(), []string{"--listen", "127.0.0.1:0", "--data-dir", t.TempDir(), "--proxy", bad}, &log, nil)
+		if err == nil || !strings.Contains(err.Error(), "--proxy") || strings.Contains(err.Error(), "s3cret") {
+			t.Errorf("--proxy %s = %v", bad, err)
+		}
+	}
+}
+
+// The target allow-list also restricts a user's proxy, and with a proxy that
+// resolves names the IED must be an address.
+func TestDaemonProxyAllowList(t *testing.T) {
+	t.Setenv("ALL_PROXY", "")
+	t.Setenv("all_proxy", "")
+	d := start(t, "--allow-target", "127.0.0.0/8")
+	for body, want := range map[string]string{
+		`{"host":"127.0.0.1","proxy":"socks5://192.0.2.1:1080"}`: "--allow-target",
+		`{"host":"localhost","proxy":"socks5h://127.0.0.1:1"}`:   "IP address",
+		`{"host":"localhost","proxy":"http://127.0.0.1:1"}`:      "IP address",
+		`{"host":"127.0.0.1","proxy":"ftp://x"}`:                 "invalid_argument",
+	} {
+		code, got := d.api(t, "POST", "/api/v1/sessions", body)
+		if (code != http.StatusForbidden && code != http.StatusBadRequest) || !strings.Contains(got, want) {
+			t.Errorf("%s = %d %s", body, code, got)
+		}
+	}
+}
+
 // Commission mode is offered only with --allow-commission.
 func TestAllowCommission(t *testing.T) {
 	for _, tc := range []struct {

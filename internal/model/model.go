@@ -59,6 +59,30 @@ type TargetConfig struct {
 	TimeoutMS int `json:"timeout_ms,omitempty"`
 	// Addressing overrides the ISO addressing; nil sends the defaults.
 	Addressing *Addressing `json:"addressing,omitempty"`
+	// Proxy is the proxy to reach the IED through: "" uses the default
+	// proxy (Settings.DefaultProxy), ProxyDirect connects without a proxy
+	// even when a default is set, anything else is a proxy URL
+	// (socks5://, socks5h:// or http://, with an optional user:password).
+	// A session's target holds it with the password replaced.
+	Proxy string `json:"proxy,omitempty"`
+}
+
+// ProxyDirect is the value of TargetConfig.Proxy and Settings.DefaultProxy
+// that asks for no proxy.
+const ProxyDirect = "direct"
+
+// MaxProxyLen bounds a proxy setting.
+const MaxProxyLen = 1024
+
+// Settings are the engine's settings.
+type Settings struct {
+	// DefaultProxy is the proxy for a target that names none: "" or
+	// ProxyDirect for none, else a proxy URL.
+	DefaultProxy string `json:"default_proxy"`
+	// DefaultProxyLocked is set when the daemon's operator chose the default
+	// proxy (--proxy or ALL_PROXY): DefaultProxy is then shown with the
+	// password replaced and cannot be changed through the Service.
+	DefaultProxyLocked bool `json:"default_proxy_locked"`
 }
 
 // Addressing is the ISO addressing of an association: the values of the
@@ -146,6 +170,9 @@ type SessionInfo struct {
 	Grant *Grant `json:"grant,omitempty"`
 	// Snapshot is set for an offline session opened from a snapshot.
 	Snapshot *SnapshotOrigin `json:"snapshot,omitempty"`
+	// Proxy is the proxy the session connected through, with the password
+	// replaced; empty for a direct connection or an offline session.
+	Proxy string `json:"proxy,omitempty"`
 }
 
 // SCLOrigin names where an offline session's model came from.

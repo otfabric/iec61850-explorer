@@ -130,6 +130,11 @@ type Service interface {
 	SaveProfile(ctx context.Context, p model.Profile) (model.Profile, error)
 	// DeleteProfile removes a profile.
 	DeleteProfile(ctx context.Context, id string) error
+	// Settings returns the engine's settings (the default proxy).
+	Settings(ctx context.Context) (model.Settings, error)
+	// SaveSettings changes the settings and returns them. A default proxy
+	// the daemon's operator set cannot be changed (CodeNotAllowed).
+	SaveSettings(ctx context.Context, s model.Settings) (model.Settings, error)
 	// Subscribe returns the event stream. Events with a sequence number above
 	// sinceSeq that the engine still holds are replayed first; sinceSeq 0
 	// delivers new events only. The channel is closed when ctx ends.

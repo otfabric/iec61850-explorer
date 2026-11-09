@@ -49,8 +49,10 @@ func TestSimIEDOnlyInTests(t *testing.T) {
 		if err != nil {
 			t.Fatalf("go list %s: %v\n%s", pkg, err, out)
 		}
-		if strings.Contains(string(out), "internal/simied") {
-			t.Errorf("%s depends on internal/simied", pkg)
+		for _, testOnly := range []string{"internal/simied", "internal/proxy/proxytest"} {
+			if strings.Contains(string(out), testOnly) {
+				t.Errorf("%s depends on %s", pkg, testOnly)
+			}
 		}
 	}
 }

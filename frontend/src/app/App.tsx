@@ -122,6 +122,8 @@ export function App({ service, platform }: AppProps) {
                 onDeleteProfile={(id) => void explorer.deleteProfile(id)}
                 onOpenSCL={(file) => void inspect(file)}
                 onOpenSnapshot={(file) => void explorer.openSnapshot(file)}
+                settings={state.settings}
+                onSaveSettings={explorer.saveSettings}
               />
             </>
           )}

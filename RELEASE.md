@@ -2,6 +2,27 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.9.0
+
+**Date:** 2026-11-10
+**Previous release:** v0.8.0
+
+### Added
+
+- **Connecting through a proxy.** An IED can be reached through a SOCKS5 proxy (`socks5://`, the Explorer resolves the IED's name; `socks5h://`, the proxy resolves it) or an HTTP proxy's CONNECT method (`http://`), each with an optional `user:password@`. The connection form and profiles have a Proxy field: empty uses the default proxy, `direct` connects without one. The default proxy is a setting below the connection form, kept in the data directory (`settings.json`, mode 0600). A session shows the proxy it connected through with the password replaced; the password never appears in sessions, events, logs, errors or snapshots. A failure through a proxy is reported at the stage `proxy`, with the SOCKS reply code or HTTP status when the proxy refused. API: `proxy` in `POST /api/v1/sessions` and in profiles; `GET`, `PUT /api/v1/settings`.
+- **Daemon: `--proxy`.** `iec61850-explorerd --proxy URL` (or `--proxy direct`) sets the default proxy; without the flag, `ALL_PROXY` or `all_proxy` does. The daemon logs the proxy in use at start, without its password. A default the operator sets cannot be changed through the API; the web UI shows it read-only.
+
+### Changed
+
+- **Daemon: the target allow-list is checked when connecting.** Besides the check of the host name when a session is opened, the address actually connected to is checked when the TCP connection is opened, so a name that resolves elsewhere in between (DNS rebinding) is refused.
+- **Daemon: the allow-list applies to proxies.** A proxy a user of the daemon names must itself be inside the allow-list; the operator's `--proxy` is trusted. With `socks5h://` and `http://`, which resolve the IED's name at the proxy, the IED must be given as an IP address.
+
+### Dependencies
+
+go-iec61850 v1.15.2 (new: `DialOptions.Dialer`, the hook the proxy uses), go-mms v1.7.1 (new: `Close` bounded by its context; a GetVariableAccessAttributes response whose optional address is encoded primitive, as some IEDs send it, is accepted), go-iec61850-model v0.8.2, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.8.0
 
 **Date:** 2026-11-09

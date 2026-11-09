@@ -31,6 +31,7 @@ import type {
   OpError,
   PollConfig,
   Profile,
+  Settings,
   RCB,
   ReadRequest,
   ReadResult,
@@ -148,6 +149,8 @@ export class HttpService implements Service {
       ? this.request<Profile>('POST', '/profiles', profile)
       : this.request<Profile>('PUT', `/profiles/${encodeURIComponent(profile.id)}`, profile);
   deleteProfile = (id: string) => this.request<void>('DELETE', `/profiles/${encodeURIComponent(id)}`);
+  settings = () => this.request<Settings>('GET', '/settings');
+  saveSettings = (settings: Settings) => this.request<Settings>('PUT', '/settings', settings);
 
   subscribe(sinceSeq: number, onEvent: (event: ExplorerEvent) => void, onLink?: (status: LinkStatus) => void): () => void {
     const abort = new AbortController();

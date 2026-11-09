@@ -124,6 +124,8 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/profiles", s.createProfile)
 	api.HandleFunc("PUT "+prefix+"/profiles/{id}", s.replaceProfile)
 	api.HandleFunc("DELETE "+prefix+"/profiles/{id}", s.deleteProfile)
+	api.HandleFunc("GET "+prefix+"/settings", s.settings)
+	api.HandleFunc("PUT "+prefix+"/settings", s.saveSettings)
 	api.HandleFunc("GET "+prefix+"/events", s.events)
 	api.HandleFunc(prefix+"/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, service.Errorf(service.CodeNotFound, "no such endpoint: %s %s", r.Method, r.URL.Path))
@@ -557,6 +559,20 @@ func (s *server) replaceProfile(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) deleteProfile(w http.ResponseWriter, r *http.Request) {
 	s.replyEmpty(w, r, s.svc.DeleteProfile(r.Context(), r.PathValue("id")))
+}
+
+func (s *server) settings(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.Settings(r.Context())
+	s.reply(w, r, v, err)
+}
+
+func (s *server) saveSettings(w http.ResponseWriter, r *http.Request) {
+	var v model.Settings
+	if !s.decode(w, r, &v) {
+		return
+	}
+	out, err := s.svc.SaveSettings(r.Context(), v)
+	s.reply(w, r, out, err)
 }
 
 // events streams the events after ?since= (or Last-Event-ID) as server-sent

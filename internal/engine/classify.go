@@ -13,6 +13,7 @@ import (
 	"github.com/otfabric/go-mms"
 
 	"github.com/otfabric/iec61850-explorer/internal/model"
+	"github.com/otfabric/iec61850-explorer/internal/proxy"
 )
 
 // Stages of OpError.Stage. A stage is named only when the error type says
@@ -26,6 +27,7 @@ const (
 	stageInitiate     = "mms-initiate"
 	stageRequest      = "request"
 	stageResponse     = "response"
+	stageProxy        = "proxy"
 )
 
 // classify turns an error of go-iec61850, go-mms or go-cotp into what the
@@ -46,6 +48,8 @@ func classify(err error, connecting bool) *model.OpError {
 		dataErr *mms.DataAccessError
 		iecData *iec61850.DataAccessError
 		refErr  *iec61850.ReferenceError
+		pxErr   *proxy.Error
+		refused *AddrRefusedError
 	)
 	// go-iec61850 reports a per-item read error with its own type and the
 	// ISO 9506 data-access-error code.
@@ -58,6 +62,12 @@ func classify(err error, connecting bool) *model.OpError {
 	case errors.Is(err, mms.ErrServiceNotAllowed):
 		e.Code, e.Stage = model.ErrCodeNotAllowed, stageRequest
 		e.Hint = "The Explorer is in Observe mode and does not send state-changing MMS services. Nothing was sent."
+	case errors.As(err, &pxErr):
+		classifyProxy(e, pxErr)
+	case errors.As(err, &refused):
+		e.Code, e.Stage = model.ErrCodeNotAllowed, stageTCP
+		e.Message = fmt.Sprintf("the connection to %s was refused before it was opened: %v", refused.Addr, refused.Err)
+		e.Hint = "The address is outside the daemon's allowed targets (--allow-target). A host name is checked again at the address it resolves to when connecting."
 	case errors.As(err, &refErr):
 		e.Code = model.ErrCodeInvalidRef
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, mms.ErrInvokeTimeout):
@@ -116,4 +126,34 @@ func classify(err error, connecting bool) *model.OpError {
 		e.Code, e.Stage = model.ErrCodeDecode, stageResponse
 	}
 	return e
+}
+
+// classifyProxy places a failure to connect through a proxy: the IED was not
+// reached, so no layer above TCP is involved.
+func classifyProxy(e *model.OpError, pe *proxy.Error) {
+	e.Code, e.Stage = model.ErrCodeConnect, stageProxy
+	switch pe.Stage {
+	case proxy.StageConnect:
+		e.Hint = "No TCP connection to the proxy. Check the proxy's address and port and that it is running."
+	case proxy.StageResolve:
+		e.Hint = "The IED's host name could not be resolved here (socks5 resolves locally; socks5h lets the proxy resolve it)."
+	case proxy.StageNotAllowed:
+		e.Code = model.ErrCodeNotAllowed
+		e.Hint = "The IED's address is outside the daemon's allowed targets (--allow-target)."
+	case proxy.StageHandshake:
+		e.Hint = "The proxy did not answer as a SOCKS5 or HTTP CONNECT proxy, or not in time. Check the proxy URL's scheme and port."
+	case proxy.StageAuth:
+		e.Code = model.ErrCodeAccessDenied
+		e.Hint = "The proxy requires authentication or refused the user name and password of the proxy URL."
+	case proxy.StageRefused:
+		e.Hint = "The proxy was reached and refused to connect to the IED. Check the IED's address and port and the proxy's rules."
+	}
+	var refused *AddrRefusedError
+	if errors.As(pe, &refused) {
+		e.Code = model.ErrCodeNotAllowed
+		e.Hint = "The address is outside the daemon's allowed targets (--allow-target): the proxy's when connecting to it, or the IED's that socks5 resolved."
+	}
+	if errors.Is(pe, context.DeadlineExceeded) {
+		e.Code = model.ErrCodeTimeout
+	}
 }

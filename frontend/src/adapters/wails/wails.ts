@@ -36,6 +36,7 @@ import type {
   OpError,
   PollConfig,
   Profile,
+  Settings,
   RCB,
   ReadRequest,
   ReadResult,
@@ -136,6 +137,8 @@ export class WailsService implements Service {
   profiles = () => call<Profile[]>('Profiles');
   saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);
   deleteProfile = (id: string) => call<void>('DeleteProfile', id);
+  settings = () => call<Settings>('Settings');
+  saveSettings = (settings: Settings) => call<Settings>('SaveSettings', settings);
 
   // The Go side forwards every engine event to the window as it happens, so
   // there is nothing to replay: sinceSeq is not used.

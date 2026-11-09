@@ -11,6 +11,7 @@ import type {
   ModelNode,
   Operation,
   Profile,
+  Settings,
   ReadValue,
   SearchQuery,
   SearchResult,
@@ -79,6 +80,8 @@ export interface ExplorerState {
   latest: Record<string, ReadEntry>;
   reading: boolean;
   profiles: Profile[];
+  /** The engine's settings (the default proxy); null until loaded. */
+  settings: Settings | null;
   activity: ActivityEntry[];
   /** Recent Commission audit records, newest first. */
   audit: AuditRecord[];
@@ -99,6 +102,7 @@ export const initialState: ExplorerState = {
   latest: {},
   reading: false,
   profiles: [],
+  settings: null,
   activity: [],
   audit: [],
   reports: [],
@@ -121,6 +125,7 @@ type Action =
   | { type: 'read'; id: string; at: string; source: ReadEntry['source']; values: ReadValue[] }
   | { type: 'watch'; entry: WatchEntry; on: boolean }
   | { type: 'profiles'; profiles: Profile[] }
+  | { type: 'settings'; settings: Settings }
   | { type: 'audit'; records: AuditRecord[] }
   | { type: 'session'; session: SessionInfo }
   | { type: 'event'; event: ExplorerEvent }
@@ -197,6 +202,8 @@ export function reducer(state: ExplorerState, action: Action): ExplorerState {
     }
     case 'profiles':
       return { ...state, profiles: action.profiles };
+    case 'settings':
+      return { ...state, settings: action.settings };
     case 'audit': {
       // Records from a query and from events may overlap.
       const seen = new Set(state.audit.map((r) => r.seq));
@@ -279,6 +286,10 @@ export function useExplorer(service: Service) {
           );
         }
       },
+      () => {},
+    );
+    service.settings().then(
+      (settings) => dispatch({ type: 'settings', settings }),
       () => {},
     );
     // A page that is reloaded adopts the sessions still open on the engine.
@@ -463,6 +474,20 @@ export function useExplorer(service: Service) {
     [service, loadProfiles, fail],
   );
 
+  /** Changes the default proxy; resolves to whether it was saved. */
+  const saveSettings = useCallback(
+    async (settings: Settings) => {
+      try {
+        dispatch({ type: 'settings', settings: await service.saveSettings(settings) });
+        return true;
+      } catch (err) {
+        fail(err);
+        return false;
+      }
+    },
+    [service, fail],
+  );
+
   /** Asks for Commission mode; resolves to whether it was granted. */
   const grantCommission = useCallback(
     async (id: string, req: GrantRequest) => {
@@ -534,6 +559,7 @@ export function useExplorer(service: Service) {
     exportSession,
     saveProfile,
     deleteProfile,
+    saveSettings,
     grantCommission,
     revokeCommission,
     write,
