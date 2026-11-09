@@ -254,7 +254,7 @@ func m2b3Contract(t *testing.T, svc service.Service) {
 		t.Errorf("open = %+v", res)
 	}
 	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
-	res, err = svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos, Value: "true"})
+	res, err = svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos, Value: "true", InterlockCheck: true})
 	if err != nil {
 		t.Fatal(err)
 	}

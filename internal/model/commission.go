@@ -172,6 +172,10 @@ type ControlRequest struct {
 	Value string `json:"value"`
 	// Test sets the Test flag: the IED treats the command as a test.
 	Test bool `json:"test,omitempty"`
+	// InterlockCheck and SynchroCheck ask the IED to check the interlocking
+	// and the synchronism before it executes (the Check attribute).
+	InterlockCheck bool `json:"interlock_check,omitempty"`
+	SynchroCheck   bool `json:"synchro_check,omitempty"`
 	// TimeoutMS bounds the wait for the CommandTermination (enhanced
 	// security); 0 means DefaultControlTimeoutMS.
 	TimeoutMS int `json:"timeout_ms,omitempty"`
@@ -216,16 +220,19 @@ const (
 
 // ControlResult is the outcome of a control, with every step.
 type ControlResult struct {
-	Ref        string        `json:"ref"`
-	At         time.Time     `json:"at"`
-	DurationMS int64         `json:"duration_ms"`
-	CtlModel   string        `json:"ctl_model"`
-	CtlNum     uint8         `json:"ctl_num"`
-	Written    *Value        `json:"written,omitempty"`
-	Test       bool          `json:"test,omitempty"`
-	Steps      []ControlStep `json:"steps"`
-	Outcome    string        `json:"outcome"`
-	AddCause   string        `json:"add_cause,omitempty"`
+	Ref        string    `json:"ref"`
+	At         time.Time `json:"at"`
+	DurationMS int64     `json:"duration_ms"`
+	CtlModel   string    `json:"ctl_model"`
+	CtlNum     uint8     `json:"ctl_num"`
+	Written    *Value    `json:"written,omitempty"`
+	Test       bool      `json:"test,omitempty"`
+	// InterlockCheck and SynchroCheck are the Check flags sent.
+	InterlockCheck bool          `json:"interlock_check,omitempty"`
+	SynchroCheck   bool          `json:"synchro_check,omitempty"`
+	Steps          []ControlStep `json:"steps"`
+	Outcome        string        `json:"outcome"`
+	AddCause       string        `json:"add_cause,omitempty"`
 	// Before and After are the data object's stVal, read before the
 	// sequence and after it; nil when it has none or the read failed.
 	Before *Value `json:"before,omitempty"`

@@ -167,12 +167,34 @@ func TestControls(t *testing.T) {
 	}
 	// ... and is blocked by interlocking when Ind1 is false.
 	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
-	closeIt := iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(true), CtlNum: 3}
+	closeIt := iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(true), CtlNum: 3, Check: iec61850.CheckInterlockCheck}
 	if err := c.SelectWithValue(ctx, pos, closeIt); err != nil {
 		t.Fatal(err)
 	}
 	term, err := c.OperateWait(ctx, pos, closeIt)
 	if !errors.Is(err, iec61850.ErrCommandTerminationNegative) || term.LastApplError.AddCause != iec61850.AddCauseBlockedByInterlocking {
 		t.Errorf("Pos close while interlocked: %+v, %v", term, err)
+	}
+}
+
+// Asked for a synchrocheck, the single point controls refuse.
+func TestControlsSynchrocheck(t *testing.T) {
+	ied, err := Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ied.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, err := iec61850.Dial(ctx, ied.Addr, iec61850.DialOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close(ctx) //nolint:errcheck
+	ref, _ := iec61850.ParseRef(Domain + "/GGIO1.SPCSO1")
+	err = c.Operate(ctx, ref, iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(true), CtlNum: 9, Check: iec61850.CheckSynchroCheck})
+	var ce *iec61850.ControlError
+	if !errors.As(err, &ce) || ce.AddCause != iec61850.AddCauseBlockedBySynchrocheck {
+		t.Errorf("operate with synchrocheck = %v", err)
 	}
 }

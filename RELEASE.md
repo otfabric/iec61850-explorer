@@ -2,6 +2,26 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.6.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.5.0
+
+### Added
+
+- **Interlock check and synchrocheck** on controls: the Control form asks the IED to check the interlocking and the synchronism before it executes (the Check attribute), and the confirmation, the result and the audit record show which checks were asked for. API: `interlock_check` and `synchro_check` in `POST /api/v1/sessions/{id}/control`.
+
+### Changed
+
+- Built on go-iec61850 v1.10.1, which sends the two Check bits in the standard order (v1.10.0 swapped them).
+- The simulated test IED checks the interlocking of XCBR1.Pos only when an interlock check is asked for, and its single point controls refuse a synchrocheck.
+
+### Dependencies
+
+go-iec61850 v1.10.1, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.5.0
 
 **Date:** 2026-11-09

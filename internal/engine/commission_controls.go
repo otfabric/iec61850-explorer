@@ -106,6 +106,13 @@ func (e *Engine) Control(ctx context.Context, id string, req model.ControlReques
 
 	res.CtlNum = nextCtlNum()
 	params := iec61850.OperateParams{CtlVal: ctlVal, CtlNum: res.CtlNum, Origin: &controlOrigin, Test: req.Test}
+	if req.InterlockCheck {
+		params.Check |= iec61850.CheckInterlockCheck
+	}
+	if req.SynchroCheck {
+		params.Check |= iec61850.CheckSynchroCheck
+	}
+	res.InterlockCheck, res.SynchroCheck = req.InterlockCheck, req.SynchroCheck
 	run := controlRun{ctx: ctx, s: s, g: g, ref: ref, params: params, timeout: timeout, res: &res}
 	run.sequence(ctlModel)
 
@@ -243,6 +250,12 @@ func (r *controlRun) detail() string {
 	parts := []string{r.res.CtlModel, fmt.Sprintf("ctlNum %d", r.res.CtlNum)}
 	if r.res.Test {
 		parts = append(parts, "test")
+	}
+	if r.res.InterlockCheck {
+		parts = append(parts, "interlock-check")
+	}
+	if r.res.SynchroCheck {
+		parts = append(parts, "synchrocheck")
 	}
 	for _, st := range r.res.Steps {
 		state := "ok"
