@@ -203,6 +203,30 @@ func (c *httpService) Write(ctx context.Context, id string, r model.WriteRequest
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/write", r, &v)
 }
 
+func (c *httpService) SubscribeReport(ctx context.Context, id string, r model.SubscribeRequest) (v model.Subscription, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/reports/subscriptions", r, &v)
+}
+
+func (c *httpService) Unsubscribe(ctx context.Context, id, sub string) error {
+	return c.do(ctx, "DELETE", "/api/v1/sessions/"+id+"/reports/subscriptions/"+url.PathEscape(sub), nil, nil)
+}
+
+func (c *httpService) TriggerGI(ctx context.Context, id, sub string) error {
+	return c.do(ctx, "POST", "/api/v1/sessions/"+id+"/reports/subscriptions/"+url.PathEscape(sub)+"/gi", nil, nil)
+}
+
+func (c *httpService) CreateDataSet(ctx context.Context, id string, r model.CreateDataSetRequest) (v model.DataSet, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/datasets", r, &v)
+}
+
+func (c *httpService) DeleteDataSet(ctx context.Context, id, ref string) error {
+	return c.do(ctx, "DELETE", "/api/v1/sessions/"+id+"/datasets?ref="+url.QueryEscape(ref), nil, nil)
+}
+
+func (c *httpService) SelectActiveSG(ctx context.Context, id string, r model.SelectSGRequest) (v model.SettingGroups, err error) {
+	return v, c.do(ctx, "PUT", "/api/v1/sessions/"+id+"/setting-groups/active", r, &v)
+}
+
 func (c *httpService) Audit(ctx context.Context, q model.AuditQuery) (v []model.AuditRecord, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/audit?session="+url.QueryEscape(q.SessionID)+"&limit="+strconv.Itoa(q.Limit), nil, &v)
 }

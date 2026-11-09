@@ -5,6 +5,7 @@ package api_test
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/otfabric/iec61850-explorer/internal/api"
@@ -130,5 +131,86 @@ func commissionRefused(t *testing.T, svc service.Service) {
 	}
 	if info, err := svc.RevokeCommission(ctx, info.ID); err != nil || info.Mode != model.ModeObserve {
 		t.Errorf("revoke without grant = %+v, %v", info, err)
+	}
+}
+
+// TestContractM2b2: report subscription, data sets and setting groups
+// behave the same through the engine and the HTTP API; reports arrive as
+// events either way.
+func TestContractM2b2(t *testing.T) {
+	t.Run("engine", func(t *testing.T) {
+		eng := engine.New(engine.Options{DataDir: t.TempDir(), Commission: true})
+		t.Cleanup(eng.Close)
+		m2b2Contract(t, eng)
+	})
+	t.Run("http", func(t *testing.T) {
+		m2b2Contract(t, newDaemon(t, engine.Options{DataDir: t.TempDir(), Commission: true}, api.Options{}).svc)
+	})
+}
+
+func m2b2Contract(t *testing.T, svc service.Service) {
+	ied, err := simied.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(ied.Close)
+	sub, cancel := context.WithCancel(ctx)
+	defer cancel()
+	events, err := svc.Subscribe(sub, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := svc.OpenSession(ctx, targetOf(t, ied.Addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = svc.CloseSession(ctx, info.ID) })
+	rcb := simied.Domain + "/LLN0.RP.urcbEvents"
+	if _, err := svc.SubscribeReport(ctx, info.ID, model.SubscribeRequest{RCB: rcb}); service.CodeOf(err) != service.CodeNotAllowed {
+		t.Fatalf("subscribe without grant = %v", err)
+	}
+	if _, err := svc.GrantCommission(ctx, info.ID, model.GrantRequest{Reason: "contract", Capabilities: []string{model.CapReports, model.CapDataSets, model.CapSettingGroups}}); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := svc.SubscribeReport(ctx, info.ID, model.SubscribeRequest{RCB: rcb, GI: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := next(t, events, "GI report", func(ev model.Event) bool { return ev.Kind == model.EventReport && ev.Report.SubscriptionID == s.ID })
+	if len(ev.Report.Entries) != 3 || ev.Report.Entries[0].Ref != simied.Domain+"/GGIO1.Ind1.stVal[ST]" || ev.SessionID != info.ID {
+		t.Errorf("report = %+v", ev.Report)
+	}
+	if err := svc.TriggerGI(ctx, info.ID, s.ID); err != nil {
+		t.Errorf("GI = %v", err)
+	}
+	if err := svc.Unsubscribe(ctx, info.ID, s.ID); err != nil {
+		t.Errorf("unsubscribe = %v", err)
+	}
+	if err := svc.Unsubscribe(ctx, info.ID, s.ID); service.CodeOf(err) != service.CodeNotFound {
+		t.Errorf("unsubscribe twice = %v", err)
+	}
+
+	ds, err := svc.CreateDataSet(ctx, info.ID, model.CreateDataSetRequest{Ref: simied.Domain + "/LLN0.Contract", Members: []string{simied.Domain + "/MMXU1.Hz[MX]"}})
+	if err != nil || !ds.Deletable || len(ds.Members) != 1 {
+		t.Fatalf("create = %+v, %v", ds, err)
+	}
+	if err := svc.DeleteDataSet(ctx, info.ID, ds.Ref); err != nil {
+		t.Errorf("delete = %v", err)
+	}
+	if err := svc.DeleteDataSet(ctx, info.ID, simied.Domain+"/LLN0.Meas"); service.CodeOf(err) != service.CodeNotAllowed {
+		t.Errorf("delete configured = %v", err)
+	}
+	sg, err := svc.SelectActiveSG(ctx, info.ID, model.SelectSGRequest{LD: simied.Domain, SG: 2})
+	if err != nil || sg.ActSG != 2 {
+		t.Errorf("select SG = %+v, %v", sg, err)
+	}
+	recs, _ := svc.Audit(ctx, model.AuditQuery{SessionID: info.ID})
+	var acts []string
+	for i := len(recs) - 1; i >= 0; i-- {
+		acts = append(acts, recs[i].Action)
+	}
+	if got := strings.Join(acts, " "); got != "grant subscribe gi unsubscribe create-dataset delete-dataset select-active-sg" {
+		t.Errorf("audit = %s", got)
 	}
 }

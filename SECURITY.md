@@ -40,7 +40,9 @@ No interface of the Explorer accepts a raw MMS PDU, a service name or a file pat
 
 Commission mode lets a user change an IED. It is off unless asked for, per session:
 
-- **A grant** names a reason, a duration (at most 8 hours) and capabilities. In this version the user interface offers `write`: writing data attributes of the functional constraints SP, CF, DC, SV and BL. Controls are not offered.
+- **A grant** names a reason, a duration (at most 8 hours) and capabilities: `write` (data attributes of the functional constraints SP, CF, DC, SV and BL), `reports` (subscribe to report control blocks), `datasets` (create and delete data sets) and `setting-groups` (select the active setting group). Controls are not offered.
+- **Reports** are taken only from a control block that is neither enabled nor reserved, so the Explorer does not take over another client's reports. The control blocks it reserved and enabled are disabled and released when the subscription or the grant ends; a step that fails (the IED is gone) is recorded as such.
+- **Data sets** the IED marks as not deletable (configured in SCL) are never deleted.
 - **A second association.** The Observe association of the session is never widened. The grant opens another association whose go-mms allow-list holds the Observe services plus only the services its capabilities need (`internal/commission`); go-mms refuses anything else before the wire. An IED that accepts few associations may refuse it.
 - **Audit trail.** Every grant, end, cleanup and write is appended to `<data dir>/audit/audit-YYYY-MM-DD.jsonl` (mode 0600) and synced before the result is shown, with the target, the reference, the value before, the value written and the value read back. Without a writable trail there is no grant. A write the IED received is recorded even if it failed.
 - **Ends by itself.** A grant ends on revoke, at its expiry, and when the session or the engine ends.

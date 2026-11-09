@@ -30,9 +30,9 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 - **Export** a snapshot (the model and the watched values, JSON) or the watched values as CSV; **open a snapshot** again later, without the IED.
 - **See what happened on the wire**: every action (connect, discover, read, close) is logged with its duration and the MMS requests it sent. A failed connect says where it stopped (TCP, COTP, session, presentation, ACSE or MMS Initiate) when the error proves it, and what to check.
 - **Observe mode** by default: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
-- **Commission mode** on request, per session: a grant with a reason and a duration opens a second, restricted association; **write** set points and configuration values (FC SP, CF, DC, SV, BL), each verified by reading it back and recorded in an audit trail. The daemon offers it only with `--allow-commission`.
+- **Commission mode** on request, per session: a grant with a reason and a duration opens a second, restricted association. **Write** set points and configuration values (FC SP, CF, DC, SV, BL), each verified by reading it back; **subscribe** to report control blocks and watch the reports arrive (the control block is released again when you stop); **create and delete** data sets; **switch** the active setting group. Everything is recorded in an audit trail. The daemon offers it only with `--allow-commission`.
 
-Not yet: report subscription, data set and setting group changes, controls, comparison of SCL with the live model, semantic search, trace analysis.
+Not yet: editing setting values, controls, comparison of SCL with the live model, semantic search, trace analysis.
 
 ## Build from source
 

@@ -2,6 +2,28 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.4.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.3.0
+
+Commission mode, second step: reports, data sets and setting groups.
+
+### Added
+
+- **Report subscription** (capability `reports`): subscribe to an unbuffered or buffered report control block, with a general interrogation if wanted. The Explorer reserves and enables the control block; unsubscribing, revoking the grant or ending the session disables and releases it. A control block that another client enabled or reserved is left alone. Reports appear in the new Reports tab with their sequence number, reasons and values, named by the data set's members.
+- **Data sets** (capability `datasets`): create a data set in LLN0 from FC-qualified references (the watched points can be used), delete the ones the IED marks deletable.
+- **Setting groups** (capability `setting-groups`): switch the active setting group; the control block is read back.
+- Every subscription, general interrogation, data set change and setting group switch is in the audit trail, with the step that failed if one did.
+- API: `POST`/`DELETE /api/v1/sessions/{id}/reports/subscriptions[/{sub}]`, `POST .../{sub}/gi`, `POST`/`DELETE /api/v1/sessions/{id}/datasets`, `PUT /api/v1/sessions/{id}/setting-groups/active`, the `report` event; API version 0.3.
+
+### Known limitations
+
+- Editing setting values (setting groups' SE values) and controls are not offered yet.
+- go-iec61850's own IED server sends data set members that are whole data objects (such as `MMXU1.Hz[MX]`) as `false` in reports and does not report changes below them; members that are attributes work. Real IEDs are not affected by this server gap.
+
+---
+
 ## v0.3.0
 
 **Date:** 2026-11-09

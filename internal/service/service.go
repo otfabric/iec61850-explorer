@@ -87,6 +87,22 @@ type Service interface {
 	// with the write capability. An IED that refuses the write is reported
 	// in the result.
 	Write(ctx context.Context, id string, req model.WriteRequest) (model.WriteResult, error)
+	// SubscribeReport subscribes to a report control block: reserve
+	// (unbuffered), enable, optionally GI. Reports arrive as events. Needs
+	// the reports capability.
+	SubscribeReport(ctx context.Context, id string, req model.SubscribeRequest) (model.Subscription, error)
+	// Unsubscribe disables and releases the RCB of a subscription.
+	Unsubscribe(ctx context.Context, id, subscriptionID string) error
+	// TriggerGI asks for a general interrogation on a subscription.
+	TriggerGI(ctx context.Context, id, subscriptionID string) error
+	// CreateDataSet defines a persistent data set. Needs the datasets
+	// capability.
+	CreateDataSet(ctx context.Context, id string, req model.CreateDataSetRequest) (model.DataSet, error)
+	// DeleteDataSet deletes a data set the IED marks deletable.
+	DeleteDataSet(ctx context.Context, id, ref string) error
+	// SelectActiveSG selects the active setting group and reads the setting
+	// group control block back. Needs the setting-groups capability.
+	SelectActiveSG(ctx context.Context, id string, req model.SelectSGRequest) (model.SettingGroups, error)
 	// Audit returns recent audit records, newest first.
 	Audit(ctx context.Context, q model.AuditQuery) ([]model.AuditRecord, error)
 	// Profiles lists the saved connection profiles, by name.

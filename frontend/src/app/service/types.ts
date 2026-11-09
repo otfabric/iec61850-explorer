@@ -283,7 +283,13 @@ export interface Operation {
     | 'setting-groups'
     | 'grant'
     | 'revoke'
-    | 'write';
+    | 'write'
+    | 'subscribe'
+    | 'unsubscribe'
+    | 'gi'
+    | 'create-dataset'
+    | 'delete-dataset'
+    | 'select-active-sg';
   target?: string;
   started_at: Timestamp;
   duration_ms: number;
@@ -293,7 +299,7 @@ export interface Operation {
   requests_dropped?: number;
 }
 
-export type EventKind = 'session' | 'operation' | 'sample' | 'resync' | 'audit';
+export type EventKind = 'session' | 'operation' | 'sample' | 'resync' | 'audit' | 'report';
 
 export interface ExplorerEvent {
   seq: number;
@@ -304,6 +310,7 @@ export interface ExplorerEvent {
   operation?: Operation;
   sample?: Sample;
   audit?: AuditRecord;
+  report?: Report;
 }
 
 export interface DataSetMember {
@@ -405,6 +412,7 @@ export interface Grant {
   capabilities: Capability[];
   granted_at: Timestamp;
   expires_at: Timestamp;
+  subscriptions: Subscription[];
 }
 
 export interface WriteRequest {
@@ -424,7 +432,19 @@ export interface WriteResult {
   duration_ms: number;
 }
 
-export type AuditAction = 'grant' | 'revoke' | 'expire' | 'end' | 'write' | 'cleanup';
+export type AuditAction =
+  | 'grant'
+  | 'revoke'
+  | 'expire'
+  | 'end'
+  | 'write'
+  | 'cleanup'
+  | 'subscribe'
+  | 'unsubscribe'
+  | 'gi'
+  | 'create-dataset'
+  | 'delete-dataset'
+  | 'select-active-sg';
 
 export interface AuditRecord {
   seq: number;
@@ -440,10 +460,63 @@ export interface AuditRecord {
   before?: string;
   written?: string;
   after?: string;
+  detail?: string;
   error?: string;
 }
 
 export interface AuditQuery {
   session_id?: string;
   limit?: number;
+}
+
+export const MAX_SUBSCRIPTIONS = 8;
+export const MAX_DATASET_MEMBERS = 100;
+
+export interface SubscribeRequest {
+  /** The RCB reference Reports returns, such as "LD/LLN0.RP.urcb01". */
+  rcb: string;
+  gi?: boolean;
+}
+
+export interface Subscription {
+  id: string;
+  rcb: string;
+  mms: MMSName;
+  buffered: boolean;
+  rpt_id: string;
+  dat_set: string;
+  since: Timestamp;
+  reports: number;
+  dropped: number;
+}
+
+export interface ReportEntry {
+  ref: string;
+  reasons?: string[];
+  value: Value;
+}
+
+export interface Report {
+  subscription_id: string;
+  rcb: string;
+  rpt_id: string;
+  received_at: Timestamp;
+  seq_num?: number;
+  time?: Timestamp;
+  conf_rev?: number;
+  entry_id?: string;
+  buf_ovfl?: boolean;
+  entries: ReportEntry[];
+}
+
+export interface CreateDataSetRequest {
+  /** Such as "LD/LLN0.Explorer1". */
+  ref: string;
+  /** FC-qualified references. */
+  members: string[];
+}
+
+export interface SelectSGRequest {
+  ld: string;
+  sg: number;
 }

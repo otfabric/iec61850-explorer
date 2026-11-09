@@ -6,6 +6,7 @@ import { ServiceError, type Service } from './service';
 import type {
   AuditQuery,
   AuditRecord,
+  CreateDataSetRequest,
   DataSet,
   ExplorerEvent,
   ExportFile,
@@ -27,8 +28,11 @@ import type {
   SCLInfo,
   SearchQuery,
   SearchResult,
+  SelectSGRequest,
   SessionInfo,
   SettingGroups,
+  SubscribeRequest,
+  Subscription,
   TargetConfig,
   Value,
   WriteRequest,
@@ -99,6 +103,8 @@ export class MockService implements Service {
   private pollers = new Map<string, ReturnType<typeof setInterval>>();
   private profileList: Profile[] = [];
   private auditLog: AuditRecord[] = [];
+  private createdSets: DataSet[] = [];
+  private actSG = 1;
   /** Attributes the mock can write, with their values. */
   private attrs = new Map<string, Value>([
     [`${LD}/LLN0.Mod.ctlModel[CF]`, { name: 'ctlModel', type: 'integer', text: '0', json: 0 }],
@@ -276,6 +282,7 @@ export class MockService implements Service {
         source: session.scl ? 'scl' : 'ied',
         members: [`${LD}/MMXU1.Hz[MX]`, `${LD}/MMXU1.TotW[MX]`].map((ref) => ({ ref, mms: itemID(ref) })),
       },
+      ...(session.scl ? [] : this.createdSets.filter((d) => d.mms.domain === ld)),
     ];
   }
 
@@ -302,6 +309,20 @@ export class MockService implements Service {
         buf_tm_ms: 0,
         intg_pd_ms: 0,
         ...(live ? { rpt_ena: true, resv: false, sq_num: 4 } : {}),
+      },
+      {
+        ref: `${ld}/LLN0.RP.urcbEvents`,
+        mms: { domain: ld, item_id: 'LLN0$RP$urcbEvents' },
+        buffered: false,
+        source: live ? 'ied' : 'scl',
+        rpt_id: 'Events',
+        dat_set: `${ld}/LLN0$Events`,
+        conf_rev: 1,
+        opt_flds: ['seq-num', 'reason-code'],
+        trg_ops: ['data-changed', 'GI'],
+        buf_tm_ms: 0,
+        intg_pd_ms: 0,
+        ...(live ? { rpt_ena: (session.grant?.subscriptions ?? []).some((s) => s.rcb === `${ld}/LLN0.RP.urcbEvents`), resv: false, sq_num: 0 } : {}),
       },
     ];
   }
@@ -336,7 +357,7 @@ export class MockService implements Service {
 
   async settingGroups(id: string, ld: string): Promise<SettingGroups> {
     this.session(id);
-    return { ld, num_of_sgs: 2, act_sg: 1, edit_sg: 0, cnf_edit: false, resv_tms: 0 };
+    return { ld, num_of_sgs: 2, act_sg: this.actSG, edit_sg: 0, cnf_edit: false, resv_tms: 0 };
   }
 
   async grantCommission(id: string, req: GrantRequest): Promise<SessionInfo> {
@@ -363,6 +384,7 @@ export class MockService implements Service {
         capabilities: [...new Set(req.capabilities)].sort(),
         granted_at: now.toISOString(),
         expires_at: new Date(now.getTime() + minutes * 60_000).toISOString(),
+        subscriptions: [],
       },
     };
     this.sessionsById.set(id, next);
@@ -376,6 +398,9 @@ export class MockService implements Service {
     const session = this.session(id);
     if (!session.grant) {
       return session;
+    }
+    for (const sub of session.grant.subscriptions) {
+      this.record(session, { action: 'cleanup', outcome: 'ok', ref: `unsubscribe ${sub.rcb}` });
     }
     const { grant, ...rest } = session;
     const next: SessionInfo = { ...rest, mode: 'observe' };
@@ -407,6 +432,140 @@ export class MockService implements Service {
     this.record(session, { action: 'write', outcome: 'ok', ref: req.ref, before: before.text, written: text, after: text });
     this.operation(id, { action: 'write', target: req.ref, ok: true });
     return { ref: req.ref, mms: itemID(req.ref), at: new Date().toISOString(), written, before, after: written, verified: true, duration_ms: 3 };
+  }
+
+  private granted(id: string, cap: string): SessionInfo {
+    const session = this.session(id);
+    if (!session.grant?.capabilities.some((c) => c === cap)) {
+      throw new ServiceError('not_allowed', `this needs Commission mode with the ${cap} capability`);
+    }
+    return session;
+  }
+
+  private setGrant(session: SessionInfo, subscriptions: Subscription[]): void {
+    if (!session.grant) {
+      return;
+    }
+    const next = { ...session, grant: { ...session.grant, subscriptions } };
+    this.sessionsById.set(session.id, next);
+    this.emit({ kind: 'session', session_id: session.id, session: next });
+  }
+
+  async subscribeReport(id: string, req: SubscribeRequest): Promise<Subscription> {
+    const session = this.granted(id, 'reports');
+    const rcb = (await this.reports(id, LD)).find((r) => r.ref === req.rcb);
+    if (!rcb) {
+      throw new ServiceError('not_found', `no report control block ${req.rcb}`);
+    }
+    if (rcb.rpt_ena) {
+      throw new ServiceError('not_allowed', `${req.rcb} is enabled: another client may own it`);
+    }
+    const sub: Subscription = {
+      id: `sub-${++this.ids}`,
+      rcb: rcb.ref,
+      mms: rcb.mms,
+      buffered: rcb.buffered,
+      rpt_id: rcb.rpt_id,
+      dat_set: rcb.dat_set,
+      since: new Date().toISOString(),
+      reports: 0,
+      dropped: 0,
+    };
+    this.setGrant(session, [...(session.grant?.subscriptions ?? []), sub]);
+    this.record(session, { action: 'subscribe', outcome: 'ok', ref: rcb.ref, detail: `RptID ${rcb.rpt_id}` });
+    if (req.gi) {
+      queueMicrotask(() => this.report(session.id, sub, 'GI'));
+    }
+    return sub;
+  }
+
+  private report(sessionId: string, sub: Subscription, reason: string): void {
+    this.emit({
+      kind: 'report',
+      session_id: sessionId,
+      report: {
+        subscription_id: sub.id,
+        rcb: sub.rcb,
+        rpt_id: sub.rpt_id,
+        received_at: new Date().toISOString(),
+        seq_num: 1,
+        entries: [
+          { ref: `${LD}/GGIO1.Ind1.stVal[ST]`, reasons: [reason], value: { name: 'stVal', type: 'boolean', text: 'true', json: true } },
+          { ref: `${LD}/MMXU1.Hz.mag.f[MX]`, reasons: [reason], value: { name: 'f', type: 'float', text: String(this.hz), json: this.hz } },
+        ],
+      },
+    });
+  }
+
+  private findSub(session: SessionInfo, subscriptionId: string): Subscription {
+    const sub = session.grant?.subscriptions.find((s) => s.id === subscriptionId);
+    if (!sub) {
+      throw new ServiceError('not_found', `no report subscription "${subscriptionId}"`);
+    }
+    return sub;
+  }
+
+  async unsubscribe(id: string, subscriptionId: string): Promise<void> {
+    const session = this.granted(id, 'reports');
+    const sub = this.findSub(session, subscriptionId);
+    this.setGrant(session, session.grant?.subscriptions.filter((s) => s.id !== subscriptionId) ?? []);
+    this.record(session, { action: 'unsubscribe', outcome: 'ok', ref: sub.rcb });
+  }
+
+  async triggerGI(id: string, subscriptionId: string): Promise<void> {
+    const session = this.granted(id, 'reports');
+    const sub = this.findSub(session, subscriptionId);
+    this.record(session, { action: 'gi', outcome: 'ok', ref: sub.rcb });
+    queueMicrotask(() => this.report(session.id, sub, 'GI'));
+  }
+
+  async createDataSet(id: string, req: CreateDataSetRequest): Promise<DataSet> {
+    const session = this.granted(id, 'datasets');
+    const match = /^([^/]+)\/(LLN0)\.([A-Za-z][A-Za-z0-9_]*)$/.exec(req.ref.trim());
+    if (!match || req.members.length === 0) {
+      throw new ServiceError('invalid_argument', 'a data set needs a name such as LD/LLN0.Name and at least one member');
+    }
+    if (this.createdSets.some((d) => d.ref === req.ref)) {
+      throw new ServiceError('invalid_argument', `create data set ${req.ref}: object-exists`);
+    }
+    const [, ld = '', ln = '', name = ''] = match;
+    const ds: DataSet = {
+      ref: req.ref,
+      mms: { domain: ld, item_id: `${ln}$${name}` },
+      deletable: true,
+      source: 'ied',
+      members: req.members.map((ref) => ({ ref, mms: itemID(ref) })),
+    };
+    this.createdSets.push(ds);
+    this.record(session, { action: 'create-dataset', outcome: 'ok', ref: req.ref, detail: `${req.members.length} members` });
+    return ds;
+  }
+
+  async deleteDataSet(id: string, ref: string): Promise<void> {
+    const session = this.granted(id, 'datasets');
+    if (!this.createdSets.some((d) => d.ref === ref)) {
+      throw new ServiceError('not_allowed', `the IED marks ${ref} as not deletable`);
+    }
+    this.createdSets = this.createdSets.filter((d) => d.ref !== ref);
+    this.record(session, { action: 'delete-dataset', outcome: 'ok', ref });
+  }
+
+  async selectActiveSG(id: string, req: SelectSGRequest): Promise<SettingGroups> {
+    const session = this.granted(id, 'setting-groups');
+    if (req.sg < 1 || req.sg > 2) {
+      throw new ServiceError('invalid_argument', `${req.ld} has setting groups 1 to 2`);
+    }
+    const before = this.actSG;
+    this.actSG = req.sg;
+    this.record(session, {
+      action: 'select-active-sg',
+      outcome: 'ok',
+      ref: `${req.ld}/LLN0.SGCB.ActSG[SP]`,
+      before: String(before),
+      written: String(req.sg),
+      after: String(req.sg),
+    });
+    return this.settingGroups(id, req.ld);
   }
 
   async audit(query: AuditQuery): Promise<AuditRecord[]> {

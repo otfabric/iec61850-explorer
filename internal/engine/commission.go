@@ -8,10 +8,12 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"net"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -31,11 +33,41 @@ type grant struct {
 	// cleanup undoes, newest first, what the engine set up for itself (for
 	// example an enabled report control block). It runs with s.mu held.
 	cleanup []cleanupStep
+
+	// subs are the report subscriptions, by ID; mu guards the map.
+	mu   sync.Mutex
+	subs map[string]*subscription
 }
 
 type cleanupStep struct {
+	// id names the step for removal (a subscription ID); may be empty.
+	id   string
 	what string
 	undo func(ctx context.Context, c *iec61850.Client) error
+}
+
+// infoCopy returns the grant's description with its subscriptions.
+func (g *grant) infoCopy() model.Grant {
+	out := g.info
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	out.Subscriptions = make([]model.Subscription, 0, len(g.subs))
+	for _, sub := range g.subs {
+		out.Subscriptions = append(out.Subscriptions, sub.snapshot())
+	}
+	slices.SortFunc(out.Subscriptions, func(a, b model.Subscription) int { return a.Since.Compare(b.Since) })
+	return out
+}
+
+// removeCleanup takes the step with id out of the cleanup list.
+func (g *grant) removeCleanup(id string) (cleanupStep, bool) {
+	for i, step := range g.cleanup {
+		if step.id == id {
+			g.cleanup = slices.Delete(g.cleanup, i, i+1)
+			return step, true
+		}
+	}
+	return cleanupStep{}, false
 }
 
 // commissionErr says why the engine grants no Commission mode.
@@ -117,7 +149,7 @@ func (e *Engine) GrantCommission(ctx context.Context, id string, req model.Grant
 		}
 	}
 	now := time.Now().UTC()
-	g := &grant{client: client, info: model.Grant{
+	g := &grant{client: client, subs: map[string]*subscription{}, info: model.Grant{
 		Reason: req.Reason, Capabilities: req.Capabilities,
 		GrantedAt: now, ExpiresAt: now.Add(time.Duration(req.Minutes) * time.Minute),
 	}}
@@ -240,6 +272,43 @@ func (e *Engine) auditRecord(s *session, rec model.AuditRecord) model.AuditRecor
 		rec.IED = strings.TrimSpace(s.identity.Vendor + " " + s.identity.Model)
 	}
 	return rec
+}
+
+// commissionAction runs fn on a connected session holding a grant with
+// capability c, as one operation: s.mu held, the timeout applied, the
+// requests recorded and published.
+func (e *Engine) commissionAction(ctx context.Context, id, c, action, target string, fn func(ctx context.Context, s *session, g *grant) error) error {
+	s, err := e.session(id)
+	if err != nil {
+		return err
+	}
+	if err := s.liveErr(); err != nil {
+		return err
+	}
+	if _, err := s.requireGrant(c); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	g, err := s.requireGrant(c) // the grant may have ended meanwhile
+	if err != nil {
+		return err
+	}
+	s.rec.start()
+	start := time.Now()
+	tctx, cancel := s.timeoutCtx(ctx)
+	defer cancel()
+	err = fn(tctx, s, g)
+	var opErr *model.OpError
+	if err != nil {
+		if se, ok := errors.AsType[*service.Error](err); ok && se.Detail != nil {
+			opErr = se.Detail
+		} else {
+			opErr = classify(err, false)
+		}
+	}
+	e.publishOperation(s.rec, s.id, action, target, start, opErr)
+	return err
 }
 
 // requireGrant returns the grant when it carries capability c.

@@ -15,7 +15,7 @@ const AppName = "iec61850-explorer"
 
 // APIVersion is the version of the Service contract and of the HTTP API. The
 // major part changes on incompatible changes, the minor part on additions.
-const APIVersion = "0.2"
+const APIVersion = "0.3"
 
 // DefaultPort is the MMS port (ISO-on-TCP, RFC 1006).
 const DefaultPort = 102
@@ -507,7 +507,9 @@ const (
 type Operation struct {
 	// Action is "connect", "discover", "read", "close"; the inspections
 	// "datasets", "reports", "files", "download", "journals", "journal",
-	// "setting-groups"; and in Commission mode "grant", "revoke", "write". A
+	// "setting-groups"; and in Commission mode "grant", "revoke", "write",
+	// "subscribe", "unsubscribe", "gi", "create-dataset", "delete-dataset",
+	// "select-active-sg". A
 	// read of several references is one operation.
 	Action string `json:"action"`
 	// Target is the object reference or address the action was about.
@@ -544,6 +546,8 @@ const (
 	EventResync = "resync"
 	// EventAudit carries an AuditRecord.
 	EventAudit = "audit"
+	// EventReport carries a Report of a subscription.
+	EventReport = "report"
 )
 
 // Event is one entry of the event stream.
@@ -557,4 +561,5 @@ type Event struct {
 	Operation *Operation   `json:"operation,omitempty"`
 	Sample    *Sample      `json:"sample,omitempty"`
 	Audit     *AuditRecord `json:"audit,omitempty"`
+	Report    *Report      `json:"report,omitempty"`
 }

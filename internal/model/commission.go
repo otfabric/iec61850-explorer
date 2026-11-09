@@ -55,6 +55,8 @@ type Grant struct {
 	Capabilities []string  `json:"capabilities"`
 	GrantedAt    time.Time `json:"granted_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
+	// Subscriptions are the report subscriptions of the grant.
+	Subscriptions []Subscription `json:"subscriptions"`
 }
 
 // WriteRequest writes one data attribute. Value is text in the form a read
@@ -119,7 +121,10 @@ type AuditRecord struct {
 	Before       string   `json:"before,omitempty"`
 	Written      string   `json:"written,omitempty"`
 	After        string   `json:"after,omitempty"`
-	Error        string   `json:"error,omitempty"`
+	// Detail adds what the other fields do not hold, such as the members
+	// of a created data set.
+	Detail string `json:"detail,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 // MaxAuditRecords is the number of recent records an engine keeps in memory
@@ -133,4 +138,86 @@ type AuditQuery struct {
 	// Limit bounds the answer; zero or more than MaxAuditRecords selects
 	// MaxAuditRecords.
 	Limit int `json:"limit,omitempty"`
+}
+
+// More audit actions (M2b2).
+const (
+	AuditSubscribe   = "subscribe"
+	AuditUnsubscribe = "unsubscribe"
+	AuditGI          = "gi"
+	AuditCreateDS    = "create-dataset"
+	AuditDeleteDS    = "delete-dataset"
+	AuditActiveSG    = "select-active-sg"
+)
+
+// MaxSubscriptions bounds the report subscriptions of one grant.
+const MaxSubscriptions = 8
+
+// SubscribeRequest subscribes to a report control block: the engine
+// reserves it (unbuffered), enables it and, with GI, asks for a general
+// interrogation. Revoking the grant or unsubscribing disables and releases
+// it again.
+type SubscribeRequest struct {
+	// RCB is the reference Reports returns, such as "LD/LLN0.RP.urcbMeas".
+	RCB string `json:"rcb"`
+	GI  bool   `json:"gi,omitempty"`
+}
+
+// Subscription is a report subscription of a grant.
+type Subscription struct {
+	ID       string    `json:"id"`
+	RCB      string    `json:"rcb"`
+	MMS      MMSName   `json:"mms"`
+	Buffered bool      `json:"buffered"`
+	RptID    string    `json:"rpt_id"`
+	DatSet   string    `json:"dat_set"`
+	Since    time.Time `json:"since"`
+	Reports  uint64    `json:"reports"`
+	// Dropped counts reports lost because the engine's queue was full.
+	Dropped uint64 `json:"dropped"`
+}
+
+// Report is one report the IED sent to a subscription.
+type Report struct {
+	SubscriptionID string    `json:"subscription_id"`
+	RCB            string    `json:"rcb"`
+	RptID          string    `json:"rpt_id"`
+	ReceivedAt     time.Time `json:"received_at"`
+	// The fields below are present when the RCB's OptFlds include them.
+	SeqNum  *uint32       `json:"seq_num,omitempty"`
+	Time    *time.Time    `json:"time,omitempty"`
+	ConfRev *uint32       `json:"conf_rev,omitempty"`
+	EntryID string        `json:"entry_id,omitempty"`
+	BufOvfl bool          `json:"buf_ovfl,omitempty"`
+	Entries []ReportEntry `json:"entries"`
+}
+
+// ReportEntry is one included data set member.
+type ReportEntry struct {
+	// Ref is the member's FC-qualified reference.
+	Ref string `json:"ref"`
+	// Reasons are the inclusion reasons, when reported.
+	Reasons []string `json:"reasons,omitempty"`
+	Value   Value    `json:"value"`
+}
+
+// CreateDataSetRequest creates a persistent data set in a logical node of
+// the IED.
+type CreateDataSetRequest struct {
+	// Ref names the data set, such as "LD/LLN0.Explorer1".
+	Ref string `json:"ref"`
+	// Members are FC-qualified references of data objects or attributes.
+	Members []string `json:"members"`
+}
+
+// Limits of a created data set.
+const (
+	MaxDataSetMembers = 100
+	MaxDataSetNameLen = 32
+)
+
+// SelectSGRequest selects the active setting group of a logical device.
+type SelectSGRequest struct {
+	LD string `json:"ld"`
+	SG uint8  `json:"sg"`
 }

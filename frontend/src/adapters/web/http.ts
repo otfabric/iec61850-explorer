@@ -1,6 +1,10 @@
 import type { Platform } from '../../app/platform/platform';
 import { ServiceError, type ErrorCode, type LinkStatus, type Service } from '../../app/service/service';
 import type {
+  CreateDataSetRequest,
+  SelectSGRequest,
+  SubscribeRequest,
+  Subscription as ReportSubscription,
   AuditQuery,
   AuditRecord,
   GrantRequest,
@@ -93,6 +97,14 @@ export class HttpService implements Service {
   grantCommission = (id: string, req: GrantRequest) => this.request<SessionInfo>('PUT', `/sessions/${encodeURIComponent(id)}/commission`, req);
   revokeCommission = (id: string) => this.request<SessionInfo>('DELETE', `/sessions/${encodeURIComponent(id)}/commission`);
   write = (id: string, req: WriteRequest) => this.request<WriteResult>('POST', `/sessions/${encodeURIComponent(id)}/write`, req);
+  subscribeReport = (id: string, req: SubscribeRequest) => this.request<ReportSubscription>('POST', `/sessions/${encodeURIComponent(id)}/reports/subscriptions`, req);
+  unsubscribe = (id: string, sub: string) =>
+    this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/reports/subscriptions/${encodeURIComponent(sub)}`);
+  triggerGI = (id: string, sub: string) =>
+    this.request<void>('POST', `/sessions/${encodeURIComponent(id)}/reports/subscriptions/${encodeURIComponent(sub)}/gi`);
+  createDataSet = (id: string, req: CreateDataSetRequest) => this.request<DataSet>('POST', `/sessions/${encodeURIComponent(id)}/datasets`, req);
+  deleteDataSet = (id: string, ref: string) => this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/datasets?ref=${encodeURIComponent(ref)}`);
+  selectActiveSG = (id: string, req: SelectSGRequest) => this.request<SettingGroups>('PUT', `/sessions/${encodeURIComponent(id)}/setting-groups/active`, req);
   audit = (query: AuditQuery) =>
     this.request<AuditRecord[]>('GET', `/audit?session=${encodeURIComponent(query.session_id ?? '')}&limit=${query.limit ?? 0}`);
   settingGroups = (id: string, ld: string) =>

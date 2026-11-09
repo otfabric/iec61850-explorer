@@ -65,7 +65,7 @@ func (s *session) info() model.SessionInfo {
 		Snapshot: s.snapshot,
 	}
 	if s.grant != nil {
-		g := s.grant.info
+		g := s.grant.infoCopy()
 		info.Mode, info.Grant = model.ModeCommission, &g
 	}
 	if s.poller != nil {

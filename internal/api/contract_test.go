@@ -239,16 +239,16 @@ func contract(t *testing.T, svc service.Service) {
 
 	// Inspection: data sets, reports, files, journals, setting groups.
 	sets, err := svc.DataSets(ctx, info.ID, simied.Domain)
-	if err != nil || len(sets) != 1 || len(sets[0].Members) != 2 {
+	if err != nil || len(sets) != 2 || len(sets[0].Members)+len(sets[1].Members) != 5 {
 		t.Fatalf("DataSets = %+v, %v", sets, err)
 	}
-	if res, err := svc.ReadDataSet(ctx, info.ID, sets[0].Ref); err != nil || len(res.Values) != 2 || res.Values[0].Value == nil {
+	if res, err := svc.ReadDataSet(ctx, info.ID, simied.Domain+"/LLN0.Meas"); err != nil || len(res.Values) != 2 || res.Values[0].Value == nil {
 		t.Errorf("ReadDataSet = %+v, %v", res, err)
 	}
 	if _, err := svc.ReadDataSet(ctx, info.ID, simied.Domain+"/LLN0.Nope"); service.CodeOf(err) != service.CodeIEDError {
 		t.Errorf("ReadDataSet unknown = %v", err)
 	}
-	if rcbs, err := svc.Reports(ctx, info.ID, simied.Domain); err != nil || len(rcbs) != 1 || rcbs[0].RptEna == nil {
+	if rcbs, err := svc.Reports(ctx, info.ID, simied.Domain); err != nil || len(rcbs) != 3 || rcbs[0].RptEna == nil {
 		t.Errorf("Reports = %+v, %v", rcbs, err)
 	}
 	if files, err := svc.Files(ctx, info.ID, ""); err != nil || len(files) != 3 {
