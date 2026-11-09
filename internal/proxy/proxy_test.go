@@ -189,6 +189,49 @@ func TestSOCKS5(t *testing.T) {
 			wantStage(t, err, proxy.StageResolve)
 		}
 	})
+	// A name resolving to several addresses is tried address by address,
+	// as net.Dialer does: "localhost" is ::1 first on Linux, while a server
+	// may listen on 127.0.0.1 only.
+	both := func(context.Context, string) ([]netip.Addr, error) {
+		return []netip.Addr{netip.MustParseAddr("::1"), netip.MustParseAddr("127.0.0.1")}, nil
+	}
+	t.Run("next address after a refusal", func(t *testing.T) {
+		s := proxytest.SOCKS5(t, "", "")
+		roundTrip(t, proxy.Dialer(mustParse(t, "socks5://"+s.Addr), proxy.Options{Resolver: both}), net.JoinHostPort("ied", port), "")
+		want := []string{net.JoinHostPort("::1", port), net.JoinHostPort("127.0.0.1", port)}
+		if got := s.Targets(); len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
+			t.Errorf("targets %v, want %v", got, want)
+		}
+	})
+	t.Run("skips addresses not allowed", func(t *testing.T) {
+		s := proxytest.SOCKS5(t, "", "")
+		check := func(a netip.Addr) error {
+			if a.Is6() {
+				return errors.New("outside")
+			}
+			return nil
+		}
+		roundTrip(t, proxy.Dialer(mustParse(t, "socks5://"+s.Addr), proxy.Options{Resolver: both, CheckAddr: check}), net.JoinHostPort("ied", port), "")
+		if got := s.Targets(); len(got) != 1 || got[0] != echo {
+			t.Errorf("targets %v", got)
+		}
+	})
+	t.Run("all refused", func(t *testing.T) {
+		s := proxytest.SOCKS5(t, "", "")
+		_, err := proxy.Dialer(mustParse(t, "socks5://"+s.Addr), proxy.Options{Resolver: both})(context.Background(), "tcp", "ied:1")
+		wantStage(t, err, proxy.StageRefused)
+		if got := s.Targets(); len(got) != 2 {
+			t.Errorf("targets %v", got)
+		}
+	})
+	t.Run("auth failure ends the attempts", func(t *testing.T) {
+		s := proxytest.SOCKS5(t, "op", "s3cret")
+		_, err := proxy.Dialer(mustParse(t, "socks5://op:wrong@"+s.Addr), proxy.Options{Resolver: both})(context.Background(), "tcp", net.JoinHostPort("ied", port))
+		wantStage(t, err, proxy.StageAuth)
+		if got := s.Targets(); len(got) != 0 {
+			t.Errorf("targets %v", got)
+		}
+	})
 	t.Run("default resolver", func(t *testing.T) {
 		s := proxytest.SOCKS5(t, "", "")
 		roundTrip(t, proxy.Dialer(mustParse(t, "socks5://"+s.Addr), proxy.Options{}), net.JoinHostPort("localhost", port), "")

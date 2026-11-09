@@ -62,7 +62,7 @@ Commission mode lets a user change an IED. It is off unless asked for, per sessi
 - **Proxies.** The allow-list applies to the IED also when it is reached through a proxy:
   - the operator's default proxy (`--proxy`, `ALL_PROXY`) is trusted: it may lie outside the allow-list, and users of the daemon cannot change it;
   - a proxy a user of the daemon names (per connection, or as the default when the operator set none) must itself be inside the allow-list, by its host when the session is opened and by its address when connecting; otherwise a token holder could reach any proxy, and through it any network;
-  - with `socks5://` the daemon resolves the IED's name and checks the address it sends to the proxy;
+  - with `socks5://` the daemon resolves the IED's name and checks every address it sends to the proxy;
   - with `socks5h://` and `http://` the proxy resolves the name, so the daemon cannot check where it leads: the IED must then be given as an IP address, and a host name is refused.
 
   The desktop application has no allow-list.

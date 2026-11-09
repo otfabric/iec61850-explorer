@@ -78,7 +78,7 @@ The daemon listens on loopback, requires its token even there, checks the Host h
 
 When the IEDs are reachable only through a jump host or a gateway proxy, the Explorer connects through a SOCKS5 proxy or an HTTP proxy's CONNECT method:
 
-- `socks5://[user:password@]host[:1080]`: the Explorer resolves the IED's host name and sends the address.
+- `socks5://[user:password@]host[:1080]`: the Explorer resolves the IED's host name and sends the address; when the name has several addresses, each is tried in turn until the proxy reaches one.
 - `socks5h://[user:password@]host[:1080]`: the proxy resolves the IED's host name.
 - `http://[user:password@]host[:8080]`: HTTP CONNECT, with `Proxy-Authorization: Basic` when a user is given; the proxy resolves the name.
 

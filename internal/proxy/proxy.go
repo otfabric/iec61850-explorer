@@ -294,24 +294,51 @@ func dial(ctx context.Context, cfg Config, opts Options, network, addr string) (
 		return nil, fail(StageConnect, errors.New("the destination host name is longer than 255 bytes"))
 	}
 	dst := destination{host: host, port: port}
+	var addrs []netip.Addr
 	if a, err := netip.ParseAddr(host); err == nil {
-		dst.addr = a.Unmap().WithZone("")
+		addrs = []netip.Addr{a}
 	} else if cfg.Scheme == SOCKS5 {
-		addrs, err := opts.Resolver(ctx, host)
+		addrs, err = opts.Resolver(ctx, host)
 		if err != nil || len(addrs) == 0 {
 			if err == nil {
 				err = errors.New("no address")
 			}
 			return nil, fail(StageResolve, fmt.Errorf("%s: %w", host, err))
 		}
-		dst.addr = addrs[0].Unmap().WithZone("")
 	}
-	if dst.addr.IsValid() && opts.CheckAddr != nil {
-		if err := opts.CheckAddr(dst.addr); err != nil {
-			return nil, fail(StageNotAllowed, err)
+	if len(addrs) == 0 {
+		// The proxy resolves the name (socks5h, http).
+		return connect(ctx, cfg, opts, dst)
+	}
+	// Like net.Dialer, try every address the destination resolved to in
+	// turn: the next one only when the proxy could not reach this one.
+	var last error
+	for _, a := range addrs {
+		dst.addr = a.Unmap().WithZone("")
+		if opts.CheckAddr != nil {
+			if err := opts.CheckAddr(dst.addr); err != nil {
+				if last == nil {
+					last = fail(StageNotAllowed, err)
+				}
+				continue
+			}
+		}
+		conn, err := connect(ctx, cfg, opts, dst)
+		if err == nil {
+			return conn, nil
+		}
+		last = err
+		var pe *Error
+		if !errors.As(err, &pe) || pe.Stage != StageRefused || ctx.Err() != nil {
+			return nil, err
 		}
 	}
+	return nil, last
+}
 
+// connect opens a connection to the proxy and asks it for dst.
+func connect(ctx context.Context, cfg Config, opts Options, dst destination) (net.Conn, error) {
+	fail := func(stage Stage, err error) error { return &Error{Proxy: cfg.Redacted(), Stage: stage, Err: err} }
 	conn, err := opts.Base(ctx, "tcp", cfg.Addr())
 	if err != nil {
 		return nil, fail(StageConnect, err)
