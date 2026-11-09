@@ -58,7 +58,10 @@ func TestOpenThroughProxy(t *testing.T) {
 				}
 				defer func() { _ = e.CloseSession(ctx, info.ID) }()
 				got := tc.srv.Targets()
-				if len(got) != before+1 || got[before] != tc.want {
+				// With socks5 the proxy may first be asked for an address
+				// the IED does not listen on ("localhost" is ::1 first on
+				// Linux); the connection is the last one asked for.
+				if len(got) <= before || got[len(got)-1] != tc.want {
 					t.Errorf("proxy targets %v, want %s", got, tc.want)
 				}
 				if strings.Contains(info.Proxy, "s3cret") || info.Proxy == "" {
