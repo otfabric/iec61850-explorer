@@ -15,7 +15,7 @@ Thank you for your interest in contributing. Read [`AGENTS.md`](AGENTS.md) first
 ### Build & Test
 
 ```sh
-make frontend-install   # once: npm ci
+make frontend-install   # optional: make build and make check run npm ci when needed
 make frontend           # build the UI twice: frontend/dist/wails and frontend/dist/web
 make check              # format, vet, lint, vulnerability scan, race tests, coverage gate, frontend checks
 make build              # ./bin/iec61850-explorer and ./bin/iec61850-explorerd

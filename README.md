@@ -37,14 +37,10 @@ Not yet: report subscription, data set and setting group changes, controls, comp
 ## Build from source
 
 ```bash
-make frontend-install
-```
-
-```bash
 make build
 ```
 
-This builds `bin/iec61850-explorer` (needs a C compiler and the platform's webview; see [CONTRIBUTING.md](CONTRIBUTING.md)) and `bin/iec61850-explorerd`.
+This builds `bin/iec61850-explorer` (needs a C compiler and the platform's webview; see [CONTRIBUTING.md](CONTRIBUTING.md)) and `bin/iec61850-explorerd`. It needs Go and Node.js 22 or later; the frontend dependencies are installed (`npm ci`) on the first build and again when `frontend/package-lock.json` changes.
 
 ## Try it without hardware
 
