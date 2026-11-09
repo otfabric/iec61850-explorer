@@ -182,6 +182,26 @@ func (a *App) SettingGroups(ctx context.Context, id, ld string) (model.SettingGr
 	return a.svc.SettingGroups(ctx, id, ld)
 }
 
+// GrantCommission puts a session in Commission mode.
+func (a *App) GrantCommission(ctx context.Context, id string, req model.GrantRequest) (model.SessionInfo, error) {
+	return a.svc.GrantCommission(ctx, id, req)
+}
+
+// RevokeCommission ends a session's Commission grant.
+func (a *App) RevokeCommission(ctx context.Context, id string) (model.SessionInfo, error) {
+	return a.svc.RevokeCommission(ctx, id)
+}
+
+// Write writes a data attribute and reads it back.
+func (a *App) Write(ctx context.Context, id string, req model.WriteRequest) (model.WriteResult, error) {
+	return a.svc.Write(ctx, id, req)
+}
+
+// Audit returns recent audit records.
+func (a *App) Audit(ctx context.Context, q model.AuditQuery) ([]model.AuditRecord, error) {
+	return a.svc.Audit(ctx, q)
+}
+
 // SaveDeviceFile downloads a file of the IED and asks the user where to save
 // it. It returns the chosen path, or "" when the user cancelled. The frontend
 // names the IED's file; the local path comes from the native dialog.

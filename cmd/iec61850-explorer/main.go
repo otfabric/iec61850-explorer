@@ -71,7 +71,9 @@ func run(args []string) error {
 
 	// The desktop application connects wherever its user can: it has no
 	// target allow-list (that protects a shared gateway, see the daemon).
-	opts := engine.Options{Logger: log}
+	// It offers Commission mode (ADR 0004); a grant needs the data
+	// directory for the audit trail.
+	opts := engine.Options{Logger: log, Commission: true}
 	// Without a usable data directory the application still explores; it
 	// only cannot keep profiles.
 	if err := ensureDir(*dataDir); err != nil {

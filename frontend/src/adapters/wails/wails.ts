@@ -6,6 +6,11 @@ import type { Mode, Platform } from '../../app/platform/platform';
 import { loadTheme, persistTheme } from '../../app/platform/themeStorage';
 import { ServiceError, toServiceError, type ErrorCode, type Service } from '../../app/service/service';
 import type {
+  AuditQuery,
+  AuditRecord,
+  GrantRequest,
+  WriteRequest,
+  WriteResult,
   DataSet,
   ExplorerEvent,
   ExportFile,
@@ -98,6 +103,10 @@ export class WailsService implements Service {
   saveDeviceFile = async (id: string, name: string) => (await call<string>('SaveDeviceFile', id, name)) !== '';
   journals = (id: string, ld: string) => call<string[]>('Journals', id, ld);
   readJournal = (id: string, req: JournalRequest) => call<JournalResult>('ReadJournal', id, req);
+  grantCommission = (id: string, req: GrantRequest) => call<SessionInfo>('GrantCommission', id, req);
+  revokeCommission = (id: string) => call<SessionInfo>('RevokeCommission', id);
+  write = (id: string, req: WriteRequest) => call<WriteResult>('Write', id, req);
+  audit = (query: AuditQuery) => call<AuditRecord[]>('Audit', query);
   settingGroups = (id: string, ld: string) => call<SettingGroups>('SettingGroups', id, ld);
   profiles = () => call<Profile[]>('Profiles');
   saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);

@@ -101,6 +101,10 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("GET "+prefix+"/sessions/{id}/journals", s.journals)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/journals/read", s.readJournal)
 	api.HandleFunc("GET "+prefix+"/sessions/{id}/setting-groups", s.settingGroups)
+	api.HandleFunc("PUT "+prefix+"/sessions/{id}/commission", s.grantCommission)
+	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/commission", s.revokeCommission)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/write", s.write)
+	api.HandleFunc("GET "+prefix+"/audit", s.audit)
 	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
 	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
@@ -340,6 +344,43 @@ func (s *server) readJournal(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) settingGroups(w http.ResponseWriter, r *http.Request) {
 	v, err := s.svc.SettingGroups(r.Context(), r.PathValue("id"), r.URL.Query().Get("ld"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) grantCommission(w http.ResponseWriter, r *http.Request) {
+	var req model.GrantRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.GrantCommission(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) revokeCommission(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.RevokeCommission(r.Context(), r.PathValue("id"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) write(w http.ResponseWriter, r *http.Request) {
+	var req model.WriteRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.Write(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) audit(w http.ResponseWriter, r *http.Request) {
+	q := model.AuditQuery{SessionID: r.URL.Query().Get("session")}
+	if l := r.URL.Query().Get("limit"); l != "" {
+		n, err := strconv.Atoi(l)
+		if err != nil || n < 0 {
+			writeError(w, http.StatusBadRequest, service.Errorf(service.CodeInvalidArgument, "limit %q is not a count", l))
+			return
+		}
+		q.Limit = n
+	}
+	v, err := s.svc.Audit(r.Context(), q)
 	s.reply(w, r, v, err)
 }
 

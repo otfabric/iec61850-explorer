@@ -14,8 +14,21 @@ function ModeBadge({ mode }: { mode: Mode }) {
   );
 }
 
-/** Observe mode: the engine sends no MMS service that changes the IED. */
-function ObserveBadge() {
+/**
+ * The mode of the open session. Observe: the engine sends no MMS service that
+ * changes the IED. Commission: the session holds a grant.
+ */
+function SessionModeBadge({ commission }: { commission: boolean }) {
+  if (commission) {
+    return (
+      <span
+        className="ot-label inline-flex items-center rounded border border-wire px-2 py-1.5 text-wire-text"
+        title="Commission mode: this session may change the IED through a granted, audited second association."
+      >
+        commission
+      </span>
+    );
+  }
   return (
     <span
       className="ot-label inline-flex items-center rounded border border-accent bg-accent-soft px-2 py-1.5 text-accent-strong"
@@ -29,10 +42,12 @@ function ObserveBadge() {
 interface HeaderProps {
   mode: Mode;
   theme: Theme;
+  /** The open session holds a Commission grant. */
+  commission?: boolean;
   onToggleTheme: () => void;
 }
 
-export function Header({ mode, theme, onToggleTheme }: HeaderProps) {
+export function Header({ mode, theme, commission = false, onToggleTheme }: HeaderProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-header px-4">
       <img src={iecIcon} alt="" width={32} height={32} />
@@ -45,7 +60,7 @@ export function Header({ mode, theme, onToggleTheme }: HeaderProps) {
         </span>
       </span>
       <span className="ml-auto flex items-center gap-3">
-        <ObserveBadge />
+        <SessionModeBadge commission={commission} />
         <ModeBadge mode={mode} />
         <IconButton label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={onToggleTheme}>
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}

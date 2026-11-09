@@ -2,6 +2,32 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.3.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.2.0
+
+Commission mode, first step: an IED can be changed, on purpose, with a record of every change.
+
+### Added
+
+- **Commission mode** per session: a grant with a reason, a duration (default 30 minutes, at most 8 hours) and capabilities. It opens a second MMS association whose allow-list holds only the services the capabilities need; the session's own association stays read-only. The grant ends on revoke, at expiry, and when the session or the application ends.
+- **Writes** of data attributes with FC SP, CF, DC, SV or BL, with the value as text in the form a read shows it. Each write reads the value before and after and says whether the IED stored what was written.
+- **Audit trail**: every grant, end and write with the target, reference, value before, value written and value read back, in `audit/audit-YYYY-MM-DD.jsonl` of the data directory (mode 0600) and in the new Audit tab.
+- Daemon flag `--allow-commission`; without it the daemon offers no Commission mode.
+- API: `PUT`/`DELETE /api/v1/sessions/{id}/commission`, `POST /api/v1/sessions/{id}/write`, `GET /api/v1/audit`, the `audit` event; API version 0.2.
+
+### Changed
+
+- The header shows the mode of the open session (observe or commission).
+
+### Known limitations
+
+- Report subscription, data set and setting group changes and controls are not offered yet.
+- A grant needs a second association: an IED that accepts only one client refuses it.
+
+---
+
 ## v0.2.0
 
 **Date:** 2026-11-08

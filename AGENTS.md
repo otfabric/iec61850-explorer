@@ -1,6 +1,6 @@
 # OT Fabric IEC 61850 Explorer: agent handoff
 
-Status (2026-11-08): **M2a (inspection) is implemented**, on top of M1 (the read-only browser, released as v0.1.0) and M0 (the foundation). It shows a logical device's data sets, report control blocks, logs and setting groups and the IED's files, from the IED or, for an offline session, from the SCL file. One Go engine behind a `Service` interface runs in the desktop application (Wails, in-process) and in the daemon (`iec61850-explorerd`, HTTP/SSE plus the embedded web UI). It connects with configurable ISO addressing, discovers, browses, searches, reads (batched) and polls IEDs, imports SCL files and snapshots as offline sessions, exports snapshots and CSV, and keeps connection profiles, all in **Observe mode**: the MMS client refuses every state-changing service before it is sent. The contract suite proves the same behaviour through the engine and through the HTTP API against a simulated IED. Read this file fully, then `docs/ARCHITECTURE.md`, before writing code.
+Status (2026-11-09): **M2b1 (Commission mode foundation) is implemented**: a per-session grant on a second, restricted association, an audit trail, and writes verified by readback (ADR 0004). Before it: M2a (inspection, v0.2.0), M1 (the read-only browser, v0.1.0) and M0 (the foundation). It shows a logical device's data sets, report control blocks, logs and setting groups and the IED's files, from the IED or, for an offline session, from the SCL file. One Go engine behind a `Service` interface runs in the desktop application (Wails, in-process) and in the daemon (`iec61850-explorerd`, HTTP/SSE plus the embedded web UI). It connects with configurable ISO addressing, discovers, browses, searches, reads (batched) and polls IEDs, imports SCL files and snapshots as offline sessions, exports snapshots and CSV, and keeps connection profiles, by default in **Observe mode**: the MMS client refuses every state-changing service before it is sent. Commission mode is a granted, audited second association. The contract suite proves the same behaviour through the engine and through the HTTP API against a simulated IED. Read this file fully, then `docs/ARCHITECTURE.md`, before writing code.
 
 ## Organisation standards
 
@@ -8,13 +8,13 @@ This repository follows **otfabric/engineering policy 1.2**, profile **applicati
 
 ## What this is
 
-A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/go-iec61850](https://github.com/otfabric/go-iec61850) and [otfabric/go-mms](https://github.com/otfabric/go-mms). The milestones after M1 (`docs/ARCHITECTURE.md` section 9) add datasets and reports, explicit Commission mode, diagnostics, semantics from [go-iec61850-model](https://github.com/otfabric/go-iec61850-model), trace analysis and replay.
+A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/go-iec61850](https://github.com/otfabric/go-iec61850) and [otfabric/go-mms](https://github.com/otfabric/go-mms). The next milestones (`docs/ARCHITECTURE.md` section 9) add report subscription, data set and setting group changes and controls in Commission mode, diagnostics, semantics from [go-iec61850-model](https://github.com/otfabric/go-iec61850-model), trace analysis and replay.
 
 ## Read these, in this order
 
 1. `docs/ARCHITECTURE.md`: artifacts, layering, the `Service` interface, the API, Observe mode, security, the capability audit of the libraries, milestones.
 2. `docs/adr/`: the foundational decisions and why.
-3. `TESTING.md`: the test tiers. `SECURITY.md`: what Observe mode guarantees.
+3. `TESTING.md`: the test tiers. `SECURITY.md`: what Observe mode and Commission mode guarantee.
 4. `docs/BRANDING.md` of [sunspec-explorer](https://github.com/otfabric/sunspec-explorer): the shared visual identity; the tokens are in `frontend/src/styles/tokens.css`.
 
 ## Decisions that are settled (do not relitigate without asking the user)
@@ -22,7 +22,7 @@ A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/
 - **The architecture of sunspec-explorer is reused** (ADR 0001): two artifacts from one module, `iec61850-explorer` (Wails GUI, cgo, Local mode only) and `iec61850-explorerd` (static daemon, `CGO_ENABLED=0`, linux/amd64, arm64, armv7). The daemon never imports Wails (`TestNoWailsNoCgo`).
 - **One `Service` interface, one Go implementation** (the engine). The Wails binding and the HTTP handlers wrap it; the contract suite (`internal/api/contract_test.go`) runs against both. The TypeScript `Service` has two implementations (Wails bindings, `fetch` to `/api/v1`).
 - **Remote = daemon + user-managed SSH port forward + browser.** No GUI remote mode, no Go client of the daemon, no token storage in the GUI (ADR 0003).
-- **Observe mode is enforced in the library, not implied by the UI** (ADR 0002): every MMS client is created with go-mms `DialOptions.AllowedServices` = `internal/readonly.Services` (go-mms v1.5.0 or later; the option was added for this project), the linter bans state-changing calls and MMS servers outside tests, and the wire test counts what the IED receives. Commission and Laboratory modes are later milestones; they will be per-session capability grants enforced in the engine, never hidden buttons.
+- **Observe mode is enforced in the library, not implied by the UI** (ADR 0002): every MMS client is created with go-mms `DialOptions.AllowedServices` = `internal/readonly.Services` (go-mms v1.5.0 or later; the option was added for this project), the linter bans state-changing calls and MMS servers outside tests, and the wire test counts what the IED receives. Commission mode (ADR 0004) is a per-session capability grant enforced in the engine on a second association, never a hidden button; Laboratory mode will follow the same pattern.
 - **The CLI is not the backend.** The engine uses the libraries directly; `iec61850ctl` is a reference for workflows (the UI offers the equivalent `iec61850ctl` command).
 - **Daemon is authenticated even on loopback**: bearer token in a 0600 file, rotatable; Host header check; target allow-list (default: private and link-local ranges); loopback bind unless `--allow-remote-bind`.
 - **CI and release builds run on native-architecture runners, never under QEMU.** One reusable workflow (`build.yml`) holds all checks and builds; `ci.yml` and `release.yml` call it.
@@ -31,7 +31,8 @@ A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/
 
 ## Hard rules
 
-- No state-changing MMS or IEC 61850 call outside `_test.go` files and `internal/simied` (`.golangci.yml` forbidigo). A new read service is added to `internal/readonly.Services` and its test deliberately.
+- No state-changing MMS or IEC 61850 call outside `_test.go` files, `internal/simied` and the engine's `commission*.go` files (`.golangci.yml` forbidigo). A new read service is added to `internal/readonly.Services` and its test deliberately; a new Commission service to `internal/commission` under a capability, with its test.
+- A Commission change goes through the grant's association only, after `requireGrant(capability)`, and is audited (ADR 0004). No grant without a writable audit trail.
 - `internal/simied` (the simulated IED) is imported by tests only (`TestSimIEDOnlyInTests`).
 - No cgo in `internal/` except what the Wails GUI strictly needs (`internal/gui`, `cmd/iec61850-explorer`).
 - Never log the bearer token. The web UI receives it only in the URL fragment.

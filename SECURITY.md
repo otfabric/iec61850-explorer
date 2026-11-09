@@ -26,7 +26,7 @@ We will acknowledge your report within 48 hours and aim to provide a fix or miti
 
 ### Observe Mode: The Explorer Does Not Change the IED
 
-In this version the Explorer only discovers and reads. It never sends a Write, a control (Select, Operate, Cancel), a report control block change, a data set definition or deletion, a setting-group change, or a file rename, deletion or transfer. This is enforced, not a convention:
+A session is in Observe mode unless the user grants it Commission mode (below). In Observe mode the Explorer only discovers and reads. It never sends a Write, a control (Select, Operate, Cancel), a report control block change, a data set definition or deletion, a setting-group change, or a file rename, deletion or transfer. This is enforced, not a convention:
 
 - every MMS client the engine creates is restricted by go-mms's service allow-list (`DialOptions.AllowedServices`) to Identify, Status, GetNameList, Read, GetVariableAccessAttributes, GetNamedVariableListAttributes, FileDirectory, FileOpen, FileRead, FileClose and ReadJournal: the client refuses anything else before it reaches the wire (`internal/readonly`). FileOpen and FileClose only open and release a read state for one download;
 - the linter fails the build when non-test code calls a state-changing go-iec61850 or go-mms method or creates an MMS server (`.golangci.yml`);
@@ -34,7 +34,18 @@ In this version the Explorer only discovers and reads. It never sends a Write, a
 
 Reading still costs the IED some work (a large log or file download most of all), and it opens one MMS association per session: an IED that accepts few associations may refuse other clients while the Explorer is connected.
 
-No interface of the Explorer accepts a raw MMS PDU, a service name, a value to write or a file path.
+No interface of the Explorer accepts a raw MMS PDU, a service name or a file path.
+
+### Commission Mode: Granted, Separate, Audited
+
+Commission mode lets a user change an IED. It is off unless asked for, per session:
+
+- **A grant** names a reason, a duration (at most 8 hours) and capabilities. In this version the user interface offers `write`: writing data attributes of the functional constraints SP, CF, DC, SV and BL. Controls are not offered.
+- **A second association.** The Observe association of the session is never widened. The grant opens another association whose go-mms allow-list holds the Observe services plus only the services its capabilities need (`internal/commission`); go-mms refuses anything else before the wire. An IED that accepts few associations may refuse it.
+- **Audit trail.** Every grant, end, cleanup and write is appended to `<data dir>/audit/audit-YYYY-MM-DD.jsonl` (mode 0600) and synced before the result is shown, with the target, the reference, the value before, the value written and the value read back. Without a writable trail there is no grant. A write the IED received is recorded even if it failed.
+- **Ends by itself.** A grant ends on revoke, at its expiry, and when the session or the engine ends.
+- **The daemon** offers Commission mode only when started with `--allow-commission`. Anyone holding the token can then change the IEDs the daemon may reach: keep the token, the target allow-list and that flag as narrow as the work needs.
+- **A write is verified** by reading the value back; a value the IED stores differently is shown and recorded as a mismatch.
 
 ### The Daemon
 

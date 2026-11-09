@@ -41,10 +41,11 @@ In the page, connect to the IED with an address **as the gateway sees it** (for 
 - **The token.** It is the only credential: treat the URL like a password. It is created on the first start, kept in a file only the daemon's user can read, and stays the same across restarts. Replace it with `iec61850-explorerd token rotate`: the old URL stops working within a second, without a restart.
 - **Which IEDs.** By default the daemon connects only to private and link-local addresses (10/8, 172.16/12, 192.168/16, 169.254/16 and their IPv6 counterparts). Add others with `--allow-target <cidr>`, for example `--allow-target 127.0.0.1` for an IED simulated on the gateway itself.
 - **Observe mode.** The daemon sends discovery and read services only; see [`SECURITY.md`](../SECURITY.md).
+- **Commission mode.** Writes to IEDs are possible only when the daemon is started with `--allow-commission`; each session then needs an explicit grant, and every change is recorded in `<data dir>/audit/`. Anyone with the token can then change the IEDs the daemon reaches.
 
 ## Where the daemon keeps its files
 
-By default in a temporary folder, `/tmp/iec61850-explorer-<uid>`: the token, the state file and the connection profiles. That is lost when the system clears `/tmp`, after which the daemon makes a new token. For a gateway that should keep its token, pass `--data-dir` (the systemd unit below does). The directory must belong to the daemon's user and be closed to everyone else (mode 0700); the daemon creates it that way and refuses anything else.
+By default in a temporary folder, `/tmp/iec61850-explorer-<uid>`: the token, the state file, the connection profiles and, with `--allow-commission`, the audit trail (`audit/`). That is lost when the system clears `/tmp`, after which the daemon makes a new token. For a gateway that should keep its token, pass `--data-dir` (the systemd unit below does). The directory must belong to the daemon's user and be closed to everyone else (mode 0700); the daemon creates it that way and refuses anything else.
 
 ## As a service (systemd)
 

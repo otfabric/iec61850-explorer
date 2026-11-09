@@ -29,21 +29,18 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 - **Inspect** what a logical device defines: data sets (read in one request, or pinned to the watch table), report control blocks with their configuration, logs by time range, setting groups; and the IED's **files** (download disturbance records). From an SCL file, data sets and report control blocks are shown as the file defines them.
 - **Export** a snapshot (the model and the watched values, JSON) or the watched values as CSV; **open a snapshot** again later, without the IED.
 - **See what happened on the wire**: every action (connect, discover, read, close) is logged with its duration and the MMS requests it sent. A failed connect says where it stopped (TCP, COTP, session, presentation, ACSE or MMS Initiate) when the error proves it, and what to check.
-- **Observe mode**: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
+- **Observe mode** by default: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
+- **Commission mode** on request, per session: a grant with a reason and a duration opens a second, restricted association; **write** set points and configuration values (FC SP, CF, DC, SV, BL), each verified by reading it back and recorded in an audit trail. The daemon offers it only with `--allow-commission`.
 
-Not yet: Commission mode (report subscription, writes, controls, setting group changes), comparison of SCL with the live model, semantic search, trace analysis.
+Not yet: report subscription, data set and setting group changes, controls, comparison of SCL with the live model, semantic search, trace analysis.
 
 ## Build from source
-
-```bash
-make frontend-install
-```
 
 ```bash
 make build
 ```
 
-This builds `bin/iec61850-explorer` (needs a C compiler and the platform's webview; see [CONTRIBUTING.md](CONTRIBUTING.md)) and `bin/iec61850-explorerd`.
+This builds `bin/iec61850-explorer` (needs a C compiler and the platform's webview; see [CONTRIBUTING.md](CONTRIBUTING.md)) and `bin/iec61850-explorerd`. It needs Go and Node.js 22 or later; the frontend dependencies are installed (`npm ci`) on the first build and again when `frontend/package-lock.json` changes.
 
 ## Try it without hardware
 

@@ -41,6 +41,8 @@ type session struct {
 	lostErr *model.OpError
 	closing bool
 	poller  *poller
+	// grant is the Commission grant in force, nil in Observe mode.
+	grant *grant
 	// scl is set for an offline session from SCL (or a snapshot of one).
 	scl *model.SCLOrigin
 	// sclDataSets and sclReports are the definitions of an SCL session, by
@@ -61,6 +63,10 @@ func (s *session) info() model.SessionInfo {
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
 		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr, SCL: s.scl,
 		Snapshot: s.snapshot,
+	}
+	if s.grant != nil {
+		g := s.grant.info
+		info.Mode, info.Grant = model.ModeCommission, &g
 	}
 	if s.poller != nil {
 		info.Polling = s.poller.snapshot()

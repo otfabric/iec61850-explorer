@@ -4,12 +4,15 @@
 
 import { ServiceError, type Service } from './service';
 import type {
+  AuditQuery,
+  AuditRecord,
   DataSet,
   ExplorerEvent,
   ExportFile,
   ExportFormat,
   FileUpload,
   FileEntry,
+  GrantRequest,
   Health,
   JournalRequest,
   JournalResult,
@@ -28,7 +31,10 @@ import type {
   SettingGroups,
   TargetConfig,
   Value,
+  WriteRequest,
+  WriteResult,
 } from './types';
+import { WRITABLE_FCS } from './types';
 
 const LD = 'DemoIEDLD0';
 
@@ -92,18 +98,24 @@ export class MockService implements Service {
   private listeners = new Set<(event: ExplorerEvent) => void>();
   private pollers = new Map<string, ReturnType<typeof setInterval>>();
   private profileList: Profile[] = [];
+  private auditLog: AuditRecord[] = [];
+  /** Attributes the mock can write, with their values. */
+  private attrs = new Map<string, Value>([
+    [`${LD}/LLN0.Mod.ctlModel[CF]`, { name: 'ctlModel', type: 'integer', text: '0', json: 0 }],
+    [`${LD}/LLN0.NamPlt.vendor[DC]`, { name: 'vendor', type: 'visible-string', text: 'OT Fabric', json: 'OT Fabric' }],
+  ]);
 
   async health(): Promise<Health> {
     return {
       status: 'ok',
       version: 'mock',
-      api_version: '0.1',
+      api_version: '0.2',
       uptime_s: 0,
       go_iec61850: 'mock',
       go_mms: 'mock',
       mode: 'observe',
       time: new Date().toISOString(),
-      features: ['profiles'],
+      features: ['profiles', 'commission'],
     };
   }
 
@@ -327,6 +339,82 @@ export class MockService implements Service {
     return { ld, num_of_sgs: 2, act_sg: 1, edit_sg: 0, cnf_edit: false, resv_tms: 0 };
   }
 
+  async grantCommission(id: string, req: GrantRequest): Promise<SessionInfo> {
+    const session = this.session(id);
+    if (session.state !== 'connected') {
+      throw new ServiceError('not_allowed', 'an SCL model has no live values: connect to the IED to read');
+    }
+    if (req.reason.trim() === '') {
+      throw new ServiceError('invalid_argument', 'a grant needs a reason, for example a work order');
+    }
+    if (req.capabilities.length === 0) {
+      throw new ServiceError('invalid_argument', 'a grant needs at least one capability');
+    }
+    if (session.grant) {
+      throw new ServiceError('not_allowed', 'the session already holds a grant; revoke it first');
+    }
+    const now = new Date();
+    const minutes = req.minutes || 30;
+    const next: SessionInfo = {
+      ...session,
+      mode: 'commission',
+      grant: {
+        reason: req.reason.trim(),
+        capabilities: [...new Set(req.capabilities)].sort(),
+        granted_at: now.toISOString(),
+        expires_at: new Date(now.getTime() + minutes * 60_000).toISOString(),
+      },
+    };
+    this.sessionsById.set(id, next);
+    this.record(next, { action: 'grant', outcome: 'ok', reason: next.grant?.reason, capabilities: next.grant?.capabilities });
+    this.operation(id, { action: 'grant', target: next.grant?.capabilities.join(', ') ?? '', ok: true });
+    this.emit({ kind: 'session', session_id: id, session: next });
+    return next;
+  }
+
+  async revokeCommission(id: string): Promise<SessionInfo> {
+    const session = this.session(id);
+    if (!session.grant) {
+      return session;
+    }
+    const { grant, ...rest } = session;
+    const next: SessionInfo = { ...rest, mode: 'observe' };
+    this.sessionsById.set(id, next);
+    this.record(next, { action: 'revoke', outcome: 'ok', capabilities: grant.capabilities });
+    this.emit({ kind: 'session', session_id: id, session: next });
+    return next;
+  }
+
+  async write(id: string, req: WriteRequest): Promise<WriteResult> {
+    const session = this.session(id);
+    if (!session.grant?.capabilities.includes('write')) {
+      throw new ServiceError('not_allowed', 'this needs Commission mode with the write capability');
+    }
+    const fc = /\[([A-Z]{2})\]$/.exec(req.ref)?.[1] ?? '';
+    if (!WRITABLE_FCS.includes(fc)) {
+      throw new ServiceError('invalid_argument', `functional constraint "${fc}" is not written`);
+    }
+    const before = this.attrs.get(req.ref);
+    if (!before) {
+      throw new ServiceError('invalid_argument', `${req.ref}: the type of the attribute is unknown`);
+    }
+    if (before.type === 'integer' && !/^-?\d+$/.test(req.value.trim())) {
+      throw new ServiceError('invalid_argument', `${req.ref}: "${req.value}" is not an INT32`);
+    }
+    const text = before.type === 'integer' ? String(Number(req.value)) : req.value;
+    const written: Value = { ...before, text, json: before.type === 'integer' ? Number(text) : text };
+    this.attrs.set(req.ref, written);
+    this.record(session, { action: 'write', outcome: 'ok', ref: req.ref, before: before.text, written: text, after: text });
+    this.operation(id, { action: 'write', target: req.ref, ok: true });
+    return { ref: req.ref, mms: itemID(req.ref), at: new Date().toISOString(), written, before, after: written, verified: true, duration_ms: 3 };
+  }
+
+  async audit(query: AuditQuery): Promise<AuditRecord[]> {
+    return this.auditLog
+      .filter((r) => !query.session_id || r.session_id === query.session_id)
+      .slice(0, query.limit || 500);
+  }
+
   async profiles(): Promise<Profile[]> {
     return [...this.profileList].sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -370,8 +458,31 @@ export class MockService implements Service {
     return session;
   }
 
+  private record(session: SessionInfo, rec: Omit<AuditRecord, 'seq' | 'at' | 'session_id' | 'target'>): void {
+    const full: AuditRecord = {
+      ...rec,
+      seq: this.auditLog.length + 1,
+      at: new Date().toISOString(),
+      session_id: session.id,
+      target: `${session.target.host}:${session.target.port ?? 102}`,
+    };
+    this.auditLog.unshift(full);
+    this.emit({ kind: 'audit', session_id: session.id, audit: full });
+  }
+
   private value(ref: string): ReadValue {
     const mms = itemID(ref);
+    const attr = this.attrs.get(ref);
+    if (attr) {
+      return { ref, mms, value: attr };
+    }
+    // A data object under an FC: the writable attributes the mock holds.
+    const fc = /\[([A-Z]{2})\]$/.exec(ref)?.[1];
+    const base = ref.replace(/\[[A-Z]{2}\]$/, '');
+    const children = [...this.attrs].filter(([r]) => r.startsWith(`${base}.`) && r.endsWith(`[${fc}]`)).map(([, v]) => v);
+    if (children.length > 0) {
+      return { ref, mms, value: { type: 'structure', text: `{${children.length} components}`, children } };
+    }
     if (ref === `${LD}/MMXU1.Hz[MX]`) {
       return { ref, mms, value: measurement(this.hz, 'good') };
     }

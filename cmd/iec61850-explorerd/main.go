@@ -131,6 +131,8 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	flags.Var(&allowTargets, "allow-target",
 		"CIDR or address of devices the daemon may connect to (repeatable; default: private and link-local ranges)")
 	maxSessions := flags.Int("max-sessions", engine.DefaultMaxSessions, "maximum number of open sessions")
+	allowCommission := flags.Bool("allow-commission", false,
+		"offer Commission mode: users may grant a session writes and other changes to the IED, recorded in <data-dir>/audit")
 	noUI := flags.Bool("no-ui", false, "serve the API only, not the web UI")
 	debug := flags.Bool("debug", false, "log at debug level")
 	if err := flags.Parse(args); err != nil {
@@ -162,7 +164,10 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 		return err
 	}
 
-	eng := engine.New(engine.Options{Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow, DataDir: p.dataDir})
+	eng := engine.New(engine.Options{Logger: log, MaxSessions: *maxSessions, AllowTarget: allow.Allow, DataDir: p.dataDir, Commission: *allowCommission})
+	if *allowCommission {
+		log.Warn("Commission mode is offered: users of this daemon may change IEDs (audit trail in " + filepath.Join(p.dataDir, "audit") + ")")
+	}
 	defer eng.Close()
 
 	var ui http.Handler

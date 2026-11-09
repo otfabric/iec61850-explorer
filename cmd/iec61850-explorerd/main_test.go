@@ -285,6 +285,31 @@ func TestEngineFlags(t *testing.T) {
 	}
 }
 
+// Commission mode is offered only with --allow-commission.
+func TestAllowCommission(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want bool
+	}{{nil, false}, {[]string{"--allow-commission"}, true}} {
+		d := start(t, tc.args...)
+		token, err := daemon.ReadToken(filepath.Join(d.dir, daemon.TokenFileName))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req, _ := http.NewRequest("GET", "http://"+d.addr+"/api/v1/health", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		if got := strings.Contains(string(b), `"commission"`); got != tc.want {
+			t.Errorf("%v: health = %s", tc.args, b)
+		}
+	}
+}
+
 func TestStaleStateFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := daemon.WriteState(dir, daemon.State{Listen: "127.0.0.1:1", PID: 1}); err != nil {

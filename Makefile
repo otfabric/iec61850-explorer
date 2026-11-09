@@ -37,7 +37,7 @@ LDFLAGS     = -ldflags "-s -w -X github.com/otfabric/iec61850-explorer/internal/
 # Packages measured by the coverage gate: the engine, the daemon and what they are built
 # from. The Wails shell (cmd/iec61850-explorer, internal/gui) needs a window and is covered
 # by the frontend tests.
-TEST_PKGS     := ./internal/engine/... ./internal/readonly/... ./internal/service/... ./internal/model/... ./internal/buildinfo/... \
+TEST_PKGS     := ./internal/engine/... ./internal/readonly/... ./internal/commission/... ./internal/service/... ./internal/model/... ./internal/buildinfo/... \
 	./internal/api/... ./internal/web/... ./internal/daemon/... ./internal/simied/... ./cmd/iec61850-explorerd/...
 COVERAGE_MIN  := 90
 # Per-package floor (TEST-012): what the weakest package measures now, rounded down.
@@ -115,14 +115,26 @@ vuln: ## Run govulncheck
 	@echo "Running govulncheck"
 	@govulncheck ./...
 
-frontend-install: ## Install the frontend dependencies (npm ci)
-	@cd frontend && npm ci
+# npm writes node_modules/.package-lock.json on every install: it is the
+# stamp of an install that matches package-lock.json. A fresh clone, or a
+# lock file that changed (git pull), installs before building.
+FRONTEND_DEPS := frontend/node_modules/.package-lock.json
 
-frontend: ## Build the frontend twice: dist/wails (desktop) and dist/web (served by the daemon)
+$(FRONTEND_DEPS): frontend/package.json frontend/package-lock.json
+	@command -v npm >/dev/null || { echo "npm not found: install Node.js 22 or later (https://nodejs.org)"; exit 1; }
+	@echo "Installing frontend dependencies (npm ci)"
+	@cd frontend && npm ci
+	@touch $@
+
+frontend-install: ## Install the frontend dependencies (npm ci)
+	@rm -f $(FRONTEND_DEPS)
+	@$(MAKE) --no-print-directory $(FRONTEND_DEPS)
+
+frontend: $(FRONTEND_DEPS) ## Build the frontend twice: dist/wails (desktop) and dist/web (served by the daemon)
 	@echo "Building frontend (wails + web)"
 	@cd frontend && npm run build
 
-frontend-check: ## Typecheck and test the frontend
+frontend-check: $(FRONTEND_DEPS) ## Typecheck and test the frontend
 	@echo "Checking frontend"
 	@cd frontend && npm run typecheck && npm test
 
