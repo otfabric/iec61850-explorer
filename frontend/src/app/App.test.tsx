@@ -282,6 +282,70 @@ describe('App', () => {
     expect(within(audit).getByText(/group 1 → 2/)).toBeInTheDocument();
   });
 
+  it('operates a control in Commission mode after a confirmation, with every step', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const control = vi.spyOn(service, 'control');
+    render(<App service={service} platform={platform()} />);
+    await connect(user);
+
+    // Without the capability the CO section only explains.
+    await user.click(await screen.findByRole('button', { name: 'Expand DemoIEDLD0' }));
+    await user.click(await screen.findByRole('button', { name: 'Expand LLN0' }));
+    await user.click(await screen.findByText('Mod'));
+    let panel = screen.getByRole('region', { name: 'Selected node' });
+    expect(within(panel).getByText(/Grant Commission mode with the controls capability/)).toBeInTheDocument();
+    expect(within(panel).queryByRole('form', { name: 'Control' })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Commission…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Commission mode' });
+    await user.type(within(dialog).getByLabelText(/Reason/), 'WO-4713');
+    await user.click(within(dialog).getByLabelText(/Operate controls/));
+    await user.click(within(dialog).getByRole('button', { name: 'Grant' }));
+    await screen.findByRole('status', { name: 'Commission grant' });
+
+    // Make Mod operable (SBO with enhanced security) with a write.
+    panel = screen.getByRole('region', { name: 'Selected node' });
+    await user.click(within(panel).getAllByRole('button', { name: 'Read' })[0]!);
+    const write = await within(panel).findByRole('form', { name: 'Write CF' });
+    await user.clear(within(write).getByLabelText('New value'));
+    await user.type(within(write).getByLabelText('New value'), '4');
+    await user.click(within(write).getByRole('button', { name: 'Write' }));
+    await within(write).findByText(/Written and verified/);
+
+    // Operate: nothing is sent before the confirmation.
+    const form = within(panel).getByRole('form', { name: 'Control' });
+    await user.clear(within(form).getByLabelText('ctlVal'));
+    await user.type(within(form).getByLabelText('ctlVal'), '2');
+    await user.click(within(form).getByRole('button', { name: 'Operate…' }));
+    expect(within(form).getByRole('group', { name: 'Confirm the control' })).toHaveTextContent('Operate DemoIEDLD0/LLN0.Mod with ctlVal 2 on the IED?');
+    expect(control).not.toHaveBeenCalled();
+    await user.click(within(form).getByRole('button', { name: 'Operate' }));
+    const ok = await within(form).findByRole('status', { name: 'Control outcome' });
+    expect(ok).toHaveTextContent('Operated');
+    expect(ok).toHaveTextContent('sbo-with-enhanced-security');
+    expect(ok).toHaveTextContent('select ok');
+    expect(ok).toHaveTextContent('termination ok');
+    expect(ok).toHaveTextContent('stVal 1 → 2');
+    expect(control).toHaveBeenCalledWith(expect.any(String), { ref: 'DemoIEDLD0/LLN0.Mod', value: '2', test: false });
+
+    // Switching it off ends negatively, with the IED's cause.
+    await user.clear(within(form).getByLabelText('ctlVal'));
+    await user.type(within(form).getByLabelText('ctlVal'), '5');
+    await user.click(within(form).getByLabelText('Test'));
+    await user.click(within(form).getByRole('button', { name: 'Operate…' }));
+    await user.click(within(form).getByRole('button', { name: 'Operate' }));
+    const negative = await within(form).findByRole('alert', { name: 'Control outcome' });
+    expect(negative).toHaveTextContent('Accepted, then ended negatively');
+    expect(negative).toHaveTextContent('blocked-by-mode');
+    expect(negative).toHaveTextContent('test');
+
+    await user.click(screen.getByRole('tab', { name: /^Audit/ }));
+    const audit = screen.getByRole('region', { name: 'Audit trail' });
+    expect(within(audit).getAllByText('control')).toHaveLength(2);
+    expect(within(audit).getByText(/termination blocked-by-mode/)).toBeInTheDocument();
+  });
+
   it('lists and downloads the files of the IED', async () => {
     const user = userEvent.setup();
     const service = new MockService();

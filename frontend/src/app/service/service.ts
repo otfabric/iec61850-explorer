@@ -32,6 +32,8 @@ import type {
   TargetConfig,
   WriteRequest,
   WriteResult,
+  ControlRequest,
+  ControlResult,
 } from './types';
 
 export type ErrorCode =
@@ -110,6 +112,8 @@ export interface Service {
   revokeCommission(id: string): Promise<SessionInfo>;
   /** Writes one data attribute and reads it back; needs the write capability. */
   write(id: string, req: WriteRequest): Promise<WriteResult>;
+  /** Operates a controllable data object (select, operate, termination); needs the controls capability. */
+  control(id: string, req: ControlRequest): Promise<ControlResult>;
   /** Subscribes to a report control block (reserve, enable, GI); reports arrive as events. */
   subscribeReport(id: string, req: SubscribeRequest): Promise<Subscription>;
   /** Disables and releases the RCB of a subscription. */

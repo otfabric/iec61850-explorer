@@ -1,8 +1,8 @@
 import { CopyIcon, ErrorIcon, PinIcon, ReadIcon } from '../icons';
 import type { ModelNode, SessionInfo } from '../service/types';
 import type { ReadEntry } from '../state/useExplorer';
-import type { WriteResult } from '../service/types';
-import { WriteForm } from './Commission';
+import type { ControlRequest, ControlResult, WriteResult } from '../service/types';
+import { ControlForm, WriteForm } from './Commission';
 import { Button, Chip } from './ui';
 import { ValueView } from './ValueView';
 
@@ -18,6 +18,8 @@ interface NodePanelProps {
   onCopy: (text: string) => void;
   /** Writes an attribute; set while the session holds the write capability. */
   onWrite?: (ref: string, value: string, reread: string) => Promise<WriteResult | null>;
+  /** Set in Commission mode with the controls capability. */
+  onControl?: (req: ControlRequest) => Promise<ControlResult | null>;
 }
 
 const withFC = (ref: string, fc: string) => `${ref}[${fc}]`;
@@ -31,7 +33,7 @@ export function cliCommand(session: SessionInfo, ref: string, fc: string): strin
   return `iec61850ctl get object --host ${session.target.host}${port} --object ${ref} --fc ${fc}`;
 }
 
-export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy, onWrite }: NodePanelProps) {
+export function NodePanel({ session, node, reads, reading, disabled, watched, onRead, onWatch, onCopy, onWrite, onControl }: NodePanelProps) {
   const sclOnly = session.state === 'offline' && !session.snapshot;
   const readable = node.kind !== 'ld' && node.fcs.length > 0;
   return (
@@ -86,8 +88,10 @@ export function NodePanel({ session, node, reads, reading, disabled, watched, on
               {control && (
                 <p className="px-3 py-2 text-muted">
                   Control attributes (Oper, SBO, SBOw, Cancel) are not read: reading SBO selects the control on the IED.
+                  {!onControl && ' Grant Commission mode with the controls capability to operate it.'}
                 </p>
               )}
+              {control && onControl && node.kind === 'do' && <ControlForm key={node.ref} doRef={node.ref} disabled={disabled} onControl={onControl} />}
               {entry?.value.error && (
                 <div className="flex gap-2 px-3 py-2 text-danger" role="alert">
                   <ErrorIcon size={16} />

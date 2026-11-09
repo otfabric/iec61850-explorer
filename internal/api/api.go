@@ -104,6 +104,7 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("PUT "+prefix+"/sessions/{id}/commission", s.grantCommission)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/commission", s.revokeCommission)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/write", s.write)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/control", s.control)
 	api.HandleFunc("GET "+prefix+"/audit", s.audit)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions", s.subscribeReport)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/reports/subscriptions/{sub}", s.unsubscribe)
@@ -373,6 +374,15 @@ func (s *server) write(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.svc.Write(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) control(w http.ResponseWriter, r *http.Request) {
+	var req model.ControlRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.Control(r.Context(), r.PathValue("id"), req)
 	s.reply(w, r, v, err)
 }
 

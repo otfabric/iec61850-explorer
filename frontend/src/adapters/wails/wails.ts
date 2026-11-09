@@ -13,6 +13,8 @@ import type {
   AuditQuery,
   AuditRecord,
   GrantRequest,
+  ControlRequest,
+  ControlResult,
   WriteRequest,
   WriteResult,
   DataSet,
@@ -110,6 +112,7 @@ export class WailsService implements Service {
   grantCommission = (id: string, req: GrantRequest) => call<SessionInfo>('GrantCommission', id, req);
   revokeCommission = (id: string) => call<SessionInfo>('RevokeCommission', id);
   write = (id: string, req: WriteRequest) => call<WriteResult>('Write', id, req);
+  control = (id: string, req: ControlRequest) => call<ControlResult>('Control', id, req);
   audit = (query: AuditQuery) => call<AuditRecord[]>('Audit', query);
   subscribeReport = (id: string, req: SubscribeRequest) => call<Subscription>('SubscribeReport', id, req);
   unsubscribe = (id: string, sub: string) => call<void>('Unsubscribe', id, sub);

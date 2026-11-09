@@ -37,6 +37,9 @@ import type {
   Value,
   WriteRequest,
   WriteResult,
+  ControlRequest,
+  ControlResult,
+  ControlStep,
 } from './types';
 import { WRITABLE_FCS } from './types';
 
@@ -105,6 +108,7 @@ export class MockService implements Service {
   private auditLog: AuditRecord[] = [];
   private createdSets: DataSet[] = [];
   private actSG = 1;
+  private ctlNum = 0;
   /** Attributes the mock can write, with their values. */
   private attrs = new Map<string, Value>([
     [`${LD}/LLN0.Mod.ctlModel[CF]`, { name: 'ctlModel', type: 'integer', text: '0', json: 0 }],
@@ -432,6 +436,41 @@ export class MockService implements Service {
     this.record(session, { action: 'write', outcome: 'ok', ref: req.ref, before: before.text, written: text, after: text });
     this.operation(id, { action: 'write', target: req.ref, ok: true });
     return { ref: req.ref, mms: itemID(req.ref), at: new Date().toISOString(), written, before, after: written, verified: true, duration_ms: 3 };
+  }
+
+  async control(id: string, req: ControlRequest): Promise<ControlResult> {
+    const session = this.granted(id, 'controls');
+    const models = ['status-only', 'direct-with-normal-security', 'sbo-with-normal-security', 'direct-with-enhanced-security', 'sbo-with-enhanced-security'];
+    const m = Number(this.attrs.get(`${req.ref}.ctlModel[CF]`)?.text ?? NaN);
+    if (!(m >= 1 && m <= 4)) {
+      throw new ServiceError('invalid_argument', `${req.ref} has ctlModel ${models[m] ?? 'unknown'}: it is not operated`);
+    }
+    if (!/^-?\d+$/.test(req.value.trim())) {
+      throw new ServiceError('invalid_argument', `${req.ref}: ctlVal: "${req.value}" is not an INT32`);
+    }
+    // The mock's Mod refuses to be switched off (5) at execution.
+    const negative = m >= 3 && req.value.trim() === '5';
+    const steps: ControlStep[] = [];
+    if (m === 2 || m === 4) steps.push({ step: 'select', ok: true, duration_ms: 2 });
+    steps.push({ step: 'operate', ok: true, duration_ms: 3 });
+    if (m >= 3) steps.push({ step: 'termination', ok: !negative, duration_ms: 100, ...(negative ? { add_cause: 'blocked-by-mode', error: 'negative command termination' } : {}) });
+    const stValRef = `${req.ref}.stVal[ST]`;
+    const before = this.attrs.get(stValRef) ?? { name: 'stVal', type: 'integer', text: '1', json: 1 };
+    const written: Value = { name: 'ctlVal', type: 'integer', text: String(Number(req.value)), json: Number(req.value) };
+    const after = negative ? before : { ...before, text: written.text, json: written.json };
+    this.attrs.set(stValRef, after);
+    this.ctlNum = (this.ctlNum % 255) + 1;
+    const outcome = negative ? 'negative' : 'ok';
+    const detail = [models[m], `ctlNum ${this.ctlNum}`, ...steps.map((st) => `${st.step} ${st.ok ? 'ok' : st.add_cause}`)].join('; ');
+    this.record(session, {
+      action: 'control', outcome: negative ? 'failed' : 'ok', ref: req.ref, before: before.text, written: written.text, after: after.text, detail,
+      ...(negative ? { error: 'negative: blocked-by-mode' } : {}),
+    });
+    this.operation(id, { action: 'control', target: req.ref, ok: !negative });
+    return {
+      ref: req.ref, at: new Date().toISOString(), duration_ms: 110, ctl_model: models[m]!, ctl_num: this.ctlNum, written, test: req.test ?? false,
+      steps, outcome, ...(negative ? { add_cause: 'blocked-by-mode' } : {}), before, after,
+    };
   }
 
   private granted(id: string, cap: string): SessionInfo {

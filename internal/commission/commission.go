@@ -24,10 +24,13 @@ var needs = map[string][]mms.Service{
 	model.CapReports:       {mms.ServiceWrite},
 	model.CapDataSets:      {mms.ServiceDefineNamedVariableList, mms.ServiceDeleteNamedVariableList},
 	model.CapSettingGroups: {mms.ServiceWrite},
+	// Operate, SBOw and Cancel are writes; the select of a control with
+	// normal security is a Read of SBO, already an Observe service, which
+	// the engine sends only on the Commission association.
+	model.CapControls: {mms.ServiceWrite},
 }
 
-// Grantable reports whether c is a capability a grant may carry. Controls
-// are not grantable until the client waits for CommandTermination.
+// Grantable reports whether c is a capability a grant may carry.
 func Grantable(c string) bool {
 	_, ok := needs[c]
 	return ok

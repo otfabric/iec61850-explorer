@@ -2,6 +2,34 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.5.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.4.1
+
+Commission mode, third step: controls.
+
+### Added
+
+- **Controls** (capability `controls`): operate a controllable data object from its CO section in the node panel, after a confirmation, optionally as a test. The Explorer reads the object's ctlModel and runs its sequence:
+  - direct: operate;
+  - select before operate: select, then operate;
+  - enhanced security: the operate is followed by a wait for the CommandTermination.
+
+  The result shows each step, the IED's reason when it refuses or ends a control negatively (such as object-not-selected or blocked-by-interlocking), and the status before and after. A failed operate after a select is cancelled. Each control is one audit record with all its steps.
+- API: `POST /api/v1/sessions/{id}/control`; API version 0.4.
+
+### Known limitations
+
+- Interlock and synchrocheck flags are not offered yet: go-iec61850 v1.10.0 encodes them in the opposite bit order to libiec61850.
+- No time-activated operate.
+
+### Dependencies
+
+go-iec61850 v1.10.0, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.4.1
 
 **Date:** 2026-11-09

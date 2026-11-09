@@ -246,7 +246,7 @@ func TestCommissionRefused(t *testing.T) {
 		{Reason: "r", Minutes: -1, Capabilities: []string{model.CapWrite}},
 		{Reason: "r", Minutes: model.MaxGrantMinutes + 1, Capabilities: []string{model.CapWrite}},
 		{Reason: "r"},
-		{Reason: "r", Capabilities: []string{"controls"}},
+		{Reason: "r", Capabilities: []string{"laboratory"}},
 	}
 	for _, req := range invalid {
 		if _, err := e.GrantCommission(ctx, live.ID, req); service.CodeOf(err) != service.CodeInvalidArgument {

@@ -41,7 +41,7 @@ func TestServicesFollowCapabilities(t *testing.T) {
 	if got := Services(nil); len(got) != len(readonly.Services) || slices.Contains(got, mms.ServiceWrite) {
 		t.Errorf("no capability: %v", got)
 	}
-	if got := Services([]string{model.CapWrite, model.CapReports, "controls"}); len(got) != len(readonly.Services)+1 {
+	if got := Services([]string{model.CapWrite, model.CapReports, model.CapControls, "laboratory"}); len(got) != len(readonly.Services)+1 {
 		t.Errorf("duplicates or unknown capability: %v", got)
 	}
 	got := Services([]string{model.CapWrite})
@@ -57,12 +57,12 @@ func TestGrantable(t *testing.T) {
 			t.Errorf("%s is listed but not grantable", c)
 		}
 	}
-	for _, c := range []string{"controls", "", "files"} {
+	for _, c := range []string{"laboratory", "", "files"} {
 		if Grantable(c) {
 			t.Errorf("%q is grantable", c)
 		}
 	}
-	if want := []string{model.CapDataSets, model.CapReports, model.CapSettingGroups, model.CapWrite}; !slices.Equal(Capabilities(), want) {
+	if want := []string{model.CapControls, model.CapDataSets, model.CapReports, model.CapSettingGroups, model.CapWrite}; !slices.Equal(Capabilities(), want) {
 		t.Errorf("Capabilities() = %v, want %v", Capabilities(), want)
 	}
 }

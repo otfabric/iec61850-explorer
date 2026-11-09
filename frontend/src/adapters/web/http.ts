@@ -8,6 +8,8 @@ import type {
   AuditQuery,
   AuditRecord,
   GrantRequest,
+  ControlRequest,
+  ControlResult,
   WriteRequest,
   WriteResult,
   DataSet,
@@ -97,6 +99,7 @@ export class HttpService implements Service {
   grantCommission = (id: string, req: GrantRequest) => this.request<SessionInfo>('PUT', `/sessions/${encodeURIComponent(id)}/commission`, req);
   revokeCommission = (id: string) => this.request<SessionInfo>('DELETE', `/sessions/${encodeURIComponent(id)}/commission`);
   write = (id: string, req: WriteRequest) => this.request<WriteResult>('POST', `/sessions/${encodeURIComponent(id)}/write`, req);
+  control = (id: string, req: ControlRequest) => this.request<ControlResult>('POST', `/sessions/${encodeURIComponent(id)}/control`, req);
   subscribeReport = (id: string, req: SubscribeRequest) => this.request<ReportSubscription>('POST', `/sessions/${encodeURIComponent(id)}/reports/subscriptions`, req);
   unsubscribe = (id: string, sub: string) =>
     this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/reports/subscriptions/${encodeURIComponent(sub)}`);

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otfabric/go-mms"
+
 	"github.com/otfabric/iec61850-explorer/internal/api"
 	"github.com/otfabric/iec61850-explorer/internal/engine"
 	"github.com/otfabric/iec61850-explorer/internal/model"
@@ -61,8 +63,8 @@ func commissionContract(t *testing.T, svc service.Service) {
 	if _, err := svc.Write(ctx, info.ID, model.WriteRequest{Ref: ref, Value: "2.0"}); service.CodeOf(err) != service.CodeNotAllowed {
 		t.Fatalf("write without grant = %v", err)
 	}
-	if _, err := svc.GrantCommission(ctx, info.ID, model.GrantRequest{Reason: "r", Capabilities: []string{"controls"}}); service.CodeOf(err) != service.CodeInvalidArgument {
-		t.Errorf("grant controls = %v", err)
+	if _, err := svc.GrantCommission(ctx, info.ID, model.GrantRequest{Reason: "r", Capabilities: []string{"laboratory"}}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("grant laboratory = %v", err)
 	}
 	g, err := svc.GrantCommission(ctx, info.ID, model.GrantRequest{Reason: "contract", Minutes: 2, Capabilities: []string{model.CapWrite}})
 	if err != nil {
@@ -212,5 +214,61 @@ func m2b2Contract(t *testing.T, svc service.Service) {
 	}
 	if got := strings.Join(acts, " "); got != "grant subscribe gi unsubscribe create-dataset delete-dataset select-active-sg" {
 		t.Errorf("audit = %s", got)
+	}
+}
+
+func TestContractM2b3(t *testing.T) {
+	t.Run("engine", func(t *testing.T) {
+		eng := engine.New(engine.Options{DataDir: t.TempDir(), Commission: true})
+		t.Cleanup(eng.Close)
+		m2b3Contract(t, eng)
+	})
+	t.Run("http", func(t *testing.T) {
+		m2b3Contract(t, newDaemon(t, engine.Options{DataDir: t.TempDir(), Commission: true}, api.Options{}).svc)
+	})
+}
+
+func m2b3Contract(t *testing.T, svc service.Service) {
+	ied, err := simied.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(ied.Close)
+	info, err := svc.OpenSession(ctx, targetOf(t, ied.Addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = svc.CloseSession(ctx, info.ID) })
+	pos := simied.Domain + "/XCBR1.Pos"
+	if _, err := svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos, Value: "false"}); service.CodeOf(err) != service.CodeNotAllowed {
+		t.Fatalf("control without grant = %v", err)
+	}
+	if _, err := svc.GrantCommission(ctx, info.ID, model.GrantRequest{Reason: "contract", Minutes: 2, Capabilities: []string{model.CapControls}}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos, Value: "false", TimeoutMS: 5000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Outcome != model.ControlOK || len(res.Steps) != 3 || res.CtlModel != "sbo-with-enhanced-security" || res.After == nil {
+		t.Errorf("open = %+v", res)
+	}
+	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
+	res, err = svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos, Value: "true"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Outcome != model.ControlNegative || res.AddCause != "blocked-by-interlocking" || res.Steps[2].OK {
+		t.Errorf("close while interlocked = %+v", res)
+	}
+	if _, err := svc.Control(ctx, info.ID, model.ControlRequest{Ref: pos + "[CO]", Value: "true"}); service.CodeOf(err) != service.CodeInvalidArgument {
+		t.Errorf("control with an FC = %v", err)
+	}
+	audit, err := svc.Audit(ctx, model.AuditQuery{SessionID: info.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(audit) == 0 || audit[0].Action != model.AuditControl || audit[0].Outcome != model.OutcomeFailed {
+		t.Errorf("audit = %+v", audit)
 	}
 }

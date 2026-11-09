@@ -197,6 +197,11 @@ func (a *App) Write(ctx context.Context, id string, req model.WriteRequest) (mod
 	return a.svc.Write(ctx, id, req)
 }
 
+// Control operates a controllable data object.
+func (a *App) Control(ctx context.Context, id string, req model.ControlRequest) (model.ControlResult, error) {
+	return a.svc.Control(ctx, id, req)
+}
+
 // SubscribeReport subscribes to a report control block.
 func (a *App) SubscribeReport(ctx context.Context, id string, req model.SubscribeRequest) (model.Subscription, error) {
 	return a.svc.SubscribeReport(ctx, id, req)

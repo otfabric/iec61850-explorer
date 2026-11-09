@@ -289,7 +289,8 @@ export interface Operation {
     | 'gi'
     | 'create-dataset'
     | 'delete-dataset'
-    | 'select-active-sg';
+    | 'select-active-sg'
+    | 'control';
   target?: string;
   started_at: Timestamp;
   duration_ms: number;
@@ -390,10 +391,10 @@ export interface SettingGroups {
 
 // Commission mode (ADR 0004).
 
-export type Capability = 'write' | 'reports' | 'datasets' | 'setting-groups';
+export type Capability = 'write' | 'reports' | 'datasets' | 'setting-groups' | 'controls';
 
 /** The capabilities a grant may carry, in the order the dialog shows them. */
-export const CAPABILITIES: Capability[] = ['write', 'reports', 'datasets', 'setting-groups'];
+export const CAPABILITIES: Capability[] = ['write', 'reports', 'datasets', 'setting-groups', 'controls'];
 
 /** The functional constraints a write may target. */
 export const WRITABLE_FCS = ['SP', 'CF', 'DC', 'SV', 'BL'];
@@ -432,6 +433,45 @@ export interface WriteResult {
   duration_ms: number;
 }
 
+export const DEFAULT_CONTROL_TIMEOUT_MS = 10_000;
+
+export interface ControlRequest {
+  /** The data object, such as "LD/XCBR1.Pos" (no FC). */
+  ref: string;
+  /** ctlVal as text. */
+  value: string;
+  test?: boolean;
+  timeout_ms?: number;
+}
+
+export type ControlStepName = 'select' | 'operate' | 'termination' | 'cancel';
+
+export interface ControlStep {
+  step: ControlStepName;
+  ok: boolean;
+  add_cause?: string;
+  error?: string;
+  duration_ms: number;
+}
+
+export type ControlOutcome = 'ok' | 'refused' | 'negative' | 'no-termination' | 'failed';
+
+export interface ControlResult {
+  ref: string;
+  at: Timestamp;
+  duration_ms: number;
+  ctl_model: string;
+  ctl_num: number;
+  written?: Value;
+  test?: boolean;
+  steps: ControlStep[];
+  outcome: ControlOutcome;
+  add_cause?: string;
+  /** stVal before and after the sequence. */
+  before?: Value;
+  after?: Value;
+}
+
 export type AuditAction =
   | 'grant'
   | 'revoke'
@@ -444,7 +484,8 @@ export type AuditAction =
   | 'gi'
   | 'create-dataset'
   | 'delete-dataset'
-  | 'select-active-sg';
+  | 'select-active-sg'
+  | 'control';
 
 export interface AuditRecord {
   seq: number;
