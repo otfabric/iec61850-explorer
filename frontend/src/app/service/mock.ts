@@ -635,6 +635,7 @@ export class MockService implements Service {
         { name: 'model', compared: true, items: 40, same: 38, only_a: 1, only_b: 0, changed: 1 },
         { name: 'datasets', compared: true, items: 2, same: 1, only_a: 0, only_b: 0, changed: 1 },
         { name: 'reports', compared: true, items: 3, same: 3, only_a: 0, only_b: 0, changed: 0 },
+        ...(req.values ? [{ name: 'values' as const, compared: true, items: 12, same: 11, only_a: 0, only_b: 0, changed: 1 }] : []),
       ],
       differences: [
         { category: 'model', kind: 'only_a', ref: `${LD}/LPHD9`, note: 'ln' },
@@ -648,6 +649,18 @@ export class MockService implements Service {
           b: `${LD}/MMXU1.Hz[MX]\n${LD}/MMXU1.TotW[MX]`,
           note: '1 members / 2 members',
         },
+        ...(req.values
+          ? [
+              {
+                category: 'values' as const,
+                kind: 'changed' as const,
+                ref: `${LD}/GGIO1.SPCSO2.ctlModel[CF]`,
+                field: 'value',
+                a: 'direct-with-normal-security (1)',
+                b: 'sbo-with-normal-security (2)',
+              },
+            ]
+          : []),
       ],
       truncated: false,
       duration_ms: 3,

@@ -108,7 +108,7 @@ func TestSCLCorpusOffline(t *testing.T) {
 					if twin, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: file, IED: ied.Name, AccessPoint: ap.Name}); err != nil {
 						t.Errorf("OpenSCL twin: %v", err)
 					} else {
-						if c, err := e.Compare(ctx, model.CompareRequest{A: s.ID, B: twin.ID}); err != nil || len(c.Differences) != 0 {
+						if c, err := e.Compare(ctx, model.CompareRequest{A: s.ID, B: twin.ID, Values: true}); err != nil || len(c.Differences) != 0 {
 							t.Errorf("Compare with itself: %v, %d differences", err, len(c.Differences))
 						}
 						_ = e.CloseSession(ctx, twin.ID)

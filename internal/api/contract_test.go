@@ -311,6 +311,10 @@ func contract(t *testing.T, svc service.Service) {
 	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 3 || cmp.A.Source != model.SourceSCL || cmp.B.Source != model.SourceIED {
 		t.Errorf("Compare = %+v, %v", cmp, err)
 	}
+	cmp, err = svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: info.ID, Values: true})
+	if err != nil || len(cmp.Differences) != 0 || len(cmp.Categories) != 4 || cmp.Categories[3].Items == 0 {
+		t.Errorf("Compare with values = %+v, %v", cmp, err)
+	}
 	if _, err := svc.Compare(ctx, model.CompareRequest{A: offline.ID, B: offline.ID}); service.CodeOf(err) != service.CodeInvalidArgument {
 		t.Errorf("Compare with itself = %v", err)
 	}

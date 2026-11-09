@@ -2,6 +2,21 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.8.0
+
+**Date:** 2026-11-09
+**Previous release:** v0.7.0
+
+### Added
+
+- **Compare values (M3b).** The Compare view has a Values option: it adds the values of configuration, description, set point and setting attributes (FC CF, DC, SP, SG) to the comparison. An SCL file gives its configured values (instance values, or the type's defaults), an IED the values read now, a snapshot the values it holds. Enumerations compare by ordinal and show the SCL literal; floats compare at FLOAT32 precision. Settings compare per setting group between two SCL files, and in the IED's active group against an IED. API: `values` in `POST /api/v1/compare`.
+
+### Dependencies
+
+go-iec61850 v1.14.0, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-11-09

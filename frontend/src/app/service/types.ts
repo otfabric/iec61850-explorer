@@ -571,9 +571,11 @@ export interface SelectSGRequest {
 export interface CompareRequest {
   a: string;
   b: string;
+  /** Adds the values of configuration and setting attributes (CF, DC, SP, SG); reads them from a live IED. */
+  values?: boolean;
 }
 
-export type CompareCategoryName = 'model' | 'datasets' | 'reports';
+export type CompareCategoryName = 'model' | 'datasets' | 'reports' | 'values';
 export type DifferenceKind = 'only_a' | 'only_b' | 'changed';
 
 export interface CompareSide {

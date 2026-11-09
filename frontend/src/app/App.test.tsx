@@ -224,6 +224,14 @@ describe('App', () => {
     expect(within(panel).getByText('1 of 3 differences')).toBeInTheDocument();
     expect(within(panel).getByText('fcs')).toBeInTheDocument();
 
+    // With values: one more category and its difference.
+    await user.selectOptions(within(panel).getByLabelText('Category'), 'all');
+    await user.selectOptions(within(panel).getByLabelText('Difference'), 'all');
+    await user.click(within(panel).getByLabelText('Values'));
+    await user.click(within(panel).getByRole('button', { name: 'Compare' }));
+    expect(await within(panel).findByText('sbo-with-normal-security (2)')).toBeInTheDocument();
+    expect(within(within(panel).getByRole('list', { name: 'Summary' })).getByText('Values')).toBeInTheDocument();
+
     // Back to the model view of the session.
     await user.click(screen.getByRole('button', { name: 'Model' }));
     expect(screen.queryByRole('region', { name: 'Compare' })).not.toBeInTheDocument();

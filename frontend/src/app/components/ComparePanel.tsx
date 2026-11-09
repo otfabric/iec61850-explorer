@@ -2,9 +2,14 @@ import { useMemo, useState } from 'react';
 import { CompareIcon, ErrorIcon } from '../icons';
 import { toServiceError, type Service } from '../service/service';
 import type { CompareCategoryName, Comparison, Difference, DifferenceKind, SessionInfo } from '../service/types';
-import { Button, Chip, Field } from './ui';
+import { Button, Chip, Field, Toggle } from './ui';
 
-const CATEGORY_LABEL: Record<CompareCategoryName, string> = { model: 'Model', datasets: 'Data sets', reports: 'Report control blocks' };
+const CATEGORY_LABEL: Record<CompareCategoryName, string> = {
+  model: 'Model',
+  datasets: 'Data sets',
+  reports: 'Report control blocks',
+  values: 'Values',
+};
 const KIND_LABEL: Record<DifferenceKind, string> = { only_a: 'only in A', only_b: 'only in B', changed: 'differs' };
 /** Rows shown before "Show more". */
 const PAGE = 200;
@@ -28,6 +33,7 @@ export function ComparePanel({ service, session, others, label }: ComparePanelPr
   const [result, setResult] = useState<Comparison | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [values, setValues] = useState(false);
   const [category, setCategory] = useState<CompareCategoryName | 'all'>('all');
   const [kind, setKind] = useState<DifferenceKind | 'all'>('all');
   const [shown, setShown] = useState(PAGE);
@@ -36,7 +42,7 @@ export function ComparePanel({ service, session, others, label }: ComparePanelPr
     try {
       setBusy(true);
       setError(null);
-      setResult(await service.compare({ a: reference, b: session.id }));
+      setResult(await service.compare({ a: reference, b: session.id, values }));
       setShown(PAGE);
     } catch (err) {
       setError(toServiceError(err).message);
@@ -73,6 +79,9 @@ export function ComparePanel({ service, session, others, label }: ComparePanelPr
           <Field label="B: this session">
             <span className="flex h-8 items-center font-mono text-[13px] text-fg-strong">{label(session.id)}</span>
           </Field>
+          <span className="flex h-8 items-center" title="Configuration, description, set point and setting values (FC CF, DC, SP, SG). From an IED, this reads them.">
+            <Toggle label="Values" checked={values} onChange={setValues} />
+          </span>
           <Button variant="primary" icon={<CompareIcon size={14} />} disabled={busy || !reference} onClick={() => void run()}>
             {busy ? 'Comparing…' : 'Compare'}
           </Button>

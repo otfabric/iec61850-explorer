@@ -49,6 +49,9 @@ func (e *Engine) Compare(ctx context.Context, req model.CompareRequest) (model.C
 	out.Categories = append(out.Categories,
 		c.dataSets(ctx, e, sa, sb, shared),
 		c.reports(ctx, e, sa, sb, shared))
+	if req.Values {
+		out.Categories = append(out.Categories, c.values(ctx, e, sa, sb))
+	}
 
 	out.Differences, out.Truncated = c.diffs, c.truncated
 	if out.Differences == nil {

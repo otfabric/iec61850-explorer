@@ -49,6 +49,10 @@ type session struct {
 	// logical device.
 	sclDataSets map[string][]model.DataSet
 	sclReports  map[string][]model.RCB
+	// sclValues are the values an SCL session configures (FC CF, DC, SP,
+	// SG), and sclActSG its active setting group per logical device.
+	sclValues map[string]sclValue
+	sclActSG  map[string]uint8
 	// snapshot, snapValues and snapAt are set for an offline session opened
 	// from a snapshot.
 	snapshot   *model.SnapshotOrigin
