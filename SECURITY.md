@@ -29,6 +29,7 @@ We will acknowledge your report within 48 hours and aim to provide a fix or miti
 A session is in Observe mode unless the user grants it Commission mode (below). In Observe mode the Explorer only discovers and reads. It never sends a Write, a control (Select, Operate, Cancel), a report control block change, a data set definition or deletion, a setting-group change, or a file rename, deletion or transfer. This is enforced, not a convention:
 
 - every MMS client the engine creates is restricted by go-mms's service allow-list (`DialOptions.AllowedServices`) to Identify, Status, GetNameList, Read, GetVariableAccessAttributes, GetNamedVariableListAttributes, FileDirectory, FileOpen, FileRead, FileClose and ReadJournal: the client refuses anything else before it reaches the wire (`internal/readonly`). FileOpen and FileClose only open and release a read state for one download;
+- the engine never reads the functional constraint CO (control attributes), in any form: reading a control's `SBO` attribute *is* the select of a control with normal security (IEC 61850-8-1), a state change carried by the Read service that the allow-list must permit. Data sets with a CO member are not read either. Versions before 0.4.1 read CO when asked to;
 - the linter fails the build when non-test code calls a state-changing go-iec61850 or go-mms method or creates an MMS server (`.golangci.yml`);
 - a test runs every workflow against a simulated IED that counts the services it receives, and asserts that only those services arrive.
 

@@ -2,6 +2,26 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.4.1
+
+**Date:** 2026-11-09
+**Previous release:** v0.4.0
+
+### Fixed
+
+- **Observe mode could select a control.** Reading a control's `SBO` attribute is the select of a control with normal security (IEC 61850-8-1), so a read of `…SBO[CO]` (or of a data object or logical node with FC CO) could select a control on the IED. The Read service is in Observe mode's allow-list, so go-mms let it pass. The engine now refuses every read of the functional constraint CO, and reading a data set with a CO member; the node panel offers no read or watch for CO.
+
+### Changed
+
+- The simulated test IED has controls: GGIO1.SPCSO1 to SPCSO4 (one per control model) and XCBR1.Pos (SBO with enhanced security, interlocked by GGIO1.Ind1).
+- Built on go-iec61850 v1.10.0 (v1.9.4 fixed this). Its IED server now reports a data set member that is a whole data object (such as `MMXU1.Hz[MX]`) as the structure of its attributes and reports changes below it; before, the member was sent as `false`. This affects only go-iec61850-based IEDs, such as its example server and the Explorer's simulated test IED, whose `Events` data set has a data-object member again.
+
+### Dependencies
+
+go-iec61850 v1.10.0, go-mms v1.5.0, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.4.0
 
 **Date:** 2026-11-09

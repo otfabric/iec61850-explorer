@@ -95,3 +95,84 @@ func TestFileStore(t *testing.T) {
 		}
 	}
 }
+
+func TestControls(t *testing.T) {
+	ied, err := Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ied.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := iec61850.Dial(ctx, ied.Addr, iec61850.DialOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close(ctx) //nolint:errcheck
+	on := iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(true), CtlNum: 1}
+	stVal := func(do string) bool {
+		t.Helper()
+		ref, _ := iec61850.ParseRef(Domain + "/" + do + ".stVal[ST]")
+		v, err := c.Read(ctx, ref)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := v.Bool()
+		return b
+	}
+	ctl := func(do string) iec61850.Ref {
+		ref, _ := iec61850.ParseRef(Domain + "/" + do)
+		return ref
+	}
+
+	// One control model each.
+	for do, m := range controlModels {
+		if got, err := c.ReadCtlModel(ctx, ctl(do)); err != nil || got != m {
+			t.Errorf("%s ctlModel = %v, %v; want %v", do, got, err, m)
+		}
+	}
+	if err := c.Operate(ctx, ctl("GGIO1.SPCSO1"), on); err != nil || !stVal("GGIO1.SPCSO1") {
+		t.Errorf("SPCSO1 direct: %v", err)
+	}
+	if _, err := c.Select(ctx, ctl("GGIO1.SPCSO2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Operate(ctx, ctl("GGIO1.SPCSO2"), on); err != nil || !stVal("GGIO1.SPCSO2") {
+		t.Errorf("SPCSO2 SBO: %v", err)
+	}
+	if term, err := c.OperateWait(ctx, ctl("GGIO1.SPCSO3"), on); err != nil || !term.Positive() || !stVal("GGIO1.SPCSO3") {
+		t.Errorf("SPCSO3 direct enhanced: %+v, %v", term, err)
+	}
+	if err := c.SelectWithValue(ctx, ctl("GGIO1.SPCSO4"), on); err != nil {
+		t.Fatal(err)
+	}
+	if term, err := c.OperateWait(ctx, ctl("GGIO1.SPCSO4"), on); err != nil || !term.Positive() || !stVal("GGIO1.SPCSO4") {
+		t.Errorf("SPCSO4 SBO enhanced: %+v, %v", term, err)
+	}
+
+	// The breaker opens while the interlock is released (Ind1 true) ...
+	pos := ctl("XCBR1.Pos")
+	open := iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(false), CtlNum: 2}
+	if err := c.SelectWithValue(ctx, pos, open); err != nil {
+		t.Fatal(err)
+	}
+	if term, err := c.OperateWait(ctx, pos, open); err != nil || !term.Positive() {
+		t.Fatalf("Pos open: %+v, %v", term, err)
+	}
+	posRef, _ := iec61850.ParseRef(Domain + "/XCBR1.Pos.stVal[ST]")
+	if v, err := c.Read(ctx, posRef); err != nil {
+		t.Fatal(err)
+	} else if bits, _ := v.MMS().BitString(); len(bits) == 0 || bits[0]&0xC0 != 0x40 {
+		t.Errorf("Pos.stVal = %v, want off", v)
+	}
+	// ... and is blocked by interlocking when Ind1 is false.
+	ied.Set("GGIO1$ST$Ind1$stVal", mms.NewBoolean(false))
+	closeIt := iec61850.OperateParams{CtlVal: iec61850.BoolCtlVal(true), CtlNum: 3}
+	if err := c.SelectWithValue(ctx, pos, closeIt); err != nil {
+		t.Fatal(err)
+	}
+	term, err := c.OperateWait(ctx, pos, closeIt)
+	if !errors.Is(err, iec61850.ErrCommandTerminationNegative) || term.LastApplError.AddCause != iec61850.AddCauseBlockedByInterlocking {
+		t.Errorf("Pos close while interlocked: %+v, %v", term, err)
+	}
+}

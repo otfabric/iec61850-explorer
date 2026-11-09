@@ -93,6 +93,11 @@ func Start() (*IED, error) {
 	set("LLN0$ST$Mod$stVal", mms.NewInteger(1))
 	set("LLN0$ST$Beh$stVal", mms.NewInteger(1))
 	set("LLN0$ST$Health$stVal", mms.NewInteger(1))
+	if err := registerControls(srv); err != nil {
+		cancel()
+		srv.Close()
+		return nil, err
+	}
 	srv.EnableReports()
 	srv.EnableJournals()
 	srv.EnableSettingGroups(iec61850.SettingGroupHandler{})
@@ -242,3 +247,54 @@ func (fileStore) Close(context.Context, mms.FileHandle) error { return nil }
 func (fileStore) Delete(context.Context, string) error             { return fs.ErrPermission }
 func (fileStore) Rename(context.Context, string, string) error     { return fs.ErrPermission }
 func (fileStore) ObtainFile(context.Context, string, string) error { return fs.ErrPermission }
+
+// Controls of the IED: GGIO1.SPCSO1 to SPCSO4 have one control model each
+// (direct and SBO, normal and enhanced security) and set their stVal.
+// XCBR1.Pos (SBO with enhanced security) sets the breaker position and is
+// interlocked by GGIO1.Ind1: while Ind1 is false the operation fails after
+// it was accepted, with a negative CommandTermination (blocked by
+// interlocking).
+var controlModels = map[string]iec61850.CtlModel{
+	"GGIO1.SPCSO1": iec61850.CtlModelDirectNormal,
+	"GGIO1.SPCSO2": iec61850.CtlModelSBONormal,
+	"GGIO1.SPCSO3": iec61850.CtlModelDirectEnhanced,
+	"GGIO1.SPCSO4": iec61850.CtlModelSBOEnhanced,
+}
+
+func registerControls(srv *iec61850.Server) error {
+	for ref, m := range controlModels {
+		if err := srv.RegisterControl(Domain, ref, m, iec61850.ControlHandler{OnOperate: setStVal(srv, ref)}); err != nil {
+			return fmt.Errorf("simied: control %s: %w", ref, err)
+		}
+	}
+	pos := iec61850.ControlHandler{OnExecute: func(ctx context.Context, req iec61850.ControlRequest) error { return executePos(ctx, srv, req) }}
+	if err := srv.RegisterControl(Domain, "XCBR1.Pos", iec61850.CtlModelSBOEnhanced, pos); err != nil {
+		return fmt.Errorf("simied: control XCBR1.Pos: %w", err)
+	}
+	return nil
+}
+
+// setStVal sets the boolean stVal of a single point control.
+func setStVal(srv *iec61850.Server, ref string) func(context.Context, iec61850.ControlRequest) error {
+	item := strings.Replace(ref, ".", "$ST$", 1) + "$stVal"
+	return func(ctx context.Context, req iec61850.ControlRequest) error {
+		srv.SetValue(ctx, Domain+"/"+item, req.CtlVal)
+		return nil
+	}
+}
+
+// executePos moves the breaker: true closes it (on), false opens it (off),
+// unless GGIO1.Ind1 (the interlock release) is false.
+func executePos(ctx context.Context, srv *iec61850.Server, req iec61850.ControlRequest) error {
+	if v := srv.ValueStore().Get(Domain + "/GGIO1$ST$Ind1$stVal"); v != nil {
+		if released, ok := v.Bool(); ok && !released {
+			return &iec61850.ControlError{Ref: req.Ref, Operation: "operate", AddCause: iec61850.AddCauseBlockedByInterlocking}
+		}
+	}
+	pos := byte(0x40) // off (01)
+	if closed, _ := req.CtlVal.Bool(); closed {
+		pos = 0x80 // on (10)
+	}
+	srv.SetValue(ctx, Domain+"/XCBR1$ST$Pos$stVal", mms.NewBitStringWithLength([]byte{pos}, 2))
+	return nil
+}

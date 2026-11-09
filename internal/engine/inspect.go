@@ -135,6 +135,15 @@ func (e *Engine) ReadDataSet(ctx context.Context, id, ref string) (model.ReadRes
 	err = e.live(ctx, id, "read", ref, 1, func(ctx context.Context, s *session) error {
 		res.At = time.Now().UTC()
 		start := time.Now()
+		ds, err := s.client.GetDataSet(ctx, ld, item)
+		if err != nil {
+			return errIED("read data set "+ref, err)
+		}
+		for _, m := range ds.Members {
+			if isControlFC(m.Ref) {
+				return service.Errorf(service.CodeInvalidArgument, "data set %s has the member %s: %s", ref, m.Ref.String(), controlReadMessage)
+			}
+		}
 		values, err := s.client.ReadDataSet(ctx, ld, item)
 		if err != nil {
 			return errIED("read data set "+ref, err)

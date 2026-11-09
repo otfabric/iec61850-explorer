@@ -54,7 +54,7 @@ const node = (ref: string, kind: ModelNode['kind'], fcs: string[], children: num
 const TREE: Record<string, ModelNode[]> = {
   '': [node(LD, 'ld', [], 2)],
   [LD]: [node(`${LD}/LLN0`, 'ln', ['ST'], 1, 'LLN0'), node(`${LD}/MMXU1`, 'ln', ['MX'], 2, 'MMXU')],
-  [`${LD}/LLN0`]: [node(`${LD}/LLN0.Mod`, 'do', ['CF', 'ST'], 0)],
+  [`${LD}/LLN0`]: [node(`${LD}/LLN0.Mod`, 'do', ['CF', 'CO', 'ST'], 0)],
   [`${LD}/MMXU1`]: [node(`${LD}/MMXU1.Hz`, 'do', ['MX'], 0), node(`${LD}/MMXU1.TotW`, 'do', ['MX'], 0)],
 };
 

@@ -99,6 +99,7 @@ Defense in depth:
 1. The allow-list in the MMS client (`TestGuardRefusesWrite`).
 2. `forbidigo` in `.golangci.yml`: state-changing go-iec61850 and go-mms calls and MMS servers are banned outside tests and `internal/simied`.
 3. The wire test: `TestWireReadOnly` runs every workflow against the simulated IED, whose server metrics count the services it received, and asserts that each is in the list.
+4. No read of FC CO (`internal/engine/observe_co.go`): reading `SBO` selects a control with normal security (IEC 61850-8-1), a state change the Read service carries, so the allow-list cannot catch it. The engine refuses CO references (`service_not_allowed`) and data sets with a CO member; the UI offers no read for CO (`TestObserveNeverReadsControls`, which checks from a second connection that no select is held; `TestSBOReadSelects` shows that the read does select).
 
 Subscribing to a report control block writes RCB attributes, so report subscription belongs to Commission mode, not Observe mode. Reading an RCB's configuration does not.
 
@@ -168,7 +169,7 @@ What the Explorer's later milestones need, against go-iec61850 v1.9.3, go-mms v1
 | Self-description, browse, typed reads | `TreeWithOptions{IncludeFCs}`, `ReadRaw`, `GetVariableType`, `ReadMultiple` | Batched reads since M1 |
 | Model cache across runs | Gap: in-memory only | Snapshots (M1) are the Explorer's own versioned files |
 | Datasets | `ListDataSets`, `GetDataSet`, `ReadDataSet`; create/delete | Inspection since M2a; create/delete in Commission mode (M2b) |
-| Reports | RCB read/write, subscription; gap: single-client ownership assumed. Server gap: the report engine sends a data-object member (FCD, such as `MMXU1.Hz[MX]`) as `false` and does not trigger on changes below it; attribute-level members work | Since M2b2: the engine runs the RCB lifecycle itself, refuses RCBs another client enabled or reserved, audits each step. The simulated IED reports from an attribute-level data set until the server gap is closed in go-iec61850 |
+| Reports | RCB read/write, subscription; gap: single-client ownership assumed. Data-object members (FCD, such as `MMXU1.Hz[MX]`) are reported as structures and trigger on changes below them since go-iec61850 v1.9.4 | Since M2b2: the engine runs the RCB lifecycle itself, refuses RCBs another client enabled or reserved, audits each step. The simulated IED's `Events` data set mixes attribute members and a data-object member |
 | Enhanced-security controls | Gap: the client does not wait for or surface CommandTermination; no time-activated operate | Close in go-iec61850 before advanced controls are offered |
 | Setting groups, files, journals | Client APIs present; server gap: no SE (edit) values | Reading since M2a (file and journal reads joined `readonly.Services`); active setting group selection since M2b2; SE editing waits for a peer that supports it |
 | SCL | Parser, `Flatten`, semantic validation; gaps: `Inputs`, `ExtRef`, `ClientLN` not normalised, no XSD validation | Import and offline browsing since M1; flow analysis waits for the normalisation |

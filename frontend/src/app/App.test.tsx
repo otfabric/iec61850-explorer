@@ -78,6 +78,22 @@ describe('App', () => {
     expect(within(activity).getByText('connect')).toBeInTheDocument();
   });
 
+  it('does not offer to read control attributes (reading SBO selects)', async () => {
+    const user = userEvent.setup();
+    const service = new MockService();
+    const read = vi.spyOn(service, 'read');
+    render(<App service={service} platform={platform()} />);
+    await connect(user);
+    await user.click(await screen.findByRole('button', { name: 'Expand DemoIEDLD0' }));
+    await user.click(await screen.findByRole('button', { name: 'Expand LLN0' }));
+    await user.click(await screen.findByText('Mod'));
+    const panel = screen.getByRole('region', { name: 'Selected node' });
+    expect(within(panel).getByText(/reading SBO selects the control on the IED/)).toBeInTheDocument();
+    expect(within(panel).getAllByRole('button', { name: 'Read' })).toHaveLength(2); // CF and ST
+    expect(within(panel).getAllByRole('button', { name: 'Watch' })).toHaveLength(2);
+    expect(read).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ refs: ['DemoIEDLD0/LLN0.Mod[CO]'] }));
+  });
+
   it('watches points, polls them, and exports the open tab', async () => {
     const user = userEvent.setup();
     const host = platform();
