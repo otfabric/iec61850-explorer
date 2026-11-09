@@ -153,6 +153,10 @@ func (c *httpService) ReadDataSet(ctx context.Context, id, ref string) (v model.
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/datasets/read", map[string]string{"ref": ref}, &v)
 }
 
+func (c *httpService) Compare(ctx context.Context, req model.CompareRequest) (v model.Comparison, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/compare", req, &v)
+}
+
 func (c *httpService) Reports(ctx context.Context, id, ld string) (v []model.RCB, err error) {
 	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/reports?ld="+url.QueryEscape(ld), nil, &v)
 }

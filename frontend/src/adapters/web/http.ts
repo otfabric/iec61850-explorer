@@ -7,6 +7,8 @@ import type {
   Subscription as ReportSubscription,
   AuditQuery,
   AuditRecord,
+  CompareRequest,
+  Comparison,
   GrantRequest,
   ControlRequest,
   ControlResult,
@@ -108,6 +110,7 @@ export class HttpService implements Service {
   createDataSet = (id: string, req: CreateDataSetRequest) => this.request<DataSet>('POST', `/sessions/${encodeURIComponent(id)}/datasets`, req);
   deleteDataSet = (id: string, ref: string) => this.request<void>('DELETE', `/sessions/${encodeURIComponent(id)}/datasets?ref=${encodeURIComponent(ref)}`);
   selectActiveSG = (id: string, req: SelectSGRequest) => this.request<SettingGroups>('PUT', `/sessions/${encodeURIComponent(id)}/setting-groups/active`, req);
+  compare = (req: CompareRequest) => this.request<Comparison>('POST', '/compare', req);
   audit = (query: AuditQuery) =>
     this.request<AuditRecord[]>('GET', `/audit?session=${encodeURIComponent(query.session_id ?? '')}&limit=${query.limit ?? 0}`);
   settingGroups = (id: string, ld: string) =>

@@ -152,6 +152,11 @@ func (a *App) DataSets(ctx context.Context, id, ld string) ([]model.DataSet, err
 	return a.svc.DataSets(ctx, id, ld)
 }
 
+// Compare compares two open sessions.
+func (a *App) Compare(ctx context.Context, req model.CompareRequest) (model.Comparison, error) {
+	return a.svc.Compare(ctx, req)
+}
+
 // ReadDataSet reads all members of a data set.
 func (a *App) ReadDataSet(ctx context.Context, id, ref string) (model.ReadResult, error) {
 	return a.svc.ReadDataSet(ctx, id, ref)

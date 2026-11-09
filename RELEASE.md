@@ -2,10 +2,14 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
-## v0.6.2
+## v0.7.0
 
 **Date:** 2026-11-09
 **Previous release:** v0.6.1
+
+### Added
+
+- **Compare (M3a).** Any two open sessions can be compared: an SCL file with the IED, a snapshot with the IED, two IEDs, two SCL files. The comparison covers the model (logical devices, logical nodes, data objects and attributes, their functional constraints and LN classes), the data sets (members, in order) and the report control blocks (buffered, report ID, data set, configuration revision, optional fields, trigger options, buffer time, integrity period). An SCL report control block is matched to the indexed instances the IED serves. Every difference shows the reference and both values; a missing node is listed once, not with everything below it. The comparison only reads: in Observe mode it lists the data sets and report control blocks of a live session from the IED. API: `POST /api/v1/compare`.
 
 ### Changed
 

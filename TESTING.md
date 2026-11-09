@@ -71,4 +71,4 @@ Measured on 2026-11-09 with the corpus's largest file (an ABB REX640 CID, 2.8 MB
 
 `frontend/src/app/components/DeviceTree.test.tsx` covers the flattening, the windowing on a 15,001-row tree, the ARIA attributes, and scrolling a row selected through search into view.
 
-The engine handles the whole corpus easily (`make corpus`): 170 IED sessions and about 537,000 nodes; the slowest session (34,465 nodes) takes about 130 ms.
+The engine handles the whole corpus easily (`make corpus`): 170 IED sessions and about 537,000 nodes. Each IED is also opened a second time and compared with the first (no differences); the slowest session (34,465 nodes) takes about 250 ms with the comparison.

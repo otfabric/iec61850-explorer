@@ -1,4 +1,4 @@
-import { CloseIcon, DisconnectIcon, FileIcon, UnlockIcon } from '../icons';
+import { CloseIcon, CompareIcon, DisconnectIcon, FileIcon, UnlockIcon } from '../icons';
 import type { SessionInfo } from '../service/types';
 import { Button, Chip } from './ui';
 
@@ -6,13 +6,15 @@ interface SessionBarProps {
   info: SessionInfo;
   filesOpen: boolean;
   onToggleFiles: () => void;
+  compareOpen: boolean;
+  onToggleCompare: () => void;
   /** Set when the engine offers Commission mode. */
   onCommission?: () => void;
   onClose: () => void;
 }
 
 /** What the open tab is: an IED, an SCL model or a snapshot. */
-export function SessionBar({ info, filesOpen, onToggleFiles, onCommission, onClose }: SessionBarProps) {
+export function SessionBar({ info, filesOpen, onToggleFiles, compareOpen, onToggleCompare, onCommission, onClose }: SessionBarProps) {
   const { identity, discovery } = info;
   const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
   return (
@@ -43,17 +45,20 @@ export function SessionBar({ info, filesOpen, onToggleFiles, onCommission, onClo
         {info.state === 'connected' && ` · discovered in ${discovery.duration_ms} ms`}
       </span>
       {info.polling && <Chip tone="accent">polling every {info.polling.interval_ms / 1000} s</Chip>}
+      <Button className="ml-auto" icon={<CompareIcon size={16} />} aria-pressed={compareOpen} onClick={onToggleCompare} title="Compare this session with another: SCL, snapshot or IED">
+        {compareOpen ? 'Model' : 'Compare'}
+      </Button>
       {info.state === 'connected' && onCommission && !info.grant && (
-        <Button className="ml-auto" icon={<UnlockIcon size={16} />} onClick={onCommission} title="Ask for Commission mode: audited changes to this IED">
+        <Button className="" icon={<UnlockIcon size={16} />} onClick={onCommission} title="Ask for Commission mode: audited changes to this IED">
           Commission…
         </Button>
       )}
       {info.state === 'connected' && (
-        <Button className={onCommission && !info.grant ? '' : 'ml-auto'} icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
+        <Button icon={<FileIcon size={16} />} aria-pressed={filesOpen} onClick={onToggleFiles}>
           {filesOpen ? 'Model' : 'Files'}
         </Button>
       )}
-      <Button className={info.state === 'connected' ? '' : 'ml-auto'} icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>
+      <Button icon={info.state === 'connected' ? <DisconnectIcon size={16} /> : <CloseIcon size={16} />} onClick={onClose}>
         {info.state === 'connected' ? 'Disconnect' : 'Close'}
       </Button>
     </div>

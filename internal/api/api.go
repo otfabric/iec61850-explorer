@@ -106,6 +106,7 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/write", s.write)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/control", s.control)
 	api.HandleFunc("GET "+prefix+"/audit", s.audit)
+	api.HandleFunc("POST "+prefix+"/compare", s.compare)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions", s.subscribeReport)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/reports/subscriptions/{sub}", s.unsubscribe)
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/reports/subscriptions/{sub}/gi", s.triggerGI)
@@ -286,6 +287,15 @@ func (s *server) readDataSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := s.svc.ReadDataSet(r.Context(), r.PathValue("id"), req.Ref)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) compare(w http.ResponseWriter, r *http.Request) {
+	var req model.CompareRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.Compare(r.Context(), req)
 	s.reply(w, r, v, err)
 }
 

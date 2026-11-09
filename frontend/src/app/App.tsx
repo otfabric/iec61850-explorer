@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActivityPanel } from './components/ActivityPanel';
 import { AuditPanel, CommissionBanner, GrantDialog, ReportsPanel } from './components/Commission';
+import { ComparePanel } from './components/ComparePanel';
 import { ConnectError } from './components/ConnectError';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { DeviceTree } from './components/DeviceTree';
@@ -38,6 +39,7 @@ export function App({ service, platform }: AppProps) {
   const [formKey, setFormKey] = useState(0);
   const [bottom, setBottom] = useState<BottomTab>('watch');
   const [filesOpen, setFilesOpen] = useState<Record<string, boolean>>({});
+  const [compareOpen, setCompareOpen] = useState<Record<string, boolean>>({});
   const [granting, setGranting] = useState<string | null>(null);
   const commission = state.health?.features.includes('commission') ?? false;
   const offline = state.link !== 'up';
@@ -126,7 +128,15 @@ export function App({ service, platform }: AppProps) {
               <SessionBar
                 info={view.info}
                 filesOpen={filesOpen[view.info.id] === true}
-                onToggleFiles={() => setFilesOpen((f) => ({ ...f, [view.info.id]: !f[view.info.id] }))}
+                onToggleFiles={() => {
+                  setCompareOpen((c) => ({ ...c, [view.info.id]: false }));
+                  setFilesOpen((f) => ({ ...f, [view.info.id]: !f[view.info.id] }));
+                }}
+                compareOpen={compareOpen[view.info.id] === true}
+                onToggleCompare={() => {
+                  setFilesOpen((f) => ({ ...f, [view.info.id]: false }));
+                  setCompareOpen((c) => ({ ...c, [view.info.id]: !c[view.info.id] }));
+                }}
                 onCommission={commission && !offline ? () => setGranting(view.info.id) : undefined}
                 onClose={() => void explorer.close(view.info.id)}
               />
@@ -156,7 +166,15 @@ export function App({ service, platform }: AppProps) {
                     />
                   </div>
                 </div>
-                {filesOpen[view.info.id] && view.info.state === 'connected' ? (
+                {compareOpen[view.info.id] ? (
+                  <ComparePanel
+                    key={view.info.id}
+                    service={service}
+                    session={view.info}
+                    others={views.map((v) => v.info).filter((i) => i.id !== view.info.id && i.state !== 'closed')}
+                    label={label}
+                  />
+                ) : filesOpen[view.info.id] && view.info.state === 'connected' ? (
                   <FilesPanel service={service} session={view.info} disabled={offline} />
                 ) : view.selected?.kind === 'ld' ? (
                   <LDPanel
