@@ -595,24 +595,24 @@ func reportOf(index int, r *trace.Report, l *traceLink) model.TraceReport {
 	if p.ListName == nil || p.ListName.Scope != mms.ObjectScopeVMD || p.ListName.ItemID != "RPT" || len(p.Values) == 0 {
 		return raw("not an IEC 61850 report (variable list RPT): shown as captured")
 	}
-	rpt, err := reportLayout(p.Values)
+	rpt, err := iec61850.DecodeReport(p.Values)
 	if err != nil {
 		return raw("the report's fields do not follow IEC 61850-8-1: " + err.Error())
 	}
-	out.RptID = rpt.rptID
-	if rpt.optFlds.Has(iec61850.OptFldSeqNum) {
-		n := rpt.seqNum
+	out.RptID = rpt.RptID
+	if rpt.OptFlds.Has(iec61850.OptFldSeqNum) {
+		n := rpt.SeqNum
 		out.SeqNum = &n
 	}
-	if rpt.optFlds.Has(iec61850.OptFldConfRev) {
-		n := rpt.confRev
+	if rpt.OptFlds.Has(iec61850.OptFldConfRev) {
+		n := rpt.ConfRev
 		out.ConfRev = &n
 	}
 	if l == nil {
 		return raw("link a model session to name the entries by their data set")
 	}
-	datSet := rpt.datSet
-	if rcb, ok := l.rcbForReport(rpt.rptID, datSet); ok {
+	datSet := rpt.DatSet
+	if rcb, ok := l.rcbForReport(rpt.RptID, datSet); ok {
 		out.RCB = rcb.Ref
 		if datSet == "" {
 			datSet = rcb.DatSet
@@ -623,34 +623,34 @@ func reportOf(index int, r *trace.Report, l *traceLink) model.TraceReport {
 	case !l.dataSetsKnown:
 		return raw("the linked session holds no data set definitions")
 	case datSet == "":
-		return raw(fmt.Sprintf("no report control block of the linked model has RptID %q, and the report names no data set", rpt.rptID))
+		return raw(fmt.Sprintf("no report control block of the linked model has RptID %q, and the report names no data set", rpt.RptID))
 	}
 	ds, ok := l.dataSets[datSet]
 	if !ok {
 		return raw("data set " + out.DatSet + " is not in the linked model")
 	}
-	if len(rpt.inclusion) != len(ds.Members) {
-		return raw(fmt.Sprintf("the inclusion bit string has %d bits, data set %s has %d members", len(rpt.inclusion), ds.Ref, len(ds.Members)))
+	if len(rpt.Inclusion) != len(ds.Members) {
+		return raw(fmt.Sprintf("the inclusion bit string has %d bits, data set %s has %d members", len(rpt.Inclusion), ds.Ref, len(ds.Members)))
 	}
 	out.Entries = []model.ReportEntry{}
 	k := 0
-	for i, included := range rpt.inclusion {
+	for i, included := range rpt.Inclusion {
 		if !included {
 			continue
 		}
 		m := ds.Members[i]
 		entry := model.ReportEntry{Ref: m.Ref}
-		if k < len(rpt.dataRefs) && rpt.dataRefs[k] != "" {
-			entry.Ref = refOfMMS(rpt.dataRefs[k])
+		if k < len(rpt.DataReferences) && rpt.DataReferences[k] != "" {
+			entry.Ref = refOfMMS(rpt.DataReferences[k])
 		}
-		if k < len(rpt.reasons) {
-			entry.Reasons = flagList(rpt.reasons[k].String())
+		if k < len(rpt.ReasonCodes) {
+			entry.Reasons = flagList(rpt.ReasonCodes[k].String())
 		}
 		name := ""
 		if mr, err := iec61850.ParseRef(m.Ref); err == nil && len(mr.Path) > 0 {
 			name = mr.Path[len(mr.Path)-1]
 		}
-		entry.Value = convertValue(rpt.values[k], nil, name)
+		entry.Value = convertValue(rpt.Values[k].MMS(), nil, name)
 		out.Entries = append(out.Entries, entry)
 		k++
 	}

@@ -97,41 +97,6 @@ func report(opt []byte, fields ...*mms.Value) []*mms.Value {
 	return append([]*mms.Value{mms.NewVisibleString("R"), mms.NewBitStringWithLength(opt, 10)}, fields...)
 }
 
-func TestReportLayout(t *testing.T) {
-	incl := mms.NewBitStringWithLength([]byte{0xa0}, 3) // members 1 and 3
-	// OptFlds: seq-num, timestamp, reason-code, data-set, data-ref, buf-ovfl, entry-id, conf-rev, segmentation.
-	all := report([]byte{0x7f, 0xc0},
-		mms.NewUnsigned(5), mms.NewVisibleString("t"), mms.NewVisibleString("LD/LLN0$DS"), mms.NewBoolean(false),
-		mms.NewVisibleString("e"), mms.NewUnsigned(3), mms.NewUnsigned(0), mms.NewBoolean(false),
-		incl, mms.NewVisibleString("LD/A$ST$x"), mms.NewVisibleString("LD/C$ST$z"), mms.NewInteger(1), mms.NewInteger(3),
-		mms.NewBitStringWithLength([]byte{0x40}, 7), mms.NewBitStringWithLength([]byte{0x04}, 7))
-	r, err := reportLayout(all)
-	if err != nil || r.rptID != "R" || r.seqNum != 5 || r.datSet != "LD/LLN0$DS" || r.confRev != 3 || len(r.values) != 2 ||
-		!slices.Equal(r.inclusion, []bool{true, false, true}) || len(r.dataRefs) != 2 || r.reasons[0].String() != "data-change" ||
-		r.reasons[1].String() != "GI" {
-		t.Fatalf("layout = %+v, %v", r, err)
-	}
-	for name, values := range map[string][]*mms.Value{
-		"empty":         nil,
-		"no OptFlds":    {mms.NewVisibleString("R")},
-		"RptID":         {mms.NewInteger(1), mms.NewBitStringWithLength([]byte{0, 0}, 10)},
-		"OptFlds type":  {mms.NewVisibleString("R"), mms.NewInteger(1)},
-		"OptFlds short": {mms.NewVisibleString("R"), mms.NewBitStringWithLength([]byte{0}, 8)},
-		"no seq":        report([]byte{0x40, 0}),
-		"no inclusion":  report([]byte{0, 0}),
-		"inclusion":     report([]byte{0, 0}, mms.NewInteger(1)),
-		"no ref":        report([]byte{0x08, 0}, incl),
-		"no value":      report([]byte{0, 0}, incl, mms.NewInteger(1)),
-		"no reason":     report([]byte{0x20, 0}, incl, mms.NewInteger(1), mms.NewInteger(2)),
-		"reason type":   report([]byte{0x20, 0}, incl, mms.NewInteger(1), mms.NewInteger(2), mms.NewInteger(1), mms.NewInteger(1)),
-		"left over":     report([]byte{0, 0}, incl, mms.NewInteger(1), mms.NewInteger(2), mms.NewInteger(3)),
-	} {
-		if _, err := reportLayout(values); err == nil {
-			t.Errorf("%s: no error", name)
-		}
-	}
-}
-
 func TestReportOf(t *testing.T) {
 	ds := model.DataSet{Ref: "LD/LLN0.DS", MMS: model.MMSName{Domain: "LD", ItemID: "LLN0$DS"},
 		Members: []model.DataSetMember{{Ref: "LD/A.x[ST]"}, {Ref: "LD/B.y[ST]"}, {Ref: "LD/C.z[ST]"}}}

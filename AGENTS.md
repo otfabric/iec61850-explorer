@@ -37,7 +37,7 @@ A cross-platform IEC 61850 workbench (Wails v3 + React/TypeScript) on [otfabric/
 - No cgo in `internal/` except what the Wails GUI strictly needs (`internal/gui`, `cmd/iec61850-explorer`).
 - Never log the bearer token. The web UI receives it only in the URL fragment.
 - The engine never opens a path a client names: SCL files, snapshots and captures arrive as bytes the user interface read.
-- The engine decodes no protocol itself: captures are go-mms-trace's, PDUs go-mms's (`DecodeTSDU`). The one exception is the field layout of a captured IEC 61850 report over values go-mms decoded (`trace_report.go`), until go-iec61850 exports its decoder. A decoding gap is reported to those libraries, not patched around. Raw MMS units are never logged.
+- The engine decodes no protocol itself: captures are go-mms-trace's, PDUs go-mms's (`DecodeTSDU`), the fields of a captured IEC 61850 report go-iec61850's (`DecodeReport`, v1.16.0). A decoding gap is reported to those libraries, not patched around. Raw MMS units are never logged.
 - An SCL-derived model claims nothing the SCL does not say: no invented control-block attributes.
 - A diagnosis names a cause only when an error type proves it (`internal/engine/classify.go`); never infer a stage from a message text.
 - Pin the Wails v3 beta version in `go.mod`.
