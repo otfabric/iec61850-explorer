@@ -2,6 +2,17 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.11.3
+
+**Date:** 2026-11-10
+**Previous release:** v0.11.2
+
+### Changed
+
+- Built on go-iec61850 v1.16.2 (was v1.16.1) and go-mms-trace v0.1.4 (was v0.1.1), in the Explorer and its demo. go-iec61850 v1.16.2 changes only its go-mms requirement, which the Explorer already had at v1.7.2. go-mms-trace v0.1.2 to v0.1.4 change only their dependencies, `mmstracectl` and test data licensing, so trace analysis behaves as before.
+
+---
+
 ## v0.11.2
 
 **Date:** 2026-11-10
