@@ -41,6 +41,16 @@ import type {
   SessionInfo,
   SettingGroups,
   TargetConfig,
+  FindingsQuery,
+  Timeline,
+  TimelineQuery,
+  TraceAssociation,
+  TraceFindings,
+  TraceReports,
+  TraceReportsQuery,
+  TraceStreams,
+  TraceSummary,
+  WireView,
 } from '../../app/service/types';
 import { createSseParser } from './sse';
 
@@ -143,6 +153,16 @@ export class HttpService implements Service {
     return this.platform.saveBlob(saveAs, await response.blob());
   }
 
+  openTrace = (file: FileUpload, ports: number[]) =>
+    this.upload<SessionInfo>('/traces/open', file, ports.length > 0 ? { ports: ports.join(',') } : {});
+  linkTrace = (id: string, session: string) => this.request<SessionInfo>('PUT', `/sessions/${encodeURIComponent(id)}/trace/link`, { session });
+  traceSummary = (id: string) => this.request<TraceSummary>('GET', `/sessions/${encodeURIComponent(id)}/trace/summary`);
+  traceAssociations = (id: string) => this.request<TraceAssociation[]>('GET', `/sessions/${encodeURIComponent(id)}/trace/associations`);
+  traceTimeline = (id: string, query: TimelineQuery) => this.request<Timeline>('POST', `/sessions/${encodeURIComponent(id)}/trace/timeline`, query);
+  traceReports = (id: string, query: TraceReportsQuery) => this.request<TraceReports>('POST', `/sessions/${encodeURIComponent(id)}/trace/reports`, query);
+  traceStreams = (id: string) => this.request<TraceStreams>('GET', `/sessions/${encodeURIComponent(id)}/trace/streams`);
+  traceFindings = (id: string, query: FindingsQuery) => this.request<TraceFindings>('POST', `/sessions/${encodeURIComponent(id)}/trace/findings`, query);
+  wire = (id: string, operation: number) => this.request<WireView>('GET', `/sessions/${encodeURIComponent(id)}/wire?operation=${operation}`);
   profiles = () => this.request<Profile[]>('GET', '/profiles');
   saveProfile = (profile: Profile) =>
     profile.id === ''

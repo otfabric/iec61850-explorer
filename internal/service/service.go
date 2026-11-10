@@ -124,6 +124,31 @@ type Service interface {
 	AddNamespaces(ctx context.Context, f model.File) (model.NamespacePackage, error)
 	// RemoveNamespaces removes a loaded package.
 	RemoveNamespaces(ctx context.Context, id string) error
+	// OpenTrace analyses a capture (pcap or pcapng, plain or gzip) the user
+	// chose and opens it as a trace session. A damaged capture opens with
+	// what was read before the damage.
+	OpenTrace(ctx context.Context, req model.OpenTraceRequest) (model.SessionInfo, error)
+	// LinkTrace correlates a trace session with a model session (live, SCL
+	// or snapshot); an empty session removes the link. Linking a live
+	// session reads its data sets and control blocks (Observe mode).
+	LinkTrace(ctx context.Context, id string, req model.LinkTraceRequest) (model.SessionInfo, error)
+	// TraceSummary describes the capture of a trace session.
+	TraceSummary(ctx context.Context, id string) (model.TraceSummary, error)
+	// TraceAssociations lists the MMS associations of a capture.
+	TraceAssociations(ctx context.Context, id string) ([]model.TraceAssociation, error)
+	// TraceTimeline lists the confirmed services of a capture in time order.
+	TraceTimeline(ctx context.Context, id string, q model.TimelineQuery) (model.Timeline, error)
+	// TraceReports lists the InformationReports of a capture, decoded
+	// against the linked model's data sets when it has them.
+	TraceReports(ctx context.Context, id string, q model.TraceReportsQuery) (model.TraceReports, error)
+	// TraceStreams lists the GOOSE and Sampled Values streams of a capture.
+	TraceStreams(ctx context.Context, id string) (model.TraceStreams, error)
+	// TraceFindings lists the gaps and anomalies of a capture, and what the
+	// linked model does not have.
+	TraceFindings(ctx context.Context, id string, q model.FindingsQuery) (model.TraceFindings, error)
+	// Wire returns the MMS units a live session sent and received during
+	// one operation (Operation.Wire), decoded.
+	Wire(ctx context.Context, id string, operation uint64) (model.WireView, error)
 	// Profiles lists the saved connection profiles, by name.
 	Profiles(ctx context.Context) ([]model.Profile, error)
 	// SaveProfile creates a profile (empty ID) or replaces one.

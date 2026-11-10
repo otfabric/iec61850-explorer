@@ -41,6 +41,16 @@ import type {
   WriteResult,
   ControlRequest,
   ControlResult,
+  FindingsQuery,
+  Timeline,
+  TimelineQuery,
+  TraceAssociation,
+  TraceFindings,
+  TraceReports,
+  TraceReportsQuery,
+  TraceStreams,
+  TraceSummary,
+  WireView,
 } from './types';
 
 export type ErrorCode =
@@ -144,6 +154,21 @@ export interface Service {
   /** Loads a package of namespace definitions (an NSD ZIP archive or one NSD document) and keeps it. */
   addNamespaces(file: FileUpload): Promise<NamespacePackage>;
   removeNamespaces(id: string): Promise<void>;
+  /** Analyses a capture (pcap, pcapng, plain or gzip) and opens it as a trace session; ports are the MMS server ports (empty: 102). */
+  openTrace(file: FileUpload, ports: number[]): Promise<SessionInfo>;
+  /** Correlates a trace session with a model session (live, SCL or snapshot); '' removes the link. */
+  linkTrace(id: string, session: string): Promise<SessionInfo>;
+  traceSummary(id: string): Promise<TraceSummary>;
+  traceAssociations(id: string): Promise<TraceAssociation[]>;
+  /** The confirmed services of a capture in time order, filtered and paged. */
+  traceTimeline(id: string, query: TimelineQuery): Promise<Timeline>;
+  /** The InformationReports, decoded against the linked model's data sets when it has them. */
+  traceReports(id: string, query: TraceReportsQuery): Promise<TraceReports>;
+  traceStreams(id: string): Promise<TraceStreams>;
+  /** Gaps and anomalies of the capture, and what the linked model does not have. */
+  traceFindings(id: string, query: FindingsQuery): Promise<TraceFindings>;
+  /** The MMS units a live session sent and received during one operation (Operation.wire). */
+  wire(id: string, operation: number): Promise<WireView>;
   profiles(): Promise<Profile[]>;
   /** Creates (empty id) or replaces a profile. */
   saveProfile(profile: Profile): Promise<Profile>;

@@ -7,7 +7,7 @@
 
 A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec61850](https://github.com/otfabric/go-iec61850) and [go-mms](https://github.com/otfabric/go-mms). MIT licensed.
 
-**Status: M2a, inspection.** Releases: v0.1.0 (the read-only browser), v0.2.0 (inspection). What comes after it is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
+**Status: M4, trace analysis** (v0.10.0). Earlier milestones: the read-only browser (M1), inspection (M2a), Commission mode (M2b), comparison, semantics and point lists (M3). Release notes are in [RELEASE.md](RELEASE.md); what comes next (M5, the laboratory) is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
 
 ## Two ways to run it
 
@@ -32,7 +32,11 @@ Both run the same engine and show the same interface. There is no "remote mode" 
 - **Observe mode** by default: the MMS client is built so that it cannot send a Write, a control, a report or data set change, or a file change. See [SECURITY.md](SECURITY.md).
 - **Commission mode** on request, per session: a grant with a reason and a duration opens a second, restricted association. **Write** set points and configuration values (FC SP, CF, DC, SV, BL), each verified by reading it back; **subscribe** to report control blocks and watch the reports arrive (the control block is released again when you stop); **create and delete** data sets; **switch** the active setting group; **operate controls** of every control model, with the select, the operate, the CommandTermination and the IED's reasons shown. Everything is recorded in an audit trail. The daemon offers it only with `--allow-commission`.
 
-Not yet: editing setting values, time-activated controls, comparison of SCL with the live model, semantic search, trace analysis.
+- **Compare** two sessions (IED, SCL file, snapshot): model, data sets, report control blocks and configured values; **check conformance** against the IEC 61850 namespaces; export **point lists**.
+- **Analyse a capture** (pcap or pcapng, plain or gzip, at most 256 MiB) offline, with [go-mms-trace](https://github.com/otfabric/go-mms-trace): the MMS associations, a **timeline** of the confirmed services with their status (ok, error, reject, unanswered, orphan, pending) and latency, the reports, the GOOSE and Sampled Values streams, and the **findings**: TCP gaps, unanswered and failed requests, associations captured midstream or still open, decoding errors, lost or repeated GOOSE and SV messages, each with where it is and the counter it comes from. MMS on another port than 102 (1102 in iec61850-interop captures) is analysed when the port is named. **Link** the capture to an IED, SCL or snapshot session: object names become IEC 61850 references, are looked up in that model, and reports are decoded against their data sets; what the model does not have is a finding. Findings and the timeline export as CSV and JSON.
+- **The wire view** of every action on an IED: the MMS PDUs it sent and received, decoded, and their bytes, in the activity panel.
+
+Not yet: editing setting values, time-activated controls, live capture, MMS over TLS in captures.
 
 ## Build from source
 

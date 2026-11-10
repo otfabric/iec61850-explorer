@@ -198,4 +198,36 @@ describe('HttpService', () => {
       body: '{"default_proxy":"direct","default_proxy_locked":false}',
     });
   });
+
+  it('calls the trace endpoints: capture upload with ports, link, views and the wire view', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => json({}));
+    vi.stubGlobal('fetch', fetchMock);
+    const service = new HttpService(TOKEN, platform);
+    await service.openTrace({ name: 'cap.pcapng', data: new Uint8Array([1, 2]) }, [102, 1102]);
+    await service.openTrace({ name: 'b.pcap', data: new Uint8Array([3]) }, []);
+    await service.linkTrace('t1', 's1');
+    await service.traceSummary('t1');
+    await service.traceAssociations('t1');
+    await service.traceTimeline('t1', { status: ['unanswered'], limit: 10 });
+    await service.traceReports('t1', { association: 2 });
+    await service.traceStreams('t1');
+    await service.traceFindings('t1', { severity: 'error' });
+    await service.wire('s1', 7);
+    const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
+    expect(calls.map(([url, init]) => `${init.method} ${url}`)).toEqual([
+      'POST /api/v1/traces/open?name=cap.pcapng&ports=102%2C1102',
+      'POST /api/v1/traces/open?name=b.pcap',
+      'PUT /api/v1/sessions/t1/trace/link',
+      'GET /api/v1/sessions/t1/trace/summary',
+      'GET /api/v1/sessions/t1/trace/associations',
+      'POST /api/v1/sessions/t1/trace/timeline',
+      'POST /api/v1/sessions/t1/trace/reports',
+      'GET /api/v1/sessions/t1/trace/streams',
+      'POST /api/v1/sessions/t1/trace/findings',
+      'GET /api/v1/sessions/s1/wire?operation=7',
+    ]);
+    expect(calls[0]?.[1].body).toBeInstanceOf(Uint8Array);
+    expect(calls[2]?.[1].body).toBe(JSON.stringify({ session: 's1' }));
+    expect(calls[5]?.[1].body).toBe(JSON.stringify({ status: ['unanswered'], limit: 10 }));
+  });
 });

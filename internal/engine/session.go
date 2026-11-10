@@ -68,6 +68,23 @@ type session struct {
 	snapshot   *model.SnapshotOrigin
 	snapValues map[string]model.ReadValue
 	snapAt     time.Time
+	// sclGoCBs are the GOOSE control blocks an SCL session's file defines.
+	sclGoCBs []gocbDef
+	// trace is set for a trace session: a capture, no IED model.
+	trace *traceState
+}
+
+// kind names what the session is (model.SessionKind*).
+func (s *session) kind() string {
+	switch {
+	case s.trace != nil:
+		return model.SessionKindTrace
+	case s.snapshot != nil:
+		return model.SessionKindSnapshot
+	case s.scl != nil:
+		return model.SessionKindSCL
+	}
+	return model.SessionKindLive
 }
 
 func (s *session) info() model.SessionInfo {
@@ -76,7 +93,12 @@ func (s *session) info() model.SessionInfo {
 	info := model.SessionInfo{
 		ID: s.id, Target: s.target, State: s.state, Mode: model.ModeObserve,
 		OpenedAt: s.openedAt, Identity: s.identity, Discovery: s.summary, Error: s.lostErr, SCL: s.scl,
-		Snapshot: s.snapshot,
+		Snapshot: s.snapshot, Kind: s.kind(),
+	}
+	if s.trace != nil {
+		o := s.trace.origin
+		o.Link = s.trace.linkInfo()
+		info.Trace = &o
 	}
 	if s.proxy.cfg != nil {
 		info.Proxy = s.proxy.cfg.Redacted()
@@ -93,6 +115,9 @@ func (s *session) info() model.SessionInfo {
 
 // setTree indexes a discovered tree and counts it.
 func (s *session) setTree(root *iec61850.ModelNode, took time.Duration) {
+	if root == nil {
+		root = &iec61850.ModelNode{Name: "root"}
+	}
 	s.index = map[string]*iec61850.ModelNode{"": root}
 	sum := model.DiscoverySummary{DurationMS: took.Milliseconds()}
 	var walk func(n *iec61850.ModelNode, depth int)
@@ -176,6 +201,11 @@ type recorder struct {
 	active   bool
 	requests []model.MMSRequest
 	dropped  int
+	// op numbers the actions; wire, when set, keeps the ISO units of the
+	// actions that are published (wire.go).
+	op      uint64
+	pending []wireUnit
+	wire    *wireRing
 }
 
 func (r *recorder) ObserveRequest(ev mms.RequestEvent) {
@@ -204,6 +234,8 @@ func (r *recorder) start() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.active, r.requests, r.dropped = true, nil, 0
+	r.op++
+	r.pending = nil
 }
 
 // stop ends the action and returns its requests.

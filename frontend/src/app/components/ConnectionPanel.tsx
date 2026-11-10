@@ -16,10 +16,22 @@ interface ConnectionPanelProps {
   onDeleteProfile: (id: string) => void;
   onOpenSCL: (file: FileUpload) => void;
   onOpenSnapshot: (file: FileUpload) => void;
+  /** Opens a capture as a trace session; ports are the MMS server ports. */
+  onOpenTrace?: (file: FileUpload, ports: number[]) => void;
   /** The engine's settings; null while unknown. */
   settings: Settings | null;
   /** Saves the default proxy; resolves to whether it was saved. */
   onSaveSettings: (settings: Settings) => Promise<boolean>;
+}
+
+/** The MMS ports of a capture: comma-separated numbers; empty is the default (102). Null when invalid. */
+export function parsePorts(text: string): number[] | null {
+  const parts = text
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p !== '');
+  const ports = parts.map(Number);
+  return ports.every((p) => Number.isInteger(p) && p >= 1 && p <= 65535) ? ports : null;
 }
 
 /** What an empty Proxy field means, for its placeholder. */
@@ -124,6 +136,9 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
   const [profileName, setProfileName] = useState('');
   const sclInput = useRef<HTMLInputElement>(null);
   const snapshotInput = useRef<HTMLInputElement>(null);
+  const traceInput = useRef<HTMLInputElement>(null);
+  const [tracePorts, setTracePorts] = useState('102');
+  const ports = parsePorts(tracePorts);
 
   function target(): TargetConfig {
     const p = Number(port);
@@ -284,6 +299,34 @@ export function ConnectionPanel(props: ConnectionPanelProps) {
           onChange={() => void pick(snapshotInput.current, props.onOpenSnapshot)}
         />
       </div>
+
+      {props.onOpenTrace && (
+        <div className="flex flex-wrap items-end gap-3 rounded border border-line p-4">
+          <span className="self-center text-muted">A capture, analysed offline:</span>
+          <Field label="MMS ports">
+            <TextInput
+              aria-label="MMS ports"
+              value={tracePorts}
+              onChange={(e) => setTracePorts(e.target.value)}
+              placeholder="102"
+              className="w-32"
+              aria-invalid={ports === null}
+            />
+          </Field>
+          <Button icon={<FileIcon size={16} />} onClick={() => traceInput.current?.click()} disabled={props.disabled || ports === null}>
+            Open capture…
+          </Button>
+          {ports === null && <span className="text-[12px] text-danger">Ports are numbers from 1 to 65535, separated by commas.</span>}
+          <input
+            ref={traceInput}
+            type="file"
+            accept=".pcap,.pcapng,.cap,.gz"
+            aria-label="Capture file"
+            className="hidden"
+            onChange={() => void pick(traceInput.current, (f) => props.onOpenTrace?.(f, ports ?? []))}
+          />
+        </div>
+      )}
     </section>
   );
 }

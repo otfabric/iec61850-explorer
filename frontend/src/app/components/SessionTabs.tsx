@@ -4,6 +4,9 @@ import type { SessionView } from '../state/useExplorer';
 /** A short name for a session: its IED, file or host. */
 export function sessionLabel(view: SessionView): string {
   const { info } = view;
+  if (info.trace) {
+    return `${info.trace.file} (capture)`;
+  }
   if (info.snapshot) {
     return info.snapshot.file;
   }

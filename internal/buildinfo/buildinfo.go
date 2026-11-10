@@ -14,6 +14,7 @@ var Version = "dev"
 const (
 	GoIEC61850Path = "github.com/otfabric/go-iec61850"
 	GoMMSPath      = "github.com/otfabric/go-mms"
+	GoMMSTracePath = "github.com/otfabric/go-mms-trace"
 )
 
 // ModuleVersion returns the version of the dependency at path in this binary,

@@ -22,6 +22,9 @@ import type {
   ControlResult,
 } from '../service/types';
 
+/** A trace session: a capture analysed offline, without an IED model. */
+export const isTrace = (info: SessionInfo) => info.kind === 'trace' || info.trace !== undefined;
+
 /** Operations kept in the activity log. */
 export const MAX_ACTIVITY = 200;
 /** Audit records kept in the window. */
@@ -259,7 +262,9 @@ export function useExplorer(service: Service) {
 
   const adopt = useCallback(
     async (session: SessionInfo) => {
-      dispatch({ type: 'opened', session, roots: await service.browse(session.id, '') });
+      // A trace session has no IED model to browse.
+      const roots = isTrace(session) ? [] : await service.browse(session.id, '');
+      dispatch({ type: 'opened', session, roots });
     },
     [service],
   );
@@ -325,6 +330,21 @@ export function useExplorer(service: Service) {
   const connect = useCallback((cfg: TargetConfig) => open(() => service.openSession(cfg)), [open, service]);
   const openSCL = useCallback((file: FileUpload, ied: string, ap: string) => open(() => service.openSCL(file, ied, ap)), [open, service]);
   const openSnapshot = useCallback((file: FileUpload) => open(() => service.openSnapshot(file)), [open, service]);
+  const openTrace = useCallback((file: FileUpload, ports: number[]) => open(() => service.openTrace(file, ports)), [open, service]);
+
+  /** Links a trace session to a model session ('' unlinks); resolves to whether it worked. */
+  const linkTrace = useCallback(
+    async (id: string, other: string) => {
+      try {
+        dispatch({ type: 'session', session: await service.linkTrace(id, other) });
+        return true;
+      } catch (err) {
+        dispatch({ type: 'error', message: toServiceError(err).message });
+        return false;
+      }
+    },
+    [service],
+  );
 
   const close = useCallback(
     async (id: string) => {
@@ -548,6 +568,8 @@ export function useExplorer(service: Service) {
     connect,
     openSCL,
     openSnapshot,
+    openTrace,
+    linkTrace,
     close,
     activate,
     toggle,

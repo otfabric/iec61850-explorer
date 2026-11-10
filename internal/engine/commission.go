@@ -139,7 +139,7 @@ func (e *Engine) GrantCommission(ctx context.Context, id string, req model.Grant
 	}
 	s.rec.start()
 	start := time.Now()
-	client, err := e.dial(ctx, s, commission.Services(req.Capabilities))
+	client, err := e.dial(ctx, s, commission.Services(req.Capabilities), wireCommission)
 	if err != nil {
 		detail := classify(err, true)
 		e.publishOperation(s.rec, s.id, "grant", net.JoinHostPort(s.target.Host, strconv.Itoa(s.target.Port)), start, detail)

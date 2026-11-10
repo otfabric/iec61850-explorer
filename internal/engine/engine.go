@@ -220,7 +220,7 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 
 	s := &session{
 		id: newID(), target: cfg, timeout: timeout, openedAt: time.Now().UTC(),
-		rec: &recorder{}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
+		rec: &recorder{wire: &wireRing{}}, types: make(map[string]*mms.TypeSpec), state: model.SessionConnected,
 		proxy: via,
 	}
 	s.target.Proxy = redactProxySetting(cfg.Proxy)
@@ -232,7 +232,7 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	// Connect.
 	s.rec.start()
 	start := time.Now()
-	client, err := e.dial(ctx, s, readonly.AllowedServices())
+	client, err := e.dial(ctx, s, readonly.AllowedServices(), wireObserve)
 	if err != nil {
 		detail := classify(err, true)
 		e.publishOperation(s.rec, s.id, "connect", addr, start, detail)
@@ -285,8 +285,11 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 
 // dial opens an association to the session's IED with an allow-list of
 // services. Its requests are recorded by the session's recorder.
-func (e *Engine) dial(ctx context.Context, s *session, allowed []mms.Service) (*iec61850.Client, error) {
-	mmsOpts := mms.DialOptions{AllowedServices: allowed, RequestTimeout: s.timeout, Metrics: s.rec}
+//
+// The association's ISO units are kept for the wire view (wire.go): go-mms
+// RawHook is passive, it sees the bytes the client sends and receives.
+func (e *Engine) dial(ctx context.Context, s *session, allowed []mms.Service, assoc string) (*iec61850.Client, error) {
+	mmsOpts := mms.DialOptions{AllowedServices: allowed, RequestTimeout: s.timeout, Metrics: s.rec, RawHook: s.rec.hook(assoc)}
 	if err := applyAddressing(s.target.Addressing, &mmsOpts); err != nil {
 		return nil, err
 	}
@@ -361,7 +364,18 @@ func (e *Engine) openCount() int {
 	return n
 }
 
+// session returns a session with a model: live, SCL or snapshot. A trace
+// session has none and is refused.
 func (e *Engine) session(id string) (*session, error) {
+	s, err := e.lookup(id)
+	if err == nil && s.trace != nil {
+		return nil, service.Errorf(service.CodeInvalidArgument, "session %s is a trace session: it has no IED model", id)
+	}
+	return s, err
+}
+
+// lookup returns a session of any kind.
+func (e *Engine) lookup(id string) (*session, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	s, ok := e.sessions[id]
@@ -373,7 +387,7 @@ func (e *Engine) session(id string) (*session, error) {
 
 // CloseSession implements service.Service. Closing a lost session forgets it.
 func (e *Engine) CloseSession(ctx context.Context, id string) error {
-	s, err := e.session(id)
+	s, err := e.lookup(id)
 	if err != nil {
 		return err
 	}
@@ -465,6 +479,7 @@ func (e *Engine) publishOperation(rec *recorder, sessionID, action, target strin
 		Action: action, Target: target, StartedAt: start.UTC(), DurationMS: since(start),
 		OK: opErr == nil, Error: opErr,
 	}
+	op.Wire = rec.commit()
 	op.Requests, op.RequestsDropped = rec.stop()
 	e.hub.publish(model.Event{Kind: model.EventOperation, SessionID: sessionID, Operation: &op})
 }
