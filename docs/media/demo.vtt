@@ -1,0 +1,131 @@
+WEBVTT
+
+1
+00:00:00.308 --> 00:00:07.819
+IEC 61850 Explorer: connect to an IED, open an SCL file, or analyse a capture.
+The demo: AA1 Northfield, a made-up substation in the repository.
+
+2
+00:00:07.819 --> 00:00:13.073
+Open the substation’s SCD. It lists six IEDs; browse the transformer protection offline, no IED needed.
+
+3
+00:00:13.073 --> 00:00:18.284
+Its model as the SCL defines it: logical devices, logical nodes, data objects and their functional constraints.
+
+4
+00:00:18.284 --> 00:00:24.123
+Search by quantity: the IEC 61850 namespace knows which data objects measure impedance, energy, voltage…
+
+5
+00:00:24.123 --> 00:00:30.098
+The namespace panel says what the selected node is: class, CDC, presence, and the quantity, phase and unit.
+
+6
+00:00:30.098 --> 00:00:36.211
+Check conformance to the namespace. YLTC1 declares the vendor namespace CORVANE 7-4X:2026A, which is not loaded.
+
+7
+00:00:36.211 --> 00:00:42.990
+Load the vendor’s NSD package and check again: its logical node and data objects are now checked against their definitions.
+
+8
+00:00:42.990 --> 00:00:50.968
+Feeder 2’s CID is an Edition 1 file: its logical devices declare no namespace, so they are checked as Edition 1.
+
+9
+00:00:50.968 --> 00:00:56.922
+Export the point list for SCADA or gateway engineering: every attribute with FC, CDC, type, quantity, data sets and reports.
+
+10
+00:00:56.922 --> 00:01:01.288
+Now live. First open feeder 1’s CID, to compare with the IED later.
+
+11
+00:01:01.288 --> 00:01:09.185
+Connect to feeder 1, served by make demo-ieds on 127.0.0.1:10201. The session starts in Observe mode: reads only.
+
+12
+00:01:09.185 --> 00:01:17.317
+Read a data object: the value with its quality and time stamp, and the MMS domain and item it was read from.
+
+13
+00:01:17.317 --> 00:01:24.220
+Watch points of any IED in one table and poll them; the measurements change every 2 s.
+
+14
+00:01:24.220 --> 00:01:30.166
+A logical device shows its data sets, report control blocks, logs and setting groups. Read a data set in one request.
+
+15
+00:01:30.166 --> 00:01:33.662
+Setting groups: the protection has two, group 1 is active.
+
+16
+00:01:33.662 --> 00:01:40.048
+The IED’s files: its CID and the COMTRADE record of this morning’s fault, ready to download.
+
+17
+00:01:40.048 --> 00:01:45.044
+Compare the IED with its CID, configured values included (FC CF, DC, SP, SG).
+
+18
+00:01:45.044 --> 00:01:51.486
+Exactly two differences: someone updated the firmware (2.4.1) and set I> to 650 A on the front panel.
+
+19
+00:01:51.486 --> 00:01:58.500
+Changes need Commission mode: a grant with a reason, a duration and capabilities, on a second, restricted association.
+
+20
+00:01:58.500 --> 00:02:05.291
+Subscribe to a report control block: the reports arrive with their reasons for inclusion.
+
+21
+00:02:05.291 --> 00:02:09.893
+Open disconnector QB1 (SBO, enhanced security). You confirm before anything is sent.
+
+22
+00:02:09.893 --> 00:02:16.658
+The IED refuses: blocked-by-interlocking, because breaker QA1 is still closed.
+
+23
+00:02:16.658 --> 00:02:23.900
+Open breaker QA1 first: select, operate and the CommandTermination, each step shown.
+
+24
+00:02:23.900 --> 00:02:32.785
+The audit trail records the grant, the subscription and every control, refused or not.
+Revoke ends the grant and releases the report control block.
+
+25
+00:02:32.785 --> 00:02:38.399
+Analyse a capture offline: the station fault at 09:00:10, with MMS, GOOSE and Sampled Values on one mirror port.
+
+26
+00:02:38.399 --> 00:02:45.326
+Link it to feeder 1’s SCL model: MMS names become IEC 61850 references, and reports are decoded against their data sets.
+
+27
+00:02:45.326 --> 00:02:50.759
+The timeline: every confirmed service with its status, latency and the objects it named.
+
+28
+00:02:50.759 --> 00:02:57.823
+Feeder 1’s reports, decoded against the data set dsTrip: the starts, the operate and the trip, each with its reason.
+
+29
+00:02:57.823 --> 00:03:04.160
+GOOSE: feeder 1’s trip, then the breaker failure 152 ms later. Sampled Values: 6000 frames, none lost.
+
+30
+00:03:04.160 --> 00:03:09.683
+Capture 08: a bad morning on the station bus. Link it to feeder 2 and open the findings.
+
+31
+00:03:09.683 --> 00:03:17.614
+A lost TCP segment, unanswered requests, a midstream association, a reject, GOOSE and SV losses: each with where and why.
+
+32
+00:03:17.614 --> 00:03:22.119
+IEC 61850 Explorer by OT Fabric: inspect, commission, compare and analyse. MIT licensed.

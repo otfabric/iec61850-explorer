@@ -16,6 +16,7 @@ The Explorer's architecture is sunspec-explorer's (ADR 0001), with go-iec61850 a
 |---|---|---|
 | `iec61850-explorer` | Wails v3 (Beta), cgo | Local mode only. Linux: GTK4 + WebKitGTK 6.0; Windows: WebView2; macOS: WKWebView. Built on a runner of the target architecture. |
 | `iec61850-explorerd` | `CGO_ENABLED=0 go build` | Static; serves `/api/v1` and the embedded web UI (`frontend/dist/web`). Subcommands `url`, `token rotate`, `version`. Release targets: linux/amd64, arm64, armv7; also a container image. |
+| README media | Playwright (local Chrome), ffmpeg | `docs/media/record-demo.mjs` drives the daemon's web UI through the demo substation (`demo/`: its SCL files and captures as file uploads, its IEDs served by `make demo-ieds`) for the screenshots of the README and `docs/PLAYBOOKS.md` and the demo video; the captions are one cue list, drawn into the frames and written as WebVTT with the frames' times. Never shipped; Playwright is installed outside the repository. |
 
 CI guards: `go list -deps ./cmd/iec61850-explorerd` contains no Wails, no cgo and no `internal/simied`; neither program depends on `internal/simied`.
 

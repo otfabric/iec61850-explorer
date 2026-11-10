@@ -2,6 +2,18 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.11.2
+
+**Date:** 2026-11-10
+**Previous release:** v0.11.1
+
+### Documentation
+
+- **Playbooks** ([docs/PLAYBOOKS.md](docs/PLAYBOOKS.md)): eight task-oriented scenarios with screenshots on the demo substation: inspect an SCL file and search by quantity, check conformance (Edition 1, vendor namespaces), commission a live IED, verify it against its SCL, operate a breaker in Commission mode, analyse a station capture, find what went wrong in a capture, export a point list.
+- **Demo video and screenshots** in the README: a demo of three and a half minutes with subtitles (`docs/media/demo.mp4`, burnt-in captions and a soft subtitle track, `docs/media/demo.vtt`), a highlight GIF and screenshots of every view. `docs/media/record-demo.mjs` makes them with Playwright and ffmpeg against the daemon and `make demo-ieds`.
+
+---
+
 ## v0.11.1
 
 **Date:** 2026-11-10

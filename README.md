@@ -9,6 +9,25 @@ A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec
 
 **Status: M4, trace analysis** (v0.10.0). Earlier milestones: the read-only browser (M1), inspection (M2a), Commission mode (M2b), comparison, semantics and point lists (M3). Release notes are in [RELEASE.md](RELEASE.md); what comes next (M5, the laboratory) is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
 
+![A highlight cut of the demo: an SCD searched by quantity, an IED compared with its CID, a control refused by interlocking, a station fault capture](docs/media/demo.gif)
+
+*The demo above is a highlight cut of under a minute. The full demo, three and a half minutes: [`docs/media/demo.mp4`](docs/media/demo.mp4), with captions in the picture and as an English subtitle track (also [`docs/media/demo.vtt`](docs/media/demo.vtt)). It runs through the [demo substation](demo/README.md): its SCD and CIDs, its live IEDs (`make demo-ieds`) and its captures. Step-by-step scenarios with screenshots are in [docs/PLAYBOOKS.md](docs/PLAYBOOKS.md).*
+
+| | |
+|---|---|
+| ![An SCD browsed offline, searched by quantity, with the namespace of the selected data object](docs/images/scl-search.png) | ![An Edition 1 CID checked against the namespace](docs/images/conformance-edition1.png) |
+| **Offline, from SCL**: browse an IED of an SCD, search by quantity (here active energy), and see what the namespace defines for a data object: class, CDC, presence, quantity, unit. | **Conformance**: each logical device against the namespace it declares, Edition 1 files marked, vendor namespaces loaded as NSD packages. |
+| ![A live IED: a value read with quality and time, points polled in the watch table](docs/images/live-watch.png) | ![The IED compared with its CID, values included](docs/images/compare.png) |
+| **Live, in Observe mode**: read with quality, time and the MMS item; watch and poll points of several IEDs. | **Compare** an IED with its SCL file, values included: here a firmware update and a setting changed on the front panel. |
+| ![A control refused by the IED: blocked by interlocking](docs/images/control-refused.png) | ![The audit trail of a Commission grant](docs/images/audit.png) |
+| **Commission mode**: operate controls with select, operate and CommandTermination shown; the IED's refusal and its reason. | **Audit trail**: the grant, report subscriptions and every control, with the reason given. |
+| ![A capture's timeline linked to an SCL model](docs/images/trace-timeline.png) | ![GOOSE and Sampled Values streams of a capture](docs/images/trace-streams.png) |
+| **Captures**: the MMS timeline with status and latency, object names resolved against a linked model. | **GOOSE and Sampled Values** streams: messages, state changes, rates, lost and repeated samples. |
+| ![Captured reports decoded against their data set](docs/images/trace-reports.png) | ![Findings of a capture full of problems](docs/images/trace-findings.png) |
+| **Reports** of a capture decoded against the linked model's data sets, with their reasons. | **Findings**: TCP gaps, unanswered requests, rejects, GOOSE and SV losses, each with where it is and its source. |
+
+Also: the [start view](docs/images/start.png); a [vendor namespace not loaded](docs/images/conformance-vendor.png); [data sets](docs/images/datasets.png), [received reports](docs/images/reports.png) and the [IED's files](docs/images/files.png) with its COMTRADE record; a [light theme](docs/images/light.png).
+
 ## Two ways to run it
 
 | | Desktop application | Daemon + browser |
@@ -101,8 +120,13 @@ A password in a proxy URL is stored as given in a profile or the settings file (
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): layering, the `Service` interface, the HTTP API, Observe mode, the capability audit of the libraries, milestones
+- [Playbooks](docs/PLAYBOOKS.md): task-oriented scenarios with screenshots, on the demo substation
 - [Decisions](docs/adr/)
 - [Security](SECURITY.md), [Testing](TESTING.md), [Contributing](CONTRIBUTING.md)
+
+## How the media are made
+
+The screenshots, the demo video and its subtitles are made by [`docs/media/record-demo.mjs`](docs/media/record-demo.mjs) (Playwright in the local Chrome, ffmpeg) against the daemon's web UI and `make demo-ieds`; usage is in its header. Rerun it when the user interface changes visibly. The captions are written once in the script: drawn into the video's frames and written as WebVTT from the same cue list, with the times of the recorded frames.
 
 ## License
 
