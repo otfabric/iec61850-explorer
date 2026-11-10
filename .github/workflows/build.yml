@@ -90,6 +90,8 @@ jobs:
       - name: govulncheck
         run: |
           go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 $GO_PKGS
+      - name: Demo set (regenerates identically; scenarios analysed with go-mms-trace)
+        run: make demo-check
 
   daemon:
     name: Daemon linux/${{ matrix.name }}

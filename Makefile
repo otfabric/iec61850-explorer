@@ -1,4 +1,4 @@
-.PHONY: corpus help all check test coverage-pkg-check fuzz coverage coverage-html coverage-check coverage-clean fmt fmt-check vet lint lint-ci vuln \
+.PHONY: demo demo-check demo-ieds corpus help all check test coverage-pkg-check fuzz coverage coverage-html coverage-check coverage-clean fmt fmt-check vet lint lint-ci vuln \
 	frontend frontend-install frontend-check build build-gui build-daemon build-daemon-all bundle-macos appicon winres docker docker-all docker-run dev clean
 
 help: ## This help
@@ -16,9 +16,13 @@ GO_MOD_VERSION := $(shell sed -nE 's/^go ([0-9]+\.[0-9]+).*/\1/p' go.mod | head 
 GOFMT_CI = $(shell GOTOOLCHAIN=go$(GO_MOD_VERSION).0 go env GOROOT)/bin/gofmt
 
 # The webview bindings are built for the SDK's macOS version; link for the same minimum,
-# or the linker warns about every object file.
+# or the linker warns about every object file. MACOSX_DEPLOYMENT_TARGET sets the minimum
+# the cgo objects are compiled for; the external link otherwise targets Go's default
+# (11.0), so the same minimum goes to the linker. CGO_LDFLAGS is part of Go's build
+# cache key, so cgo objects built without it are not reused.
 ifeq ($(shell uname -s),Darwin)
 export MACOSX_DEPLOYMENT_TARGET ?= 13.0
+export CGO_LDFLAGS += -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET)
 endif
 
 GUI_NAME    = iec61850-explorer
@@ -54,7 +58,23 @@ coverage-pkg-check: coverage-check ## Fail when a package is below COVER_PKG_MIN
 	END { for (k in n) { p = k; sub(/\/[^\/]*$$/, "", p); s[p] += n[k]; if (k in h) c[p] += n[k] } \
 	for (p in s) { v = 100 * c[p] / s[p]; if (v < m) { printf "%s: %.1f%% < %s%%\n", p, v, m; bad = 1 } } exit bad }' coverage.out
 
-check: fmt fmt-check vet lint lint-ci vuln test coverage-pkg-check frontend-check ## Run all checks (Go and frontend)
+check: fmt fmt-check vet lint lint-ci vuln test coverage-pkg-check frontend-check demo-check ## Run all checks (Go, frontend and the demo set)
+
+# The demo set (demo/, a Go module of its own): SCL files, a vendor namespace and captures
+# of the AA1 Northfield substation, generated deterministically, and its live IEDs.
+DEMO_CHECK_DIR := .demo-check
+
+demo: ## Regenerate the demo set (demo/scl, demo/nsd, demo/captures)
+	@cd demo && go run ./gen -out .
+
+demo-check: ## Regenerate the demo set into demo/.demo-check, compare it with demo/, vet and test the demo module
+	@echo "Checking the demo set (regenerated into demo/$(DEMO_CHECK_DIR))"
+	@cd demo && go run ./gen -out $(DEMO_CHECK_DIR) >/dev/null && \
+		diff -r $(DEMO_CHECK_DIR)/scl scl && diff -r $(DEMO_CHECK_DIR)/nsd nsd && diff -r $(DEMO_CHECK_DIR)/captures captures && \
+		test -z "$$($(GOFMT_CI) -l .)" && go vet ./... && go test -count=1 -race ./...
+
+demo-ieds: ## Serve the demo IEDs live on 127.0.0.1:10201-10205 (Ctrl-C stops)
+	@cd demo && go run ./ieds
 
 corpus: ## Open every IED of the private SCL corpus offline and run the workflow (IEC61850_SCL_CORPUS=<checkout>)
 	IEC61850_SCL_CORPUS_REQUIRE=1 go test -count=1 -run TestSCLCorpusOffline -v ./internal/engine/ | grep -E '^(--- FAIL|ok|FAIL)|corpus_stress_test.go'
@@ -90,11 +110,11 @@ coverage-clean: ## Remove coverage artifacts
 
 fmt: ## Format Go code with the gofmt of the Go version in go.mod (what CI uses)
 	@echo "Running gofmt (go$(GO_MOD_VERSION))"
-	@$(GOFMT_CI) -w cmd internal frontend/*.go
+	@$(GOFMT_CI) -w cmd internal frontend/*.go demo
 
 fmt-check: ## Fail if the go.mod-version gofmt or the local gofmt would change any file
 	@echo "Checking formatting (gofmt go$(GO_MOD_VERSION) and local $$(go env GOVERSION))"
-	@ci="$$($(GOFMT_CI) -l cmd internal frontend/*.go)"; loc="$$(gofmt -l cmd internal frontend/*.go)"; \
+	@ci="$$($(GOFMT_CI) -l cmd internal frontend/*.go demo)"; loc="$$(gofmt -l cmd internal frontend/*.go demo)"; \
 	if [ -n "$$ci$$loc" ]; then \
 		[ -z "$$ci" ] || { echo "Not formatted for gofmt go$(GO_MOD_VERSION) (CI):"; echo "$$ci"; }; \
 		[ -z "$$loc" ] || { echo "Not formatted for the local gofmt:"; echo "$$loc"; }; \

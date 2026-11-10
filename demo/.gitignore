@@ -1,0 +1,6 @@
+# Output of a bare `go build` in the command folders
+/gen/gen
+/ieds/ieds
+
+# Output of make demo-check
+/.demo-check/

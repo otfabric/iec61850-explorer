@@ -40,6 +40,15 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
   });
 
+  it('shows the three ways in at first, without the dock', async () => {
+    render(<App service={new MockService()} platform={platform()} />);
+    for (const name of ['Connect to an IED', 'Open without an IED', 'Analyse a capture']) {
+      expect(await screen.findByRole('region', { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('region', { name: 'Watch' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
+
   it('shows where a failed connect stopped and what to check', async () => {
     const user = userEvent.setup();
     render(<App service={new MockService()} platform={platform()} />);
@@ -360,7 +369,8 @@ describe('App', () => {
     const session = await service.openSession({ host: '10.0.0.5' });
     await service.startPolling(session.id, { refs: ['DemoIEDLD0/MMXU1.Hz[MX]'], interval_ms: 500 });
     render(<App service={service} platform={platform()} />);
-    const watch = screen.getByRole('region', { name: 'Watch' });
+    // The dock appears once the open session is known.
+    const watch = await screen.findByRole('region', { name: 'Watch' });
     expect(await within(watch).findByText('DemoIEDLD0/MMXU1.Hz[MX]')).toBeInTheDocument();
     expect(within(watch).getByRole('button', { name: 'Stop polling' })).toBeInTheDocument();
     await service.stopPolling(session.id);
