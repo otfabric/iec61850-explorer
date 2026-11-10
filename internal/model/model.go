@@ -15,7 +15,7 @@ const AppName = "iec61850-explorer"
 
 // APIVersion is the version of the Service contract and of the HTTP API. The
 // major part changes on incompatible changes, the minor part on additions.
-const APIVersion = "0.4"
+const APIVersion = "0.5"
 
 // DefaultPort is the MMS port (ISO-on-TCP, RFC 1006).
 const DefaultPort = 102
@@ -173,6 +173,11 @@ type SessionInfo struct {
 	// Proxy is the proxy the session connected through, with the password
 	// replaced; empty for a direct connection or an offline session.
 	Proxy string `json:"proxy,omitempty"`
+	// Kind is live, scl, snapshot or trace (SessionKind*).
+	Kind string `json:"kind"`
+	// Trace is set for a trace session: a capture analysed offline. It
+	// has no IED model of its own; its State is offline.
+	Trace *TraceOrigin `json:"trace,omitempty"`
 }
 
 // SCLOrigin names where an offline session's model came from.
@@ -555,6 +560,10 @@ type Operation struct {
 	Requests   []MMSRequest `json:"requests"`
 	// RequestsDropped counts requests beyond the ones listed.
 	RequestsDropped int `json:"requests_dropped,omitempty"`
+	// Wire numbers the operation for Service.Wire, which returns the MMS
+	// units it sent and received; 0 when none were recorded (an offline
+	// session).
+	Wire uint64 `json:"wire,omitempty"`
 }
 
 // MaxOperationRequests bounds Operation.Requests.

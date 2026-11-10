@@ -15,13 +15,14 @@ import { SCLDialog } from './components/SCLDialog';
 import { SearchBox } from './components/SearchBox';
 import { SessionBar } from './components/SessionBar';
 import { SessionTabs, sessionLabel } from './components/SessionTabs';
+import { TracePanel } from './components/TracePanel';
 import { Button } from './components/ui';
 import { WatchTable } from './components/WatchTable';
 import { ErrorIcon } from './icons';
 import type { Platform } from './platform/platform';
 import type { Service } from './service/service';
 import type { ExportFormat, FileUpload, SCLInfo, TargetConfig } from './service/types';
-import { useExplorer, watchedRefs, watchKey, type SessionView } from './state/useExplorer';
+import { isTrace, useExplorer, watchedRefs, watchKey, type SessionView } from './state/useExplorer';
 import { useTheme } from './state/useTheme';
 
 interface AppProps {
@@ -83,10 +84,17 @@ export function App({ service, platform }: AppProps) {
     }
   }
 
+  async function exportTrace(id: string, format: ExportFormat) {
+    const file = await explorer.exportSession(id, format, []);
+    if (file) {
+      await platform.saveFile(file.name, file.mime, file.text);
+    }
+  }
+
   async function readAll() {
     for (const v of views) {
       const refs = watchedRefs(state.watch, v.info.id);
-      if (refs.length > 0 && (v.info.state === 'connected' || v.info.snapshot)) {
+      if (refs.length > 0 && !isTrace(v.info) && (v.info.state === 'connected' || v.info.snapshot)) {
         await explorer.read(v.info.id, refs);
       }
     }
@@ -122,12 +130,27 @@ export function App({ service, platform }: AppProps) {
                 onDeleteProfile={(id) => void explorer.deleteProfile(id)}
                 onOpenSCL={(file) => void inspect(file)}
                 onOpenSnapshot={(file) => void explorer.openSnapshot(file)}
+                onOpenTrace={(file, ports) => void explorer.openTrace(file, ports)}
                 settings={state.settings}
                 onSaveSettings={explorer.saveSettings}
               />
             </>
           )}
-          {view && (
+          {view && isTrace(view.info) && (
+            <div className="flex h-full min-h-0 flex-col">
+              <SessionBar info={view.info} panel={undefined} onToggle={() => {}} onClose={() => void explorer.close(view.info.id)} />
+              <TracePanel
+                key={view.info.id}
+                service={service}
+                session={view.info}
+                models={views.map((v) => v.info).filter((i) => !isTrace(i) && i.state !== 'closed')}
+                label={label}
+                onLink={(other) => explorer.linkTrace(view.info.id, other)}
+                onExport={(format) => void exportTrace(view.info.id, format)}
+              />
+            </div>
+          )}
+          {view && !isTrace(view.info) && (
             <div className="flex h-full min-h-0 flex-col">
               <SessionBar
                 info={view.info}
@@ -170,7 +193,7 @@ export function App({ service, platform }: AppProps) {
                     key={view.info.id}
                     service={service}
                     session={view.info}
-                    others={views.map((v) => v.info).filter((i) => i.id !== view.info.id && i.state !== 'closed')}
+                    others={views.map((v) => v.info).filter((i) => i.id !== view.info.id && i.state !== 'closed' && !isTrace(i))}
                     label={label}
                   />
                 ) : panel[view.info.id] === 'files' && view.info.state === 'connected' ? (
@@ -255,7 +278,7 @@ export function App({ service, platform }: AppProps) {
                 onExport={(format) => void exportActive(format)}
               />
             ) : bottom === 'activity' ? (
-              <ActivityPanel activity={state.activity} />
+              <ActivityPanel activity={state.activity} service={service} />
             ) : bottom === 'reports' ? (
               <ReportsPanel reports={state.reports} label={label} />
             ) : (

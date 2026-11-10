@@ -46,6 +46,16 @@ import type {
   SessionInfo,
   SettingGroups,
   TargetConfig,
+  FindingsQuery,
+  Timeline,
+  TimelineQuery,
+  TraceAssociation,
+  TraceFindings,
+  TraceReports,
+  TraceReportsQuery,
+  TraceStreams,
+  TraceSummary,
+  WireView,
 } from '../../app/service/types';
 
 const BINDING = 'github.com/otfabric/iec61850-explorer/internal/gui.App';
@@ -134,6 +144,15 @@ export class WailsService implements Service {
   deleteDataSet = (id: string, ref: string) => call<void>('DeleteDataSet', id, ref);
   selectActiveSG = (id: string, req: SelectSGRequest) => call<SettingGroups>('SelectActiveSG', id, req);
   settingGroups = (id: string, ld: string) => call<SettingGroups>('SettingGroups', id, ld);
+  openTrace = (file: FileUpload, ports: number[]) => call<SessionInfo>('OpenTrace', { file: toGoFile(file), ports });
+  linkTrace = (id: string, session: string) => call<SessionInfo>('LinkTrace', id, { session });
+  traceSummary = (id: string) => call<TraceSummary>('TraceSummary', id);
+  traceAssociations = (id: string) => call<TraceAssociation[]>('TraceAssociations', id);
+  traceTimeline = (id: string, query: TimelineQuery) => call<Timeline>('TraceTimeline', id, query);
+  traceReports = (id: string, query: TraceReportsQuery) => call<TraceReports>('TraceReports', id, query);
+  traceStreams = (id: string) => call<TraceStreams>('TraceStreams', id);
+  traceFindings = (id: string, query: FindingsQuery) => call<TraceFindings>('TraceFindings', id, query);
+  wire = (id: string, operation: number) => call<WireView>('Wire', id, operation);
   profiles = () => call<Profile[]>('Profiles');
   saveProfile = (profile: Profile) => call<Profile>('SaveProfile', profile);
   deleteProfile = (id: string) => call<void>('DeleteProfile', id);

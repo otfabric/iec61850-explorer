@@ -118,6 +118,15 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("POST "+prefix+"/sessions/{id}/datasets", s.createDataSet)
 	api.HandleFunc("DELETE "+prefix+"/sessions/{id}/datasets", s.deleteDataSet)
 	api.HandleFunc("PUT "+prefix+"/sessions/{id}/setting-groups/active", s.selectActiveSG)
+	api.HandleFunc("POST "+prefix+"/traces/open", s.openTrace)
+	api.HandleFunc("PUT "+prefix+"/sessions/{id}/trace/link", s.linkTrace)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/trace/summary", s.traceSummary)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/trace/associations", s.traceAssociations)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/trace/timeline", s.traceTimeline)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/trace/reports", s.traceReports)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/trace/streams", s.traceStreams)
+	api.HandleFunc("POST "+prefix+"/sessions/{id}/trace/findings", s.traceFindings)
+	api.HandleFunc("GET "+prefix+"/sessions/{id}/wire", s.wire)
 	api.HandleFunc("POST "+prefix+"/scl/inspect", s.inspectSCL)
 	api.HandleFunc("POST "+prefix+"/scl/open", s.openSCL)
 	api.HandleFunc("GET "+prefix+"/profiles", s.profiles)
@@ -492,6 +501,95 @@ func (s *server) openSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := s.svc.OpenSnapshot(r.Context(), f)
 	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+// openTrace takes a capture as the raw request body; ?name= names it and
+// ?ports= lists the MMS ports (comma separated, default 102).
+func (s *server) openTrace(w http.ResponseWriter, r *http.Request) {
+	var ports []int
+	if raw := strings.TrimSpace(r.URL.Query().Get("ports")); raw != "" {
+		for p := range strings.SplitSeq(raw, ",") {
+			n, err := strconv.Atoi(strings.TrimSpace(p))
+			if err != nil {
+				s.fail(w, r, service.Errorf(service.CodeInvalidArgument, "ports: %q is not a port number", p))
+				return
+			}
+			ports = append(ports, n)
+		}
+	}
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, model.MaxTraceBytes))
+	if err != nil {
+		if _, tooBig := errors.AsType[*http.MaxBytesError](err); tooBig {
+			s.fail(w, r, service.Errorf(service.CodeLimitExceeded, "the capture is larger than %d MiB", model.MaxTraceBytes>>20))
+		} else {
+			s.fail(w, r, service.Errorf(service.CodeInvalidArgument, "the capture could not be read: %v", err))
+		}
+		return
+	}
+	v, err := s.svc.OpenTrace(r.Context(), model.OpenTraceRequest{File: model.File{Name: r.URL.Query().Get("name"), Data: data}, Ports: ports})
+	s.replyStatus(w, r, http.StatusCreated, v, err)
+}
+
+func (s *server) linkTrace(w http.ResponseWriter, r *http.Request) {
+	var req model.LinkTraceRequest
+	if !s.decode(w, r, &req) {
+		return
+	}
+	v, err := s.svc.LinkTrace(r.Context(), r.PathValue("id"), req)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceSummary(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.TraceSummary(r.Context(), r.PathValue("id"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceAssociations(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.TraceAssociations(r.Context(), r.PathValue("id"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceTimeline(w http.ResponseWriter, r *http.Request) {
+	var q model.TimelineQuery
+	if !s.decode(w, r, &q) {
+		return
+	}
+	v, err := s.svc.TraceTimeline(r.Context(), r.PathValue("id"), q)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceReports(w http.ResponseWriter, r *http.Request) {
+	var q model.TraceReportsQuery
+	if !s.decode(w, r, &q) {
+		return
+	}
+	v, err := s.svc.TraceReports(r.Context(), r.PathValue("id"), q)
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceStreams(w http.ResponseWriter, r *http.Request) {
+	v, err := s.svc.TraceStreams(r.Context(), r.PathValue("id"))
+	s.reply(w, r, v, err)
+}
+
+func (s *server) traceFindings(w http.ResponseWriter, r *http.Request) {
+	var q model.FindingsQuery
+	if !s.decode(w, r, &q) {
+		return
+	}
+	v, err := s.svc.TraceFindings(r.Context(), r.PathValue("id"), q)
+	s.reply(w, r, v, err)
+}
+
+// wire returns the units of ?operation= (Operation.Wire).
+func (s *server) wire(w http.ResponseWriter, r *http.Request) {
+	op, err := strconv.ParseUint(r.URL.Query().Get("operation"), 10, 64)
+	if err != nil {
+		s.fail(w, r, service.Errorf(service.CodeInvalidArgument, "operation must be an operation number"))
+		return
+	}
+	v, err := s.svc.Wire(r.Context(), r.PathValue("id"), op)
+	s.reply(w, r, v, err)
 }
 
 // sclFile reads an SCL document sent as the raw request body; ?name= names

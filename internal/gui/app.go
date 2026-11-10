@@ -292,6 +292,51 @@ func (a *App) SaveDeviceFile(ctx context.Context, id, name string) (string, erro
 	return path, nil
 }
 
+// OpenTrace implements the frontend's Service.
+func (a *App) OpenTrace(ctx context.Context, req model.OpenTraceRequest) (model.SessionInfo, error) {
+	return a.svc.OpenTrace(ctx, req)
+}
+
+// LinkTrace implements the frontend's Service.
+func (a *App) LinkTrace(ctx context.Context, id string, req model.LinkTraceRequest) (model.SessionInfo, error) {
+	return a.svc.LinkTrace(ctx, id, req)
+}
+
+// TraceSummary implements the frontend's Service.
+func (a *App) TraceSummary(ctx context.Context, id string) (model.TraceSummary, error) {
+	return a.svc.TraceSummary(ctx, id)
+}
+
+// TraceAssociations implements the frontend's Service.
+func (a *App) TraceAssociations(ctx context.Context, id string) ([]model.TraceAssociation, error) {
+	return a.svc.TraceAssociations(ctx, id)
+}
+
+// TraceTimeline implements the frontend's Service.
+func (a *App) TraceTimeline(ctx context.Context, id string, q model.TimelineQuery) (model.Timeline, error) {
+	return a.svc.TraceTimeline(ctx, id, q)
+}
+
+// TraceReports implements the frontend's Service.
+func (a *App) TraceReports(ctx context.Context, id string, q model.TraceReportsQuery) (model.TraceReports, error) {
+	return a.svc.TraceReports(ctx, id, q)
+}
+
+// TraceStreams implements the frontend's Service.
+func (a *App) TraceStreams(ctx context.Context, id string) (model.TraceStreams, error) {
+	return a.svc.TraceStreams(ctx, id)
+}
+
+// TraceFindings implements the frontend's Service.
+func (a *App) TraceFindings(ctx context.Context, id string, q model.FindingsQuery) (model.TraceFindings, error) {
+	return a.svc.TraceFindings(ctx, id, q)
+}
+
+// Wire implements the frontend's Service.
+func (a *App) Wire(ctx context.Context, id string, operation uint64) (model.WireView, error) {
+	return a.svc.Wire(ctx, id, operation)
+}
+
 // InspectSCL parses an SCL document the user chose in the window.
 func (a *App) InspectSCL(ctx context.Context, f model.File) (model.SCLInfo, error) {
 	return a.svc.InspectSCL(ctx, f)

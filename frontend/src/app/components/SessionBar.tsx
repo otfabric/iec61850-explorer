@@ -15,6 +15,22 @@ interface SessionBarProps {
 /** What the open tab is: an IED, an SCL model or a snapshot. */
 export function SessionBar({ info, panel, onToggle, onCommission, onClose }: SessionBarProps) {
   const { identity, discovery } = info;
+  if (info.trace) {
+    return (
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-2">
+        <Chip tone="neutral">capture</Chip>
+        <span className="font-mono text-fg-strong">{info.trace.file}</span>
+        <span className="text-muted">
+          {info.trace.format}
+          {info.trace.gzip ? ' (gzip)' : ''} · {info.trace.packets} packets · MMS ports {info.trace.ports.join(', ')}
+        </span>
+        {info.trace.damaged && <Chip tone="wire">damaged: read up to the damage</Chip>}
+        <Button className="ml-auto" icon={<CloseIcon size={16} />} onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    );
+  }
   const tone = info.state === 'connected' ? 'accent' : info.state === 'offline' ? 'neutral' : 'wire';
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-line bg-surface px-4 py-2">

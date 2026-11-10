@@ -141,6 +141,50 @@ func (c *httpService) Export(ctx context.Context, id string, req model.ExportReq
 	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/export", req, &v)
 }
 
+func (c *httpService) OpenTrace(ctx context.Context, r model.OpenTraceRequest) (v model.SessionInfo, err error) {
+	q := url.Values{}
+	if len(r.Ports) > 0 {
+		ports := make([]string, len(r.Ports))
+		for i, p := range r.Ports {
+			ports[i] = strconv.Itoa(p)
+		}
+		q.Set("ports", strings.Join(ports, ","))
+	}
+	return v, c.sclRequest(ctx, "/api/v1/traces/open", r.File, q, &v)
+}
+
+func (c *httpService) LinkTrace(ctx context.Context, id string, r model.LinkTraceRequest) (v model.SessionInfo, err error) {
+	return v, c.do(ctx, "PUT", "/api/v1/sessions/"+id+"/trace/link", r, &v)
+}
+
+func (c *httpService) TraceSummary(ctx context.Context, id string) (v model.TraceSummary, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/trace/summary", nil, &v)
+}
+
+func (c *httpService) TraceAssociations(ctx context.Context, id string) (v []model.TraceAssociation, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/trace/associations", nil, &v)
+}
+
+func (c *httpService) TraceTimeline(ctx context.Context, id string, q model.TimelineQuery) (v model.Timeline, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/trace/timeline", q, &v)
+}
+
+func (c *httpService) TraceReports(ctx context.Context, id string, q model.TraceReportsQuery) (v model.TraceReports, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/trace/reports", q, &v)
+}
+
+func (c *httpService) TraceStreams(ctx context.Context, id string) (v model.TraceStreams, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/trace/streams", nil, &v)
+}
+
+func (c *httpService) TraceFindings(ctx context.Context, id string, q model.FindingsQuery) (v model.TraceFindings, err error) {
+	return v, c.do(ctx, "POST", "/api/v1/sessions/"+id+"/trace/findings", q, &v)
+}
+
+func (c *httpService) Wire(ctx context.Context, id string, operation uint64) (v model.WireView, err error) {
+	return v, c.do(ctx, "GET", "/api/v1/sessions/"+id+"/wire?operation="+strconv.FormatUint(operation, 10), nil, &v)
+}
+
 func (c *httpService) OpenSnapshot(ctx context.Context, f model.File) (v model.SessionInfo, err error) {
 	return v, c.sclRequest(ctx, "/api/v1/snapshots/open", f, url.Values{}, &v)
 }

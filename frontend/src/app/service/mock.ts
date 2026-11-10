@@ -47,8 +47,19 @@ import type {
   ControlRequest,
   ControlResult,
   ControlStep,
+  FindingsQuery,
+  Timeline,
+  TimelineQuery,
+  TraceAssociation,
+  TraceFindings,
+  TraceReports,
+  TraceReportsQuery,
+  TraceStreams,
+  TraceSummary,
+  WireView,
 } from './types';
 import { WRITABLE_FCS } from './types';
+import { MockTrace, mockWire } from './mockTrace';
 
 const LD = 'DemoIEDLD0';
 
@@ -123,6 +134,9 @@ export class MockService implements Service {
   private createdSets: DataSet[] = [];
   private actSG = 1;
   private ctlNum = 0;
+  private traces = new Map<string, MockTrace>();
+  private wires = new Map<number, number[]>();
+  private wireSeq = 0;
   /** Attributes the mock can write, with their values. */
   private attrs = new Map<string, Value>([
     [`${LD}/LLN0.Mod.ctlModel[CF]`, { name: 'ctlModel', type: 'integer', text: '0', json: 0 }],
@@ -169,6 +183,7 @@ export class MockService implements Service {
   }
 
   async closeSession(id: string): Promise<void> {
+    this.traces.delete(id);
     await this.stopPolling(id);
     const session = this.sessionsById.get(id);
     this.sessionsById.delete(id);
@@ -182,7 +197,9 @@ export class MockService implements Service {
   }
 
   async browse(id: string, ref: string): Promise<ModelNode[]> {
-    this.session(id);
+    if (this.session(id).trace) {
+      throw new ServiceError('not_allowed', 'a trace session has no IED model');
+    }
     const nodes = TREE[ref];
     if (!nodes) {
       throw new ServiceError('not_found', `${ref} is not in the discovered model`);
@@ -258,6 +275,11 @@ export class MockService implements Service {
 
   async exportSession(id: string, format: ExportFormat, refs: string[]): Promise<ExportFile> {
     const session = this.session(id);
+    if (format === 'findings-csv' || format === 'findings-json' || format === 'timeline-csv' || format === 'timeline-json') {
+      const { trace } = this.trace(id);
+      const [what, ext] = format.split('-') as ['findings' | 'timeline', 'csv' | 'json'];
+      return { name: `${trace.file}-${what}.${ext}`, mime: ext === 'csv' ? 'text/csv' : 'application/json', text: trace.exportText(what, ext === 'json') };
+    }
     if (format === 'points-csv' || format === 'points-json') {
       const point = { ref: `${LD}/MMXU1.Hz.mag.f[MX]`, ln_class: 'MMXU', cdc: 'MV', type: 'FLOAT32', quantity: 'frequency', unit: 'Hz' };
       return format === 'points-csv'
@@ -275,6 +297,91 @@ export class MockService implements Service {
       values: refs.map((r) => this.value(r)),
     };
     return { name: 'iec61850-mock.json', mime: 'application/json', text: JSON.stringify(snapshot) };
+  }
+
+  async openTrace(file: FileUpload, ports: number[]): Promise<SessionInfo> {
+    if (!/\.(pcap|pcapng|cap|gz)$/i.test(file.name)) {
+      throw new ServiceError('invalid_argument', `${file.name} is not a pcap or pcapng capture`);
+    }
+    const used = ports.length > 0 ? ports : [102];
+    const trace = new MockTrace(file.name, used);
+    const session = this.add({
+      target: { host: '' },
+      state: 'offline',
+      discovery: { logical_devices: 0, logical_nodes: 0, data_objects: 0, nodes: 0, duration_ms: 0 },
+      trace: { file: file.name, format: 'pcapng', packets: 42, sha256: trace.summary().file.sha256, ports: used },
+    });
+    this.traces.set(session.id, trace);
+    return session;
+  }
+
+  async linkTrace(id: string, other: string): Promise<SessionInfo> {
+    const { session, trace } = this.trace(id);
+    if (other === '') {
+      trace.link = undefined;
+    } else {
+      const target = this.session(other);
+      if (target.trace) {
+        throw new ServiceError('invalid_argument', 'a trace session cannot be linked to another trace session');
+      }
+      const kind = target.snapshot ? 'snapshot' : target.scl ? 'scl' : 'live';
+      trace.link = {
+        session_id: other,
+        kind,
+        label: target.scl ? target.scl.ied : target.snapshot ? target.snapshot.file : `${target.target.host}:${target.target.port ?? 102}`,
+        linked_at: new Date().toISOString(),
+        data_sets: kind === 'snapshot' ? 0 : 2,
+        rcbs: kind === 'snapshot' ? 0 : 3,
+        gocbs: 0,
+        notes: kind === 'snapshot' ? ['A snapshot holds no data set or report control block definitions: reports are shown as captured.'] : ['The model defines no GOOSE control blocks.'],
+      };
+    }
+    const next: SessionInfo = { ...session, trace: { ...session.trace!, ...(trace.link ? { link: trace.link } : { link: undefined }) } };
+    this.sessionsById.set(id, next);
+    this.emit({ kind: 'session', session_id: id, session: next });
+    return next;
+  }
+
+  async traceSummary(id: string): Promise<TraceSummary> {
+    return this.trace(id).trace.summary();
+  }
+
+  async traceAssociations(id: string): Promise<TraceAssociation[]> {
+    return this.trace(id).trace.associations();
+  }
+
+  async traceTimeline(id: string, query: TimelineQuery): Promise<Timeline> {
+    return this.trace(id).trace.timeline(query);
+  }
+
+  async traceReports(id: string, query: TraceReportsQuery): Promise<TraceReports> {
+    return this.trace(id).trace.reports(query);
+  }
+
+  async traceStreams(id: string): Promise<TraceStreams> {
+    return this.trace(id).trace.streams();
+  }
+
+  async traceFindings(id: string, query: FindingsQuery): Promise<TraceFindings> {
+    return this.trace(id).trace.findings(query);
+  }
+
+  async wire(id: string, operation: number): Promise<WireView> {
+    this.session(id);
+    const ids = this.wires.get(operation);
+    if (!ids) {
+      throw new ServiceError('not_found', `no operation ${operation} is held for this session`);
+    }
+    return mockWire(id, operation, ids);
+  }
+
+  private trace(id: string): { session: SessionInfo; trace: MockTrace } {
+    const session = this.session(id);
+    const trace = this.traces.get(id);
+    if (!trace) {
+      throw new ServiceError('invalid_argument', 'not a trace session');
+    }
+    return { session, trace };
   }
 
   async openSnapshot(file: FileUpload): Promise<SessionInfo> {
@@ -838,6 +945,7 @@ export class MockService implements Service {
       mode: 'observe',
       opened_at: new Date().toISOString(),
       discovery: { logical_devices: 1, logical_nodes: 2, data_objects: 3, nodes: 3, duration_ms: 3 },
+      kind: parts.trace ? 'trace' : parts.snapshot ? 'snapshot' : parts.scl ? 'scl' : 'live',
       ...parts,
     };
     this.sessionsById.set(session.id, session);
@@ -885,6 +993,12 @@ export class MockService implements Service {
   }
 
   private operation(sessionId: string | undefined, op: Omit<Operation, 'started_at' | 'duration_ms' | 'requests'>): void {
+    const invokeId = this.seq;
+    let wire: number | undefined;
+    if (sessionId && this.sessionsById.get(sessionId)?.state === 'connected') {
+      wire = ++this.wireSeq;
+      this.wires.set(wire, [invokeId]);
+    }
     this.emit({
       kind: 'operation',
       session_id: sessionId,
@@ -892,7 +1006,8 @@ export class MockService implements Service {
         ...op,
         started_at: new Date().toISOString(),
         duration_ms: 1,
-        requests: [{ service: op.action === 'read' ? 'Read' : 'Identify', invoke_id: this.seq, duration_ms: 0.4 }],
+        requests: [{ service: op.action === 'read' ? 'Read' : 'Identify', invoke_id: invokeId, duration_ms: 0.4 }],
+        ...(wire ? { wire } : {}),
       },
     });
   }

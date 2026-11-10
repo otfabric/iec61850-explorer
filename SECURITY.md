@@ -80,6 +80,14 @@ IEC 61850 MMS as most IEDs run it carries no authentication and no encryption: a
 
 SCL files and snapshots come from users and other tools. The engine never opens a path a client names: the user interface reads the file the user chose and hands over its bytes, at most 64 MiB. SCL is parsed by go-iec61850's parser (Go's `encoding/xml`, which resolves no external entities); a snapshot is checked for its schema and for a consistent tree before it is used. Strings from either are rendered as text, never as markup; CSV exports prefix text a spreadsheet would take for a formula.
 
+### Captures Are Untrusted Input
+
+A capture (pcap or pcapng, plain or gzip) comes from a user and from whatever was on the network. The engine reads no path: the user interface hands over the file's bytes, at most 256 MiB. It is analysed by go-mms-trace, which bounds its own buffers (packet records, IP reassembly, TCP reassembly, a transport unit at 16 MiB) and fuzzes its reader and pipeline; MMS is decoded by go-mms and GOOSE and SV by go-iec61850, which fuzz their decoders. The result of an analysis is not bounded by those limits: it grows with the capture and stays in memory while its trace session is open, so at most 4 trace sessions are open at once. Strings from a capture are rendered as text; CSV exports protect cells against formulas. A capture is never replayed and nothing is sent because of it. Authentication values in a captured AARQ are never decoded, only the mechanism.
+
+### The Wire View Holds the Explorer's Own Traffic
+
+For each operation of a live session the engine keeps the MMS units it sent and received (at most 256 units and 4 MiB per session, in memory, gone when the session closes) and shows them decoded and as hex to whoever may use the engine (the daemon's token holders). They are what the session read from the IED; they are never logged. The Explorer sends no AARQ authentication; the hex of one that carries authentication would be withheld.
+
 ### Profiles
 
 Connection profiles hold addresses, ISO selectors, notes and a proxy URL. A proxy URL may contain a user name and password; it is stored as given, like the rest of the profile, in a file with mode 0600 in the data directory, and the profile list returns it to whoever may use the engine (the daemon's token holders). The default proxy is kept the same way in `settings.json`. Everywhere else (sessions, events, logs, error messages, snapshots) a proxy password is replaced by `xxxxx`; the operator's default proxy is shown to users of the daemon with its password replaced.

@@ -105,7 +105,13 @@ export interface SessionInfo {
   grant?: Grant;
   /** The proxy the session connected through, password replaced; absent for a direct connection. */
   proxy?: string;
+  /** live, scl, snapshot or trace. */
+  kind?: SessionKind;
+  /** Set for a trace session: a capture analysed offline (state 'offline', no IED model). */
+  trace?: TraceOrigin;
 }
+
+export type SessionKind = 'live' | 'scl' | 'snapshot' | 'trace';
 
 export interface SCLOrigin {
   file: string;
@@ -193,7 +199,15 @@ export interface SCLInfo {
   diagnostics_dropped?: number;
 }
 
-export type ExportFormat = 'snapshot' | 'csv' | 'points-csv' | 'points-json';
+export type ExportFormat =
+  | 'snapshot'
+  | 'csv'
+  | 'points-csv'
+  | 'points-json'
+  | 'findings-csv'
+  | 'findings-json'
+  | 'timeline-csv'
+  | 'timeline-json';
 
 export interface ExportFile {
   name: string;
@@ -322,6 +336,8 @@ export interface Operation {
   error?: OpError;
   requests: MMSRequest[];
   requests_dropped?: number;
+  /** Numbers the operation for Service.wire; absent when no units were recorded. */
+  wire?: number;
 }
 
 export type EventKind = 'session' | 'operation' | 'sample' | 'resync' | 'audit' | 'report';
@@ -721,4 +737,299 @@ export interface Conformance {
   data_objects: number;
   truncated: boolean;
   duration_ms: number;
+}
+
+// Trace analysis (M4): internal/model/trace.go.
+
+export const DEFAULT_TRACE_PAGE = 200;
+export const MAX_TRACE_PAGE = 1000;
+export const DEFAULT_MMS_PORT = 102;
+
+export interface TraceLink {
+  session_id: string;
+  kind: 'live' | 'scl' | 'snapshot';
+  label: string;
+  linked_at: Timestamp;
+  data_sets: number;
+  rcbs: number;
+  gocbs: number;
+  notes: string[];
+}
+
+export interface TraceOrigin {
+  file: string;
+  format: string;
+  gzip?: boolean;
+  packets: number;
+  sha256: string;
+  ports: number[];
+  damaged?: boolean;
+  link?: TraceLink;
+}
+
+export interface TraceFile {
+  name: string;
+  format: string;
+  gzip?: boolean;
+  sha256: string;
+  bytes: number;
+  packets: number;
+  interfaces: number;
+  links: string[];
+  truncated_tail?: boolean;
+  skipped_blocks?: number;
+  first?: Timestamp;
+  last?: Timestamp;
+  duration_ms: number;
+  damaged?: boolean;
+  damage?: string;
+  ports: number[];
+}
+
+export interface TraceCounters {
+  unsupported: Record<string, number>;
+  tpkt_resync: number;
+  cotp_errors: number;
+  tsdu_errors: number;
+  bare_mms: number;
+  tso_segments: number;
+  goose_errors: number;
+  sv_errors: number;
+}
+
+export interface TraceSummary {
+  file: TraceFile;
+  counters: TraceCounters;
+  associations: number;
+  transactions: number;
+  by_status: Record<string, number>;
+  by_service: Record<string, number>;
+  reports: number;
+  goose: number;
+  sv: number;
+  findings: Record<string, number>;
+  link?: TraceLink;
+  engine: string;
+}
+
+export interface TraceInitiate {
+  local_detail: number;
+  max_serv_outstanding_calling: number;
+  max_serv_outstanding_called: number;
+  data_structure_nesting: number;
+  version: number;
+}
+
+export interface TraceAssociation {
+  id: number;
+  client: string;
+  server: string;
+  calling_tsap?: string;
+  called_tsap?: string;
+  open: string;
+  close: string;
+  accepted?: boolean;
+  authentication?: string;
+  initiate?: TraceInitiate;
+  first?: Timestamp;
+  last?: Timestamp;
+  transactions: number;
+  reports: number;
+  unanswered: number;
+  gaps: number;
+}
+
+export type TraceStatus = 'ok' | 'error' | 'reject' | 'unanswered' | 'orphan' | 'pending';
+export const TRACE_STATUSES: TraceStatus[] = ['ok', 'error', 'reject', 'unanswered', 'orphan', 'pending'];
+
+export interface TimelineQuery {
+  association?: number;
+  service?: string;
+  status?: string[];
+  from?: Timestamp;
+  to?: Timestamp;
+  offset?: number;
+  limit?: number;
+}
+
+/** found, missing or not-iec61850; absent without a link. */
+export type Resolution = 'found' | 'missing' | 'not-iec61850' | 'unknown';
+
+export interface TraceObject {
+  mms: MMSName;
+  scope: string;
+  list?: boolean;
+  ref?: string;
+  kind?: string;
+  model?: Resolution;
+  concerns?: string[];
+}
+
+export interface WirePDU {
+  kind: string;
+  invoke_id?: number;
+  service?: string;
+  objects?: TraceObject[];
+  objects_dropped?: number;
+  values?: Value[];
+  values_dropped?: number;
+  write_results?: string[];
+  name_list?: string[];
+  name_list_more?: boolean;
+  identity?: Identity;
+  initiate?: TraceInitiate;
+  error?: string;
+  raw?: string;
+  decode_error?: string;
+}
+
+export interface TraceTransaction {
+  index: number;
+  association: number;
+  invoke_id: number;
+  service: string;
+  status: TraceStatus;
+  server_request?: boolean;
+  request_at?: Timestamp;
+  response_at?: Timestamp;
+  latency_ms?: number;
+  request_frame?: number;
+  response_frame?: number;
+  objects: TraceObject[];
+  error?: string;
+  request?: WirePDU;
+  response?: WirePDU;
+}
+
+export interface Timeline {
+  total: number;
+  offset: number;
+  transactions: TraceTransaction[];
+}
+
+export interface TraceReportsQuery {
+  association?: number;
+  offset?: number;
+  limit?: number;
+}
+
+export interface TraceReport {
+  index: number;
+  association: number;
+  at?: Timestamp;
+  frame: number;
+  list_name?: string;
+  objects?: TraceObject[];
+  rpt_id?: string;
+  rcb?: string;
+  dat_set?: string;
+  decoded: boolean;
+  seq_num?: number;
+  conf_rev?: number;
+  entries?: ReportEntry[];
+  values?: Value[];
+  note?: string;
+  decode_error?: string;
+}
+
+export interface TraceReports {
+  total: number;
+  offset: number;
+  reports: TraceReport[];
+}
+
+export interface TraceGoose {
+  src: string;
+  dst: string;
+  app_id: number;
+  vlan: number;
+  gocb_ref: string;
+  dat_set: string;
+  go_id: string;
+  conf_rev: number;
+  messages: number;
+  changes: number;
+  first?: Timestamp;
+  last?: Timestamp;
+  simulation: number;
+  nds_com: number;
+  issues: Record<string, number>;
+  max_per_second: number;
+  /** found, missing or unknown (the model defines no GOOSE control blocks); absent without a link. */
+  model?: string;
+  note?: string;
+}
+
+export interface TraceSV {
+  src: string;
+  dst: string;
+  app_id: number;
+  vlan: number;
+  sv_id: string;
+  dat_set: string;
+  conf_rev: number;
+  messages: number;
+  asdus: number;
+  lost: number;
+  repeated: number;
+  first?: Timestamp;
+  last?: Timestamp;
+  wrap: number;
+}
+
+export interface TraceStreams {
+  goose: TraceGoose[];
+  sv: TraceSV[];
+}
+
+export type TraceSeverity = 'error' | 'warning' | 'info';
+export const TRACE_SEVERITIES: TraceSeverity[] = ['error', 'warning', 'info'];
+
+export interface TraceFinding {
+  severity: TraceSeverity;
+  kind: string;
+  message: string;
+  association?: number;
+  frame?: number;
+  at?: Timestamp;
+  transaction?: number;
+  stream?: string;
+  source: string;
+  count?: number;
+}
+
+export interface FindingsQuery {
+  severity?: string;
+  kind?: string;
+  offset?: number;
+  limit?: number;
+}
+
+export interface TraceFindings {
+  total: number;
+  offset: number;
+  by_severity: Record<string, number>;
+  findings: TraceFinding[];
+}
+
+export interface WireUnit {
+  seq: number;
+  at: Timestamp;
+  direction: 'send' | 'recv';
+  association: 'observe' | 'commission';
+  bytes: number;
+  hex: string;
+  truncated?: boolean;
+  session?: string;
+  presentation?: string;
+  acse?: string;
+  pdu?: WirePDU;
+  decode_error?: string;
+}
+
+export interface WireView {
+  session_id: string;
+  operation: number;
+  units: WireUnit[];
+  note?: string;
 }

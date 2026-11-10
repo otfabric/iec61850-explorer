@@ -32,6 +32,12 @@ func appInfo() model.AppInfo {
 // Export implements service.Service.
 func (e *Engine) Export(ctx context.Context, id string, req model.ExportRequest) (model.ExportFile, error) {
 	switch req.Format {
+	case model.ExportFindingsCSV, model.ExportFindingsJSON, model.ExportTimelineCSV, model.ExportTimelineJSON:
+		_, ts, err := e.traceOf(id)
+		if err != nil {
+			return model.ExportFile{}, err
+		}
+		return exportTrace(ts, req.Format)
 	case model.ExportPointsCSV, model.ExportPointsJSON:
 		s, err := e.session(id)
 		if err != nil {
@@ -40,8 +46,9 @@ func (e *Engine) Export(ctx context.Context, id string, req model.ExportRequest)
 		return e.exportPoints(ctx, s, req.Format)
 	case model.ExportSnapshot, model.ExportCSV:
 	default:
-		return model.ExportFile{}, service.Errorf(service.CodeInvalidArgument, "export format %q: use %s, %s, %s or %s", req.Format,
-			model.ExportSnapshot, model.ExportCSV, model.ExportPointsCSV, model.ExportPointsJSON)
+		return model.ExportFile{}, service.Errorf(service.CodeInvalidArgument, "export format %q: use %s, %s, %s or %s (a trace session: %s, %s, %s or %s)", req.Format,
+			model.ExportSnapshot, model.ExportCSV, model.ExportPointsCSV, model.ExportPointsJSON,
+			model.ExportFindingsCSV, model.ExportFindingsJSON, model.ExportTimelineCSV, model.ExportTimelineJSON)
 	}
 	if len(req.Refs) > model.MaxReadRefs {
 		return model.ExportFile{}, service.Errorf(service.CodeLimitExceeded, "at most %d references", model.MaxReadRefs)

@@ -41,6 +41,13 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `TestServicesFollowCapabilities` (`internal/commission`): each capability adds only the services it needs; none adds file changes.
 - `TestContractCommission` (`internal/api`): grant, write, audit and revoke behave the same through the engine and the HTTP API, and are refused where Commission mode is not offered.
 - `TestApplyAddressing`, `TestProfilesStore`, `TestProfileEdges`: ISO addressing is validated before dialling; profiles are stored 0600 and atomically.
+- `TestTraceGapsOfSimIED` (`internal/engine`), M4's exit test: a test-only TCP relay (`tracecapture_test.go`) records the Explorer reading the simulated IED, and a test-only writer turns the recording into a classic pcap file (Ethernet, IPv4, TCP with consistent sequence numbers) with the segment that carries a Read response left out. Opened as a trace and linked to a live session of the same IED: the association shows a TCP gap, the `tcp-gap` and `unanswered` findings name their association, frame, time and source, the unanswered Read's objects resolve to `DemoIEDLD0/MMXU1.Hz[MX]` (its data object and data set) and `LLN0.Mod.stVal[ST]`, and a reference the IED does not have is a `not-in-model` finding.
+- `TestTraceReportsDecoded` (`internal/engine`): reports captured from a Commission subscription (through the relay) are decoded against the members of the `Events` data set, linked to the SCL file and to the live IED; raw, with the reason, without a link and against a snapshot.
+- `TestTraceFixtures`, `TestTraceDamagedAndInvalid`, `TestTraceExports` (`internal/engine`): the captures of `testdata/traces` (see its `NOTICE.md`): statuses, findings, filters and paging, GOOSE and SV, MMS on port 1102 found only when named, a capture captured midstream, `ErrCorrupt` (opens, with a finding) and `ErrFormat` (`invalid_argument`), gzip, the size and session limits; exports with formula-protected cells.
+- `TestWireView`, `TestWireRing` (`internal/engine`): an operation's `wire` number returns its units, decoded with go-mms, with the AARQ of the connect and the Read request and response matched by invoke ID; poll cycles keep none; the ring's bounds.
+- `TestReportLayout`, `TestReportOf`, `TestObjectOf`, `TestGooseModel`, `TestCaptureFindings` (`internal/engine`): the field layout of a report and its malformed forms, the mapping of MMS names, GOOSE control block matching, a finding for every counter, status and issue.
+- `TestTraceContract`, `TestTraceHTTP` (`internal/api`): every trace method and the wire view through the engine and the HTTP API.
+- `frontend/src/app/Trace.test.tsx`: the trace tab (summary, findings, timeline filter, the correlation picker) and the wire view of the activity panel, against the mock.
 - `TestAuthAndHost`, `TestHostCheck`, `TestEventsResume`, `TestEventsEndWhenTokenRotates`, `FuzzRequest` (`internal/api`): token, Host check, SSE replay and resync, rotation.
 
 ## Fuzz targets
@@ -51,8 +58,9 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 | `internal/daemon` | `FuzzReadToken`, `FuzzReadState` | The token file and the state file |
 | | `FuzzListenAddress`, `FuzzTargetAllowList` | The flags `--listen`, `--allow-target` |
 | `internal/web` | `FuzzHandlerPath` | A path asked of the web UI |
+| `internal/engine` | `FuzzReportLayout` | The values of a captured InformationReport, walked as the IEC 61850-8-1 report fields (`trace_report.go`) |
 
-go-mms and go-iec61850 fuzz their own decoders. A failing input lands in `testdata/fuzz/<target>/` of its package: commit it with the fix.
+go-mms, go-iec61850 and go-mms-trace fuzz their own decoders (go-mms-trace: the capture reader and the pipeline). A failing input lands in `testdata/fuzz/<target>/` of its package: commit it with the fix.
 
 ## Coverage policy
 

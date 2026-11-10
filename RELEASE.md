@@ -2,6 +2,30 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.10.0
+
+**Date:** 2026-11-10
+**Previous release:** v0.9.0
+
+### Added
+
+- **Trace analysis (M4).** Open a capture (pcap or pcapng, plain or gzip, at most 256 MiB) from the connection screen: it opens as a trace session in its own tab, analysed offline by [go-mms-trace](https://github.com/otfabric/go-mms-trace) v0.1.1. MMS ports default to 102 and can be set (1102 for iec61850-interop captures). A damaged capture opens with what was read before the damage; a file that is not a capture is refused. At most 4 trace sessions are open at once. API: `POST /api/v1/traces/open?name=&ports=`.
+- **Summary, associations, timeline, reports, streams.** The summary shows the file (format, packets, time span, SHA-256, link types), counts by status and service and the analyser's counters. Associations show their endpoints, TSAPs, AARE result, authentication mechanism (never a credential), Initiate parameters, how they opened and closed, and TCP gaps. The timeline lists the confirmed services with time, association, invoke ID, service, status (ok, error, reject, unanswered, orphan, pending), latency, the objects they name and the error, with filters (association, service, status, time window) and paging; a row opens the decoded request and response. Reports, GOOSE streams (with their issues) and Sampled Values streams (lost, repeated samples) have their own views. API: `GET .../trace/summary`, `.../trace/associations`, `.../trace/streams`; `POST .../trace/timeline`, `.../trace/reports`.
+- **Findings: the gaps of a capture.** TCP gaps, associations captured midstream, rejected, aborted, reset or still open at the end, unanswered, rejected, failed, orphan and pending transactions, PDUs that did not decode, TPKT resyncs, COTP and TSDU errors, unsupported packets, a truncated or damaged file, GOOSE sequence issues and lost or repeated SV samples; each with a severity, where it is (association, frame, time, transaction or stream) and the go-mms-trace field it comes from. API: `POST .../trace/findings`.
+- **Correlation with a model.** Link a trace to an IED, SCL or snapshot session: MMS names become IEC 61850 references (`LLN0$ST$Mod$stVal` in domain `LD` is `LD/LLN0.Mod.stVal[ST]`) and are looked up in that model, with the data object, data sets and control blocks they concern; what the model does not have is a "not in the model" finding. Captured IEC 61850 reports are matched to their report control block by RptID and decoded against the data set's members (inclusion bit string, data references, reasons) when the linked session defines them; otherwise they are shown as captured, with the reason. GOOSE streams are matched to the model's GOOSE control blocks, or the view says the model has none. A live session's definitions are read in Observe mode when it is linked. API: `PUT .../trace/link`.
+- **Exports.** Findings and the timeline as CSV (cells protected against spreadsheet formulas) or JSON (`otfabric.iec61850-explorer.trace/1`). API: export formats `findings-csv`, `findings-json`, `timeline-csv`, `timeline-json`.
+- **Wire view.** In the activity panel, an operation of a live session shows the MMS units it sent and received: direction, association (Observe or Commission), session, presentation and ACSE kinds, the decoded PDU and the bytes as hex (first 4 KiB), with the units of its requests marked by invoke ID. The engine keeps the units of the newest operations (256 units, 4 MiB per session) and never logs them. API: `GET /api/v1/sessions/{id}/wire?operation=`; operations carry `wire`.
+
+### Changed
+
+- API version 0.5: sessions carry `kind` (`live`, `scl`, `snapshot`, `trace`) and, for a trace, `trace`. The model views refuse a trace session (`invalid_argument`).
+
+### Dependencies
+
+go-mms-trace v0.1.1 (new), go-iec61850 v1.15.2, go-mms v1.7.1 (`DecodeTSDU`, used for the wire view), go-iec61850-model v0.8.2, go-cotp v1.3.0, Wails v3.0.0-beta.29.
+
+---
+
 ## v0.9.0
 
 **Date:** 2026-11-10
