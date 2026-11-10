@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/otfabric/go-iec61850 v1.16.1
-	github.com/otfabric/go-mms v1.7.1
+	github.com/otfabric/go-mms v1.7.2
 	github.com/otfabric/go-mms-trace v0.1.1
 )
 

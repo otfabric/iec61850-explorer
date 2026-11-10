@@ -7,6 +7,17 @@ Release notes, newest first. Each release has a section headed `## vX.Y.Z` with 
 **Date:** 2026-11-10
 **Previous release:** v0.11.1
 
+### Changed
+
+- **Built on go-mms v1.7.2** (was v1.7.1), in the Explorer and its demo. A TimeOfDay (BinaryTime) whose millisecond field is one day or more now decodes instead of failing the whole PDU: ISO 9506-2:2003 §7.5.1 only requires bits 28–31 to be zero, so a 4-octet value keeps the field as is (up to 2^28−1 ms, a deadline past midnight) and a 6-octet value carries it into the following days. A field with bits 28–31 set is rejected (otfabric/go-mms#30). Captures and live reads with such a value now show it instead of a decode error.
+
+---
+
+## v0.11.2
+
+**Date:** 2026-11-10
+**Previous release:** v0.11.1
+
 ### Documentation
 
 - **Playbooks** ([docs/PLAYBOOKS.md](docs/PLAYBOOKS.md)): eight task-oriented scenarios with screenshots on the demo substation: inspect an SCL file and search by quantity, check conformance (Edition 1, vendor namespaces), commission a live IED, verify it against its SCL, operate a breaker in Commission mode, analyse a station capture, find what went wrong in a capture, export a point list.

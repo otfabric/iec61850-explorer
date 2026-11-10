@@ -6,7 +6,7 @@ require (
 	github.com/otfabric/go-cotp v1.3.0
 	github.com/otfabric/go-iec61850 v1.16.1
 	github.com/otfabric/go-iec61850-model v0.8.2
-	github.com/otfabric/go-mms v1.7.1
+	github.com/otfabric/go-mms v1.7.2
 	github.com/otfabric/go-mms-trace v0.1.1
 	github.com/wailsapp/wails/v3 v3.0.0-beta.29
 )
