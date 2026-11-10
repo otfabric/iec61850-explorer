@@ -2,6 +2,21 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.10.1
+
+**Date:** 2026-11-10
+**Previous release:** v0.10.0
+
+### Changed
+
+- **Captured reports are decoded by go-iec61850.** The fields of a report in a capture (RptID, OptFlds, the optional fields, inclusion, data references, values, reasons) are decoded by go-iec61850 `DecodeReport` (v1.16.0), which is strict about the IEC 61850-8-1 report format. v0.10.0 walked them in the engine because go-iec61850's decoder was not exported. A report that does not follow the format is still shown with its values as captured, and the reason. The engine no longer decodes any protocol itself.
+
+### Dependencies
+
+go-iec61850 v1.16.0 (new: `DecodeReport`), go-mms-trace v0.1.1, go-mms v1.7.1.
+
+---
+
 ## v0.10.0
 
 **Date:** 2026-11-10
