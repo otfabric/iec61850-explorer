@@ -20,8 +20,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/otfabric/go-cotp v1.3.0 h1:IXfqzdt86GPg6+il9g2GIWLFFmtNuVBMiE2ceLrXJpo=
 github.com/otfabric/go-cotp v1.3.0/go.mod h1:0XVoeSHnOPj8XWI484tUC2U6dbaKCtVk0z18MipM37s=
-github.com/otfabric/go-iec61850 v1.16.0 h1:7ZXFQTsZxIyB9Dvenh2ZD9BMnRfael+L0LTU5aFVGUM=
-github.com/otfabric/go-iec61850 v1.16.0/go.mod h1:5yMecWO7sX3Rmlw8yiZPdzIcEv1HQau5IvKbDxWjkdQ=
+github.com/otfabric/go-iec61850 v1.16.1 h1:ieGOWx2ByuhRgqVlcCcVn/LrMZxYi64Gv/Rv74rSjAU=
+github.com/otfabric/go-iec61850 v1.16.1/go.mod h1:5yMecWO7sX3Rmlw8yiZPdzIcEv1HQau5IvKbDxWjkdQ=
 github.com/otfabric/go-iec61850-model v0.8.2 h1:g0yGeCKDx8LySPUHF2UDvMvYUIKbVCI3CnXxb+qAFW0=
 github.com/otfabric/go-iec61850-model v0.8.2/go.mod h1:jek8N2XjIQkyIe+nTh292Mzk8oLyoRGOtu2/QObKkwk=
 github.com/otfabric/go-mms v1.7.1 h1:YwqxCavFofDW/MXVsqm+7sClqKC74HVCMIVNZiyC8SE=

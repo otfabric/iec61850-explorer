@@ -332,6 +332,9 @@ func (i *IED) feederMeas(at time.Time, scale, df float64, all bool) {
 	for _, step := range i.feederSteps(at, scale, df, all) {
 		step()
 	}
+	amps, ang := i.load()
+	i.threePhase("MEAS", "MMXU1", at, fault.PhaseV, amps*scale, ang, 0)
+	i.energy("MEAS", "MMTR1", at, 3*fault.PhaseV*amps*scale, ang)
 }
 
 // feederSteps are the changes of a feeder's measurements, one data set
@@ -378,6 +381,77 @@ func (i *IED) transformerMeas(at time.Time, scale float64) {
 	angs := []float64{-16, -136, 104}
 	i.Phases("MEAS", "MMXU1", "A", at, abc, []float64{hv, hv, hv}, angs)
 	i.Phases("MEAS", "MMXU2", "A", at, abc, []float64{lvA, lvA, lvA}, angs)
+	i.threePhase("MEAS", "MMXU1", at, 110000/math.Sqrt(3), lv*20/110, -16, 50.012)
+	i.threePhase("MEAS", "MMXU2", at, fault.PhaseV, lv, -16, 0)
+	// The tap changer's motor supply: 230 V, idle at 0.4 A.
+	for do, v := range map[string]float64{"Vol": 231.2, "Amp": 0.4, "Watt": 74, "VolAmpr": 55, "VolAmp": 92.5, "PwrFact": 0.8, "Hz": 50.01} {
+		i.quietMeas("MEAS", "MMXN1", do, at, v)
+	}
+	i.quietMeas("MEAS", "MHAI1", "Hz", at, 50.012)
+	i.energy("MEAS", "MMTR1", at, 3*fault.PhaseV*lv, -16)
+}
+
+// threePhase sets the measurements of an MMXU that the reported data sets
+// leave out, quietly (no report): apparent power and power factor, the
+// voltages line to line and line to neutral, the per-phase powers and the
+// impedance seen from the voltage and current. v is the phase voltage, a
+// the phase current, ang the current's angle in degrees, hz the frequency
+// (0 leaves Hz alone).
+func (i *IED) threePhase(inst, ln string, at time.Time, v, a, ang, hz float64) {
+	rad := -ang * math.Pi / 180
+	round := func(x, step float64) float64 { return math.Round(x/step) * step }
+	abc := []string{"phsA", "phsB", "phsC"}
+	angs := []float64{0, -120, 120}
+	i.quietMeas(inst, ln, "TotVA", at, round(3*v*a, 100))
+	i.quietMeas(inst, ln, "TotPF", at, round(math.Cos(rad), 0.001))
+	if hz > 0 { // 0: Hz is a reported data set member, set elsewhere
+		i.quietMeas(inst, ln, "Hz", at, round(hz, 0.001))
+	}
+	vll := round(v*math.Sqrt(3), 1)
+	i.quietPhases(inst, ln, "PPV", at, []string{"phsAB", "phsBC", "phsCA"}, []float64{vll, vll, vll}, []float64{30, -90, 150})
+	vn := round(v, 1)
+	i.quietPhases(inst, ln, "PNV", at, abc, []float64{vn, vn, vn}, angs)
+	per := func(x float64) []float64 { return []float64{x, x, x} }
+	i.quietPhases(inst, ln, "W", at, abc, per(round(v*a*math.Cos(rad), 100)), angs)
+	i.quietPhases(inst, ln, "VAr", at, abc, per(round(v*a*math.Sin(rad), 100)), angs)
+	i.quietPhases(inst, ln, "VA", at, abc, per(round(v*a, 100)), angs)
+	i.quietPhases(inst, ln, "PF", at, abc, per(round(math.Cos(rad), 0.001)), angs)
+	if a > 0 {
+		z := round(v/a, 0.01)
+		i.quietPhases(inst, ln, "Z", at, abc, per(z), per(-ang))
+	}
+}
+
+// energy sets the counters of an MMTR (Wh, VArh, VAh), quietly: the energy
+// delivered since 2026-01-01 at power p (W) and the current's angle ang,
+// with 4 % returned (supply) and the rest drawn (demand).
+func (i *IED) energy(inst, ln string, at time.Time, p, ang float64) {
+	h := at.Sub(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)).Hours()
+	rad := -ang * math.Pi / 180
+	wh, varh := p*math.Cos(rad)*h, p*math.Sin(rad)*h
+	for do, v := range map[string]float64{
+		"TotWh": wh, "TotVArh": varh, "TotVAh": p * h,
+		"DmdWh": wh * 0.96, "DmdVArh": varh * 0.96, "SupWh": wh * 0.04, "SupVArh": varh * 0.04,
+	} {
+		i.quiet(inst, ln+"$ST$"+do+"$t", TS(at))
+		i.quiet(inst, ln+"$ST$"+do+"$actVal", mms.NewInteger(int64(v)))
+	}
+}
+
+// quietMeas sets an MV without a report.
+func (i *IED) quietMeas(inst, ln, do string, at time.Time, v float64) {
+	i.quiet(inst, ln+"$MX$"+do+"$t", TS(at))
+	i.quiet(inst, ln+"$MX$"+do+"$mag$f", mms.NewFloat(v))
+}
+
+// quietPhases sets the CMVs of a WYE or DEL without a report.
+func (i *IED) quietPhases(inst, ln, do string, at time.Time, phs []string, mag, ang []float64) {
+	for k, ph := range phs {
+		p := ln + "$MX$" + do + "$" + ph
+		i.quiet(inst, p+"$t", TS(at))
+		i.quiet(inst, p+"$cVal$mag$f", mms.NewFloat(mag[k]))
+		i.quiet(inst, p+"$cVal$ang$f", mms.NewFloat(ang[k]))
+	}
 }
 
 // interlocks derives the feeder's interlocking: the breaker may always

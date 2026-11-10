@@ -100,7 +100,16 @@ var LNodeTypes = []LNodeType{
 	{ID: "XCBR_A", Class: "XCBR", DOs: []DORef{do("Beh", "ENS_Beh"), do("Loc", "SPS_A"), do("OpCnt", "INS_A"), do("Pos", "DPC_ST"), do("BlkOpn", "SPC_ST"), do("BlkCls", "SPC_ST")}},
 	{ID: "XSWI_A", Class: "XSWI", DOs: []DORef{do("Beh", "ENS_Beh"), do("Loc", "SPS_A"), do("OpCnt", "INS_A"), do("Pos", "DPC_ST"), do("BlkOpn", "SPC_ST"), do("BlkCls", "SPC_ST"), do("SwTyp", "ENS_SwTyp")}},
 	{ID: "CILO_A", Class: "CILO", DOs: []DORef{do("Beh", "ENS_Beh"), do("EnaOpn", "SPS_A"), do("EnaCls", "SPS_A")}},
-	{ID: "MMXU_A", Class: "MMXU", DOs: []DORef{do("Beh", "ENS_Beh"), do("TotW", "MV_A"), do("TotVAr", "MV_A"), do("Hz", "MV_A"), do("PhV", "WYE_A"), do("A", "WYE_A")}},
+	{ID: "MMXU_A", Class: "MMXU", Desc: "Three-phase measurement: every quantity the Explorer's search knows", DOs: []DORef{
+		do("Beh", "ENS_Beh"), do("TotW", "MV_A"), do("TotVAr", "MV_A"), do("TotVA", "MV_A"), do("TotPF", "MV_A"), do("Hz", "MV_A"),
+		do("PPV", "DEL_A"), do("PNV", "WYE_A"), do("PhV", "WYE_A"), do("A", "WYE_A"),
+		do("W", "WYE_A"), do("VAr", "WYE_A"), do("VA", "WYE_A"), do("PF", "WYE_A"), do("Z", "WYE_A")}},
+	{ID: "MMXN_A", Class: "MMXN", Desc: "Single-phase measurement", DOs: []DORef{
+		do("Beh", "ENS_Beh"), do("Amp", "MV_A"), do("Vol", "MV_A"), do("Watt", "MV_A"), do("VolAmpr", "MV_A"), do("VolAmp", "MV_A"), do("PwrFact", "MV_A"), do("Hz", "MV_A")}},
+	{ID: "MMTR_A", Class: "MMTR", Desc: "Energy metering", DOs: []DORef{
+		do("Beh", "ENS_Beh"), do("TotWh", "BCR_A"), do("TotVArh", "BCR_A"), do("TotVAh", "BCR_A"),
+		do("SupWh", "BCR_A"), do("SupVArh", "BCR_A"), do("DmdWh", "BCR_A"), do("DmdVArh", "BCR_A")}},
+	{ID: "MHAI_A", Class: "MHAI", Desc: "Harmonics", DOs: []DORef{do("Beh", "ENS_Beh"), do("Hz", "MV_A")}},
 	{ID: "MSQI_A", Class: "MSQI", DOs: []DORef{do("Beh", "ENS_Beh"), do("SeqA", "SEQ_A")}},
 	{ID: "YPTR_A", Class: "YPTR", DOs: []DORef{do("Beh", "ENS_Beh"), do("OpOvA", "SPS_A"), do("LodFact", "MV_A")}},
 	{ID: "YLTC_CV", Class: "YLTC", Desc: "Tap changer with Corvane extension data objects", DOs: []DORef{do("Beh", "ENS_Beh"), do("NamPlt", "LPL_LN"), do("EndPosR", "SPS_A"), do("EndPosL", "SPS_A"), do("OpCnt", "INS_A"), do("TapPos", "ISC_A"), {Name: "MotDrvTmp", Type: "MV_VND", Desc: "Motor drive temperature (vendor extension)"}, {Name: "MotDrvA", Type: "MV_VND", Desc: "Motor drive current (vendor extension)"}}},
@@ -134,6 +143,8 @@ var DOTypes = []DOType{
 	{ID: "MV_VND", CDC: "MV", Elems: []DOElem{dchg(daT("mag", "MX", "Struct", "AnalogueValue")), qchg(da("q", "MX", "Quality")), da("t", "MX", "Timestamp"), val(da("dataNs", "EX", "VisString255"), VendorNS)}},
 	{ID: "CMV_A", CDC: "CMV", Elems: []DOElem{dchg(daT("cVal", "MX", "Struct", "Vector")), qchg(da("q", "MX", "Quality")), da("t", "MX", "Timestamp")}},
 	{ID: "WYE_A", CDC: "WYE", Elems: []DOElem{sdo("phsA", "CMV_A"), sdo("phsB", "CMV_A"), sdo("phsC", "CMV_A")}},
+	{ID: "DEL_A", CDC: "DEL", Elems: []DOElem{sdo("phsAB", "CMV_A"), sdo("phsBC", "CMV_A"), sdo("phsCA", "CMV_A")}},
+	{ID: "BCR_A", CDC: "BCR", Elems: []DOElem{dchg(da("actVal", "ST", "INT64")), qchg(da("q", "ST", "Quality")), da("t", "ST", "Timestamp"), val(da("pulsQty", "CF", "FLOAT32"), "1")}},
 	{ID: "SEQ_A", CDC: "SEQ", Elems: []DOElem{sdo("c1", "CMV_A"), sdo("c2", "CMV_A"), sdo("c3", "CMV_A"), val(daT("seqT", "MX", "Enum", "SequenceKind"), "pos-neg-zero")}},
 	{ID: "DPC_SBOE", CDC: "DPC", Elems: cat(status(da("stVal", "ST", "Dbpos")), []DOElem{
 		val(daT("ctlModel", "CF", "Enum", "CtlModelKind"), "sbo-with-enhanced-security"),

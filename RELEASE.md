@@ -2,6 +2,25 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.11.1
+
+**Date:** 2026-11-10
+**Previous release:** v0.11.0
+
+### Fixed
+
+- **SCL files of ABB's tools keep their addresses** (go-iec61850 v1.16.1): `<P type="IP" xsi:type="tP_IP">` was read with the type `tP_IP`, so such files opened without IP addresses, OSI selectors and GOOSE and SV MAC addresses. Optional booleans that the file leaves out take their schema default: an absent TrgOps `gi`, OptFields `bufOvfl`, SMV `multicast` or ConfDataSet `modify` read false, and an Edition 1 report control block never allowed GI.
+
+### Changed
+
+- **Demo set: every quantity of the search by quantity.** Every MMXU carries all its measurements (voltages line to line, line to neutral and line to ground, per-phase powers, power factor, impedance), the feeders and the transformer have energy meters (MMTR), the transformer an MMXN for the tap changer's motor supply and an MHAI; the search finds points for all eleven quantities. The SCL files write addresses in ABB's attribute order and `bufOvfl` explicitly; SCD and CIDs compare without differences, Edition 1 feeder included.
+
+### Dependencies
+
+go-iec61850 v1.16.1.
+
+---
+
 ## v0.11.0
 
 **Date:** 2026-11-10

@@ -29,9 +29,9 @@ type want struct {
 
 var expectations = map[string]want{
 	"01-hmi-browse-and-poll.pcapng": {
-		packets: 209,
+		packets: 245,
 		assocs:  []string{"10.20.1.31:102 associate/conclude", "10.20.1.21:102 associate/conclude", "10.20.1.41:102 associate/conclude"},
-		statuses: map[string]int{"GetNameList/ok": 22, "GetNamedVariableListAttributes/ok": 10, "GetVariableAccessAttributes/ok": 15,
+		statuses: map[string]int{"GetNameList/ok": 29, "GetNamedVariableListAttributes/ok": 10, "GetVariableAccessAttributes/ok": 15,
 			"Identify/ok": 3, "Read/ok": 12},
 	},
 	"02-reports.pcapng": {
