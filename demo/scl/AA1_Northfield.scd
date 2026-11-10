@@ -117,166 +117,166 @@
 			<BitRate unit="b/s" multiplier="M">100</BitRate>
 			<ConnectedAP iedName="AA1KA1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.10</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.10</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 			<ConnectedAP iedName="AA1E1Q01A1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.21</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.21</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 			<ConnectedAP iedName="AA1D1Q02A1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.31</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.31</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<GSE ldInst="PROT" cbName="gcbTrip">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-11</P>
-						<P xsi:type="tP_APPID" type="APPID">0101</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-11</P>
+						<P type="APPID" xsi:type="tP_APPID">0101</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">4</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<GSE ldInst="CTRL" cbName="gcbPos">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-12</P>
-						<P xsi:type="tP_APPID" type="APPID">0102</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-12</P>
+						<P type="APPID" xsi:type="tP_APPID">0102</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">4</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 			<ConnectedAP iedName="AA1D1Q03A1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.32</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.32</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<GSE ldInst="PROT" cbName="gcbTrip">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-21</P>
-						<P xsi:type="tP_APPID" type="APPID">0201</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-21</P>
+						<P type="APPID" xsi:type="tP_APPID">0201</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">4</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<GSE ldInst="CTRL" cbName="gcbPos">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-22</P>
-						<P xsi:type="tP_APPID" type="APPID">0202</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-22</P>
+						<P type="APPID" xsi:type="tP_APPID">0202</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">4</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 			<ConnectedAP iedName="AA1D1W1A1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.41</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.41</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<GSE ldInst="PROT" cbName="gcbBF">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-41</P>
-						<P xsi:type="tP_APPID" type="APPID">0401</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">6</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-41</P>
+						<P type="APPID" xsi:type="tP_APPID">0401</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">6</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">2</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 			<ConnectedAP iedName="AA1D1Q02MU1" apName="S1">
 				<Address>
-					<P xsi:type="tP_IP" type="IP">10.20.1.51</P>
-					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
-					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
-					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
-					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
-					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
-					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
-					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+					<P type="IP" xsi:type="tP_IP">10.20.1.51</P>
+					<P type="IP-SUBNET" xsi:type="tP_IP-SUBNET">255.255.255.0</P>
+					<P type="IP-GATEWAY" xsi:type="tP_IP-GATEWAY">10.20.1.1</P>
+					<P type="OSI-AP-Title" xsi:type="tP_OSI-AP-Title">1,3,9999,33</P>
+					<P type="OSI-AE-Qualifier" xsi:type="tP_OSI-AE-Qualifier">33</P>
+					<P type="OSI-PSEL" xsi:type="tP_OSI-PSEL">00000001</P>
+					<P type="OSI-SSEL" xsi:type="tP_OSI-SSEL">0001</P>
+					<P type="OSI-TSEL" xsi:type="tP_OSI-TSEL">0001</P>
 				</Address>
 				<GSE ldInst="MU01" cbName="gcbStatus">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-51</P>
-						<P xsi:type="tP_APPID" type="APPID">0501</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-01-00-51</P>
+						<P type="APPID" xsi:type="tP_APPID">0501</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">00A</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 					<MinTime unit="s" multiplier="m">4</MinTime>
 					<MaxTime unit="s" multiplier="m">1000</MaxTime>
 				</GSE>
 				<SMV ldInst="MU01" cbName="MSVCB01">
 					<Address>
-						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-04-00-01</P>
-						<P xsi:type="tP_APPID" type="APPID">4001</P>
-						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">014</P>
-						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+						<P type="MAC-Address" xsi:type="tP_MAC-Address">01-0C-CD-04-00-01</P>
+						<P type="APPID" xsi:type="tP_APPID">4001</P>
+						<P type="VLAN-ID" xsi:type="tP_VLAN-ID">014</P>
+						<P type="VLAN-PRIORITY" xsi:type="tP_VLAN-PRIORITY">4</P>
 					</Address>
 				</SMV>
 				<PhysConn type="Connection">
-					<P xsi:type="tP_Type" type="Type">FOC</P>
-					<P xsi:type="tP_Plug" type="Plug">LC</P>
+					<P type="Type" xsi:type="tP_Type">FOC</P>
+					<P type="Plug" xsi:type="tP_Plug">LC</P>
 				</PhysConn>
 			</ConnectedAP>
 		</SubNetwork>
@@ -413,7 +413,7 @@
 						</DataSet>
 						<ReportControl name="brcbTrip" desc="Protection events to the station HMI" datSet="dsTrip" rptID="AA1E1Q01A1PROT/LLN0.brcbTrip" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -478,7 +478,7 @@
 						</DataSet>
 						<ReportControl name="urcbTap" desc="Tap changer to the station HMI" datSet="dsTap" rptID="AA1E1Q01A1CTRL/LLN0.urcbTap" confRev="1" buffered="false" bufTime="100" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -545,7 +545,7 @@
 						</DataSet>
 						<ReportControl name="urcbMeas" desc="Measurements to the station HMI" datSet="dsMeas" intgPd="10000" rptID="AA1E1Q01A1MEAS/LLN0.urcbMeas" confRev="1" buffered="false" bufTime="100" indexed="false">
 							<TrgOps dchg="true" period="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -653,7 +653,7 @@
 						</DataSet>
 						<ReportControl name="brcbTrip" desc="Protection events to the station HMI" datSet="dsTrip" rptID="AA1D1Q02A1PROT/LLN0.brcbTrip" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -775,7 +775,7 @@
 						</DataSet>
 						<ReportControl name="brcbPos" desc="Switch positions to the station HMI" datSet="dsPos" rptID="AA1D1Q02A1CTRL/LLN0.brcbPos" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -825,7 +825,7 @@
 						</DataSet>
 						<ReportControl name="urcbMeas" desc="Measurements to the station HMI" datSet="dsMeas" intgPd="10000" rptID="AA1D1Q02A1MEAS/LLN0.urcbMeas" confRev="1" buffered="false" bufTime="100" indexed="false">
 							<TrgOps dchg="true" qchg="true" period="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -947,7 +947,7 @@
 						</DataSet>
 						<ReportControl name="brcbTrip" desc="Protection events to the station HMI" datSet="dsTrip" rptID="AA1D1Q03A1PROT/LLN0.brcbTrip" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -1069,7 +1069,7 @@
 						</DataSet>
 						<ReportControl name="brcbPos" desc="Switch positions to the station HMI" datSet="dsPos" rptID="AA1D1Q03A1CTRL/LLN0.brcbPos" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -1119,7 +1119,7 @@
 						</DataSet>
 						<ReportControl name="urcbMeas" desc="Measurements to the station HMI" datSet="dsMeas" intgPd="10000" rptID="AA1D1Q03A1MEAS/LLN0.urcbMeas" confRev="1" buffered="false" bufTime="100" indexed="false">
 							<TrgOps dchg="true" qchg="true" period="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>
@@ -1243,7 +1243,7 @@
 						</DataSet>
 						<ReportControl name="brcbTrip" desc="Protection events to the station HMI" datSet="dsTrip" rptID="AA1D1W1A1PROT/LLN0.brcbTrip" confRev="1" buffered="true" bufTime="50" indexed="false">
 							<TrgOps dchg="true" qchg="true" gi="true"/>
-							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true" bufOvfl="false"/>
 							<RptEnabled max="2">
 								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
 							</RptEnabled>

@@ -216,9 +216,9 @@ func writeSubstation(w *xw) {
 }
 
 func p(w *xw, typ, v string) {
-	// xsi:type comes first: go-iec61850 v1.16.0 takes a later xsi:type
-	// for the P type (see README, gaps).
-	w.text("P", v, "xsi:type", "tP_"+typ, "type", typ)
+	// type before xsi:type, as ABB's tools write it (go-iec61850 reads it
+	// since v1.16.1).
+	w.text("P", v, "type", typ, "xsi:type", "tP_"+typ)
 }
 
 func writeCommunication(w *xw, ieds []*IED) {
@@ -346,8 +346,10 @@ func writeLN0(w *xw, ed1 bool, ld *LD) {
 		}
 		w.leaf("TrgOps", "dchg", b2s(r.Trg.Dchg), "qchg", b2s(r.Trg.Qchg), "dupd", b2s(r.Trg.Dupd), "period", b2s(r.Trg.Period), "gi", gi)
 		o := r.Opt
+		// bufOvfl is written either way: its default is true in the 2007
+		// schemas and false in the 2003 schema.
 		w.leaf("OptFields", "seqNum", b2s(o.SeqNum), "timeStamp", b2s(o.TimeStamp), "dataSet", b2s(o.DataSet), "reasonCode", b2s(o.ReasonCode),
-			"dataRef", b2s(o.DataRef), "entryID", b2s(o.EntryID), "configRef", b2s(o.ConfigRef), "bufOvfl", b2s(o.BufOvfl))
+			"dataRef", b2s(o.DataRef), "entryID", b2s(o.EntryID), "configRef", b2s(o.ConfigRef), "bufOvfl", fmt.Sprint(o.BufOvfl))
 		w.open("RptEnabled", "max", fmt.Sprint(r.Max))
 		for _, c := range r.Clients {
 			w.leaf("ClientLN", "iedName", c.IED, "ldInst", c.LD, "lnClass", c.Class, "lnInst", c.Inst, "apRef", c.AP)
