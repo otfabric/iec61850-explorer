@@ -225,6 +225,7 @@ func Feeder(n int) *IED {
 		{Class: "MMXU", Inst: "1", Type: "MMXU_A", Desc: "Feeder measurement", DOIs: []DOI{
 			{Name: "TotW", DAIs: []DAI{V("db", "2000")}}, {Name: "TotVAr", DAIs: []DAI{V("db", "2000")}}, {Name: "Hz", DAIs: []DAI{V("db", "100")}}}},
 		{Class: "MSQI", Inst: "1", Type: "MSQI_A", Desc: "Sequence currents"},
+		{Class: "MMTR", Inst: "1", Type: "MMTR_A", Desc: "Feeder energy meter"},
 	}
 	d.LDs = []LD{ld0, prot, ctrl, meas}
 	d.History = []Hitem{{"1", "A", "2026-10-02T15:10:00Z", "j.devries", "CID from the system configuration", "Detailed design"}, {"3", "B", "2026-11-03T09:20:00Z", "m.okafor", "GOOSE addresses updated", "FAT findings"}}
@@ -299,6 +300,9 @@ func T1() *IED {
 	meas.LNs = []LN{
 		{Class: "MMXU", Inst: "1", Type: "MMXU_A", Desc: "HV side"},
 		{Class: "MMXU", Inst: "2", Type: "MMXU_A", Desc: "LV side"},
+		{Class: "MMXN", Inst: "1", Type: "MMXN_A", Desc: "Tap changer motor supply, 230 V"},
+		{Class: "MHAI", Inst: "1", Type: "MHAI_A", Desc: "Harmonics, LV side"},
+		{Class: "MMTR", Inst: "1", Type: "MMTR_A", Desc: "Transformer energy meter, LV side"},
 	}
 	d.LDs = []LD{ld0, prot, ctrl, meas}
 	d.History = []Hitem{{"2", "A", "2026-10-02T15:30:00Z", "j.devries", "CID from the system configuration", "Detailed design"}}

@@ -254,6 +254,9 @@
 					</LN0>
 					<LN lnClass="MMXU" inst="1" lnType="MMXU_A" desc="HV side"/>
 					<LN lnClass="MMXU" inst="2" lnType="MMXU_A" desc="LV side"/>
+					<LN lnClass="MMXN" inst="1" lnType="MMXN_A" desc="Tap changer motor supply, 230 V"/>
+					<LN lnClass="MHAI" inst="1" lnType="MHAI_A" desc="Harmonics, LV side"/>
+					<LN lnClass="MMTR" inst="1" lnType="MMTR_A" desc="Transformer energy meter, LV side"/>
 				</LDevice>
 			</Server>
 		</AccessPoint>
@@ -297,13 +300,46 @@
 			<DO name="BlkOpn" type="SPC_ST"/>
 			<DO name="BlkCls" type="SPC_ST"/>
 		</LNodeType>
-		<LNodeType id="MMXU_A" lnClass="MMXU">
+		<LNodeType id="MMXU_A" lnClass="MMXU" desc="Three-phase measurement: every quantity the Explorer&#39;s search knows">
 			<DO name="Beh" type="ENS_Beh"/>
 			<DO name="TotW" type="MV_A"/>
 			<DO name="TotVAr" type="MV_A"/>
+			<DO name="TotVA" type="MV_A"/>
+			<DO name="TotPF" type="MV_A"/>
 			<DO name="Hz" type="MV_A"/>
+			<DO name="PPV" type="DEL_A"/>
+			<DO name="PNV" type="WYE_A"/>
 			<DO name="PhV" type="WYE_A"/>
 			<DO name="A" type="WYE_A"/>
+			<DO name="W" type="WYE_A"/>
+			<DO name="VAr" type="WYE_A"/>
+			<DO name="VA" type="WYE_A"/>
+			<DO name="PF" type="WYE_A"/>
+			<DO name="Z" type="WYE_A"/>
+		</LNodeType>
+		<LNodeType id="MMXN_A" lnClass="MMXN" desc="Single-phase measurement">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Amp" type="MV_A"/>
+			<DO name="Vol" type="MV_A"/>
+			<DO name="Watt" type="MV_A"/>
+			<DO name="VolAmpr" type="MV_A"/>
+			<DO name="VolAmp" type="MV_A"/>
+			<DO name="PwrFact" type="MV_A"/>
+			<DO name="Hz" type="MV_A"/>
+		</LNodeType>
+		<LNodeType id="MMTR_A" lnClass="MMTR" desc="Energy metering">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="TotWh" type="BCR_A"/>
+			<DO name="TotVArh" type="BCR_A"/>
+			<DO name="TotVAh" type="BCR_A"/>
+			<DO name="SupWh" type="BCR_A"/>
+			<DO name="SupVArh" type="BCR_A"/>
+			<DO name="DmdWh" type="BCR_A"/>
+			<DO name="DmdVArh" type="BCR_A"/>
+		</LNodeType>
+		<LNodeType id="MHAI_A" lnClass="MHAI" desc="Harmonics">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Hz" type="MV_A"/>
 		</LNodeType>
 		<LNodeType id="YPTR_A" lnClass="YPTR">
 			<DO name="Beh" type="ENS_Beh"/>
@@ -426,6 +462,19 @@
 			<SDO name="phsA" type="CMV_A"/>
 			<SDO name="phsB" type="CMV_A"/>
 			<SDO name="phsC" type="CMV_A"/>
+		</DOType>
+		<DOType id="DEL_A" cdc="DEL">
+			<SDO name="phsAB" type="CMV_A"/>
+			<SDO name="phsBC" type="CMV_A"/>
+			<SDO name="phsCA" type="CMV_A"/>
+		</DOType>
+		<DOType id="BCR_A" cdc="BCR">
+			<DA name="actVal" fc="ST" bType="INT64" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="pulsQty" fc="CF" bType="FLOAT32">
+				<Val>1</Val>
+			</DA>
 		</DOType>
 		<DOType id="DPC_ST" cdc="DPC">
 			<DA name="stVal" fc="ST" bType="Dbpos" dchg="true"/>

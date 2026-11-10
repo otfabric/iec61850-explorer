@@ -50,14 +50,18 @@ MMS domains are the IED name followed by the instance (`AA1D1Q02A1PROT`). Every 
 - `LD0`: LPHD1, GGIO1 (Ind1 SF6 pressure low, Ind2 spring charged, Ind3 trip circuit supervision).
 - `PROT`: PTOC1 (I>, 51) and PTOC2 (I>>, 50) with StrVal and OpDlTmms in **two setting groups** (I> 600 A / 800 A, 300 ms / 500 ms; I>> 4000 A / 5000 A, 50 ms), PTRC1. `SettingControl numOfSGs="2" actSG="1"`. Data sets `dsTrip` (PTOC1/2.Str, PTOC1/2.Op, PTRC1.Tr, all FCD [ST]) and `dsGoTrip` (PTRC1.Tr.general, .q). Buffered RCB `brcbTrip` (rptID `<IED>PROT/LLN0.brcbTrip`, dchg qchg gi, seqNum dataSet reasonCode dataRef entryID configRef, bufTime 50). GoCB `gcbTrip`.
 - `CTRL`: CSWI1 (breaker QA1) and CSWI2 (disconnector QB1), both **SBO with enhanced security** (sboTimeout 30 s); XCBR1, XSWI1 (SwTyp Disconnector); CILO1, CILO2 (interlocking). Data sets `dsPos` (CSWI1/2.Pos, XCBR1.Pos, XSWI1.Pos, XCBR1.OpCnt, CILO2.EnaOpn.stVal, CILO2.EnaCls.stVal) and `dsGoPos` (XCBR1.Pos.stVal, .q, .t). Buffered RCB `brcbPos`. LogControl `lcbEvents` on `dsPos` into the **journal** `EventLog`. GoCB `gcbPos`.
-- `MEAS`: MMXU1 (TotW, TotVAr, Hz, PhV, A; deadbands), MSQI1 (SeqA). Data set `dsMeas`, unbuffered RCB `urcbMeas` (integrity 10 s, dchg qchg period gi).
+- `MEAS`: MMXU1 (every MMXU measurement: TotW, TotVAr, TotVA, TotPF, Hz, PPV, PNV, PhV, A, W, VAr, VA, PF, Z; deadbands), MSQI1 (SeqA), MMTR1 (TotWh, TotVArh, TotVAh, SupWh, SupVArh, DmdWh, DmdVArh). Data set `dsMeas`, unbuffered RCB `urcbMeas` (integrity 10 s, dchg qchg period gi).
 - Every RCB has `RptEnabled max="2"` with `ClientLN` AA1KA1/LD0/IHMI1; `indexed="false"` (the IEDs serve one instance per RCB).
 
-**Transformer** (`AA1E1Q01A1`): `PROT` PDIF1 (87T), PTOC1 (LV overcurrent, **subscribes** the feeders' `gcbTrip`: ExtRef BlkF1, BlkF2), PTRC1 (**subscribes** the busbar protection's `gcbBF`: BFTrip1, BFTrip2), `dsTrip`, `brcbTrip`. `CTRL` YPTR1, **YLTC1 with the vendor extension** (NamPlt.lnNs `CORVANE 7-4X:2026A`, data objects MotDrvTmp and MotDrvA with `dataNs`), ATCC1 (Auto: a direct control with normal security; BndCtr, BndWid), XCBR1 (HV), XCBR2 (LV incomer); `dsTap`, unbuffered `urcbTap`. `MEAS` MMXU1 (HV), MMXU2 (LV), `dsMeas`, `urcbMeas`.
+**Transformer** (`AA1E1Q01A1`): `PROT` PDIF1 (87T), PTOC1 (LV overcurrent, **subscribes** the feeders' `gcbTrip`: ExtRef BlkF1, BlkF2), PTRC1 (**subscribes** the busbar protection's `gcbBF`: BFTrip1, BFTrip2), `dsTrip`, `brcbTrip`. `CTRL` YPTR1, **YLTC1 with the vendor extension** (NamPlt.lnNs `CORVANE 7-4X:2026A`, data objects MotDrvTmp and MotDrvA with `dataNs`), ATCC1 (Auto: a direct control with normal security; BndCtr, BndWid), XCBR1 (HV), XCBR2 (LV incomer); `dsTap`, unbuffered `urcbTap`. `MEAS` MMXU1 (HV), MMXU2 (LV), MMXN1 (the tap changer's 230 V motor supply: Amp, Vol, Watt, VolAmpr, VolAmp, PwrFact, Hz), MHAI1 (harmonics: Hz), MMTR1 (LV energy), `dsMeas`, `urcbMeas`.
 
 **Busbar protection** (`AA1D1W1A1`): `PROT` PDIF1 (87B, **subscribes** the merging unit's Sampled Values: ExtRef serviceType SMV to I TCTR1-3 AmpSv), RBRF1 and RBRF2 (breaker failure of feeder 1 and 2, FailTmms 150 ms, **subscribe** the feeders' `gcbTrip`), PTRC1; `dsGoBF` (RBRF1/2.OpEx.general, .q) for the GoCB `gcbBF`, `dsTrip` and `brcbTrip`.
 
 **Merging unit** (`AA1D1Q02MU1`): LD `MU01` with LPHD1, ITCTR1-4 (AmpSv, ratings 600 A) and UTVTR1-4 (VolSv); data set `PhsMeas1` (the 9-2LE layout: 4 currents, 4 voltages, instMag.i and q each); SVCB `MSVCB01`; status GoCB `gcbStatus` on `dsStatus` (LPHD1.PhyHealth, LLN0.Beh).
+
+### Search by quantity
+
+The Explorer's search by quantity (frequency, voltage, current, active, reactive and apparent power, power factor, active, reactive and apparent energy, impedance) finds something for every one of them in feeders 1 and 2 and the transformer: every rule of go-iec61850-model's semantic mapping has a data object here. MMXU gives all three-phase quantities (voltages line to line `PPV`, line to neutral `PNV`, line to ground `PhV`; the impedance `Z`), MMXN the single-phase ones, MMTR the energies (total, supply and demand), and MHAI's `Hz` is found by the rule for `Hz` in any class. Only the values in `dsMeas` are reported; the others are read. Demo: open `scl/AA1_Northfield.scd`, choose the transformer, pick *Impedance* or *Active energy* in the search; or connect to a live IED and read what the search found.
 
 ### GOOSE and Sampled Values
 
@@ -75,14 +79,14 @@ MMS domains are the IED name followed by the instance (`AA1D1Q02A1PROT`). Every 
 
 | File | Size | What |
 |---|---|---|
-| `scl/AA1_Northfield.scd` | 77 KB | The system configuration: Header with history, Substation, Communication (GSE, SMV), the six IEDs, all data type templates |
-| `scl/AA1E1Q01A1.cid` | 22 KB | Transformer T1 (Ed2) |
-| `scl/AA1D1Q02A1.cid` | 24 KB | Feeder 1 (Ed2) |
-| `scl/AA1D1Q03A1.cid` | 24 KB | Feeder 2, **Edition 1** (schema 1.7, no version attributes, no name plate namespaces) |
+| `scl/AA1_Northfield.scd` | 79 KB | The system configuration: Header with history, Substation, Communication (GSE, SMV), the six IEDs, all data type templates |
+| `scl/AA1E1Q01A1.cid` | 23 KB | Transformer T1 (Ed2) |
+| `scl/AA1D1Q02A1.cid` | 25 KB | Feeder 1 (Ed2) |
+| `scl/AA1D1Q03A1.cid` | 25 KB | Feeder 2, **Edition 1** (schema 1.7, no version attributes, no name plate namespaces) |
 | `scl/AA1D1W1A1.cid` | 14 KB | Busbar protection (Ed2) |
 | `scl/AA1D1Q02MU1.cid` | 13 KB | Merging unit (Ed2) |
 | `nsd/corvane-7-4x-2026a.nsd` | 1 KB | The vendor extension namespace `CORVANE 7-4X:2026A` (YLTC + MotDrvTmp, MotDrvA), an NSD package for the Explorer's namespace view |
-| `captures/01-hmi-browse-and-poll.pcapng` | 61 KB | MMS: the HMI discovers and polls three IEDs |
+| `captures/01-hmi-browse-and-poll.pcapng` | 78 KB | MMS: the HMI discovers and polls three IEDs |
 | `captures/02-reports.pcapng` | 12 KB | MMS: report subscription with GI, data change, quality change, integrity |
 | `captures/03-control-sbo.pcapng` | 12 KB | MMS: SBO with enhanced security, an interlocked switch refuses |
 | `captures/04-settings-files-logs.pcapng` | 37 KB | MMS: setting groups, a COMTRADE download, the journal |
@@ -102,7 +106,7 @@ Counts below are go-mms-trace v0.1.1's (`internal/scenario/captures_test.go` che
 ### 01-hmi-browse-and-poll.pcapng (08:55)
 
 The HMI associates with feeder 1, the transformer and the busbar protection in turn: Identify, GetNameList (domains, then the variables of every logical device), GetNamedVariableListAttributes of every data set, GetVariableAccessAttributes of what it displays, a first read, then three poll cycles 2 s apart (Read of several variables at once), and concludes all three.
-209 frames; 3 associations (associate/conclude); 62 transactions, all ok: GetNameList 22, GetNamedVariableListAttributes 10, GetVariableAccessAttributes 15, Identify 3, Read 12.
+245 frames; 3 associations (associate/conclude); 69 transactions, all ok: GetNameList 29, GetNamedVariableListAttributes 10, GetVariableAccessAttributes 15, Identify 3, Read 12.
 
 *Demo:* open the SCD, choose AA1D1Q02A1 (an SCL session); open the capture; link it to that session. Associations and the timeline show the discovery; the objects of feeder 1 resolve to IEC 61850 references, the 20 objects of the transformer and the busbar protection are `not-in-model` warnings (a trace links to one IED's model: link it to AA1E1Q01A1 to see the others resolve).
 

@@ -336,6 +336,7 @@
 						</DOI>
 					</LN>
 					<LN lnClass="MSQI" inst="1" lnType="MSQI_A" desc="Sequence currents"/>
+					<LN lnClass="MMTR" inst="1" lnType="MMTR_A" desc="Feeder energy meter"/>
 				</LDevice>
 			</Server>
 		</AccessPoint>
@@ -397,13 +398,32 @@
 			<DO name="EnaOpn" type="SPS_A"/>
 			<DO name="EnaCls" type="SPS_A"/>
 		</LNodeType>
-		<LNodeType id="MMXU_A" lnClass="MMXU">
+		<LNodeType id="MMXU_A" lnClass="MMXU" desc="Three-phase measurement: every quantity the Explorer&#39;s search knows">
 			<DO name="Beh" type="ENS_Beh"/>
 			<DO name="TotW" type="MV_A"/>
 			<DO name="TotVAr" type="MV_A"/>
+			<DO name="TotVA" type="MV_A"/>
+			<DO name="TotPF" type="MV_A"/>
 			<DO name="Hz" type="MV_A"/>
+			<DO name="PPV" type="DEL_A"/>
+			<DO name="PNV" type="WYE_A"/>
 			<DO name="PhV" type="WYE_A"/>
 			<DO name="A" type="WYE_A"/>
+			<DO name="W" type="WYE_A"/>
+			<DO name="VAr" type="WYE_A"/>
+			<DO name="VA" type="WYE_A"/>
+			<DO name="PF" type="WYE_A"/>
+			<DO name="Z" type="WYE_A"/>
+		</LNodeType>
+		<LNodeType id="MMTR_A" lnClass="MMTR" desc="Energy metering">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="TotWh" type="BCR_A"/>
+			<DO name="TotVArh" type="BCR_A"/>
+			<DO name="TotVAh" type="BCR_A"/>
+			<DO name="SupWh" type="BCR_A"/>
+			<DO name="SupVArh" type="BCR_A"/>
+			<DO name="DmdWh" type="BCR_A"/>
+			<DO name="DmdVArh" type="BCR_A"/>
 		</LNodeType>
 		<LNodeType id="MSQI_A" lnClass="MSQI">
 			<DO name="Beh" type="ENS_Beh"/>
@@ -499,6 +519,19 @@
 			<SDO name="phsA" type="CMV_A"/>
 			<SDO name="phsB" type="CMV_A"/>
 			<SDO name="phsC" type="CMV_A"/>
+		</DOType>
+		<DOType id="DEL_A" cdc="DEL">
+			<SDO name="phsAB" type="CMV_A"/>
+			<SDO name="phsBC" type="CMV_A"/>
+			<SDO name="phsCA" type="CMV_A"/>
+		</DOType>
+		<DOType id="BCR_A" cdc="BCR">
+			<DA name="actVal" fc="ST" bType="INT64" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="pulsQty" fc="CF" bType="FLOAT32">
+				<Val>1</Val>
+			</DA>
 		</DOType>
 		<DOType id="SEQ_A" cdc="SEQ">
 			<SDO name="c1" type="CMV_A"/>
