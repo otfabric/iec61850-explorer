@@ -434,6 +434,16 @@ func Quantities() []string {
 	return out
 }
 
+// QuantityLabels names each of Quantities in words ("Active power"), from
+// go-iec61850-model.
+func QuantityLabels() map[string]string {
+	out := map[string]string{}
+	for _, q := range semantic.Quantities() {
+		out[string(q)] = q.Label()
+	}
+	return out
+}
+
 // lnProfiles gives the profile and resolver for each logical node, by the
 // namespace it declares, built once per declaration.
 type lnProfiles struct {

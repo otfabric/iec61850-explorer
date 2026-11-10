@@ -287,6 +287,12 @@ func TestNamespaceUnavailable(t *testing.T) {
 	}
 	if h, _ := e.Health(ctx); len(h.Quantities) == 0 {
 		t.Error("Health lists no quantities")
+	} else {
+		for _, q := range h.Quantities {
+			if h.QuantityLabels[q] == "" || h.QuantityLabels[q] == q {
+				t.Errorf("quantity %s has label %q", q, h.QuantityLabels[q])
+			}
+		}
 	}
 }
 

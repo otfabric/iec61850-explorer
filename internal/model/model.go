@@ -46,6 +46,9 @@ type Health struct {
 	// Quantities are the measured quantities a search can ask for
 	// (SearchQuery.Quantity).
 	Quantities []string `json:"quantities"`
+	// QuantityLabels names each of Quantities in words for a person
+	// ("active-power" is "Active power"; go-iec61850-model Quantity.Label).
+	QuantityLabels map[string]string `json:"quantity_labels"`
 }
 
 // TargetConfig names an IED.

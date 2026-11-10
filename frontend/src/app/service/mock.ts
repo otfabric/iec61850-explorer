@@ -155,6 +155,7 @@ export class MockService implements Service {
       time: new Date().toISOString(),
       features: ['profiles', 'commission'],
       quantities: ['frequency', 'voltage', 'current', 'active-power'],
+      quantity_labels: { frequency: 'Frequency', voltage: 'Voltage', current: 'Current', 'active-power': 'Active power' },
     };
   }
 

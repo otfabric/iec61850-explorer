@@ -17,6 +17,8 @@ export interface Health {
   features: string[];
   /** Measured quantities a search can ask for (SearchQuery.quantity). */
   quantities: string[];
+  /** Each of quantities in words, e.g. "active-power": "Active power". */
+  quantity_labels?: Record<string, string>;
 }
 
 export interface TargetConfig {

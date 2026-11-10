@@ -70,6 +70,9 @@ type session struct {
 	snapAt     time.Time
 	// sclGoCBs are the GOOSE control blocks an SCL session's file defines.
 	sclGoCBs []gocbDef
+	// sclTypes are an SCL session's data type templates, which name the
+	// components of captured values.
+	sclTypes *sclTypes
 	// trace is set for a trace session: a capture, no IED model.
 	trace *traceState
 }

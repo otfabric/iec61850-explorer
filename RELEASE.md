@@ -12,6 +12,15 @@ Release notes, newest first. Each release has a section headed `## vX.Y.Z` with 
 - **Playbooks** ([docs/PLAYBOOKS.md](docs/PLAYBOOKS.md)): eight task-oriented scenarios with screenshots on the demo substation: inspect an SCL file and search by quantity, check conformance (Edition 1, vendor namespaces), commission a live IED, verify it against its SCL, operate a breaker in Commission mode, analyse a station capture, find what went wrong in a capture, export a point list.
 - **Demo video and screenshots** in the README: a demo of three and a half minutes with subtitles (`docs/media/demo.mp4`, burnt-in captions and a soft subtitle track, `docs/media/demo.vtt`), a highlight GIF and screenshots of every view. `docs/media/record-demo.mjs` makes them with Playwright and ffmpeg against the daemon and `make demo-ieds`.
 
+### Fixed
+
+- **Commission dialog**: it no longer says that controls are not offered; they have been since v0.5.0.
+- **Captured values are named by the linked model.** The structures of captured reports (and the values of the reads and writes in the timeline) showed their components without names (`{10 components}`, rows named `·`). A trace linked to an SCL session names them from its data type templates, linked to a live session from the IED's variable types (read in Observe mode when linking): `PTOC1.Str[ST]` shows `general`, `dirGeneral`, `phsA`, ..., `q` as a quality and `t` as a time stamp. Only a value with exactly the type's shape is named; otherwise it stays unnamed, as does a data object whose SCL type mixes attributes and sub-data objects under one FC (the order is not known).
+- **Positions by name.** A control's outcome shows a double point position (Dbpos) as `on`, `off`, `intermediate-state` or `bad-state` (the bits in the tooltip), and the audit trail records and shows the stVal before and after a control, `on (10)` → `off (01)`.
+- **Quantities in words.** The quantity list of the search shows "Active power", not `active-power`; the identifier is still what is searched. API: `GET /api/v1/health` gives `quantity_labels` (go-iec61850-model `Quantity.Label`).
+- **The session bar keeps one line** at 1280 and 1024 px: the information truncates, and below 1536 px the buttons show their icon, with the label as the tooltip and accessible name. The Disconnect button no longer wraps onto a second line.
+- **More room for traces.** The bottom dock takes a fifth of the height in a trace session (a third elsewhere) and can be collapsed to its tabs (remembered per browser); a tab opens it again.
+
 ---
 
 ## v0.11.1

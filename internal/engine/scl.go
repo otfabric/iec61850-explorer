@@ -170,6 +170,7 @@ func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.Ses
 	s.setTree(root, time.Since(start))
 	s.sclDataSets, s.sclReports = sclControls(ied, ap)
 	s.sclGoCBs = sclGoCBs(ied, ap)
+	s.sclTypes = newSCLTypes(doc, ied, ap)
 	m := sclValues(doc, ied, ap)
 	s.sclValues, s.sclActSG, s.sclCDC, s.sclDecls, s.sclSchema = m.values, m.actSG, m.cdcs, m.decls, string(res.Version.Schema)
 	e.sessions[s.id] = s

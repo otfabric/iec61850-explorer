@@ -360,6 +360,17 @@ func transactionOf(index int, t *trace.Transaction, link *traceLink) model.Trace
 	if out.Response != nil {
 		link.resolveAll(out.Response.Objects)
 	}
+	// A Write request's data and a Read response's results are the
+	// variables the request names, in order: the link names their
+	// components.
+	if req := t.Request; req != nil && req.ListName == nil {
+		if out.Request != nil {
+			link.valuesOf(req.Variables, req.Values, out.Request.Values)
+		}
+		if out.Response != nil && t.Response != nil {
+			link.valuesOf(req.Variables, t.Response.Values, out.Response.Values)
+		}
+	}
 	out.Error = transactionError(t)
 	return out
 }

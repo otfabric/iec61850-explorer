@@ -55,6 +55,37 @@ describe('trace sessions', () => {
     expect(screen.queryByRole('button', { name: /Commission/ })).not.toBeInTheDocument();
   });
 
+  it('gives a trace a smaller dock that collapses to its tabs and opens again from a tab', async () => {
+    const user = userEvent.setup();
+    localStorage.removeItem('iec61850-explorer.dock');
+    const { container } = render(<App service={new MockService()} platform={platform()} />);
+    await openCapture(user);
+    await screen.findByRole('region', { name: 'Trace summary' });
+    const grid = () => container.querySelector('.grid.min-h-0.flex-1') as HTMLElement;
+    expect(grid().className).toContain('grid-rows-[1fr_minmax(128px,20%)]');
+    const dock = screen.getByRole('region', { name: 'Dock' });
+    await user.click(within(dock).getByRole('button', { name: 'Hide the dock' }));
+    expect(grid().className).toContain('grid-rows-[1fr_auto]');
+    expect(within(dock).getByRole('button', { name: 'Show the dock' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(dock).queryByRole('button', { name: /Read all/ })).not.toBeInTheDocument();
+    expect(localStorage.getItem('iec61850-explorer.dock')).toBe('collapsed');
+    await user.click(within(dock).getByRole('tab', { name: /Activity/ }));
+    expect(grid().className).toContain('grid-rows-[1fr_minmax(128px,20%)]');
+    expect(within(dock).getByRole('button', { name: 'Hide the dock' })).toHaveAttribute('aria-expanded', 'true');
+    localStorage.removeItem('iec61850-explorer.dock');
+  });
+
+  it('keeps the session bar on one line: the information truncates, the actions have names and tooltips', async () => {
+    const user = userEvent.setup();
+    render(<App service={new MockService()} platform={platform()} />);
+    await openCapture(user);
+    const actions = await screen.findByRole('toolbar', { name: 'Session actions' });
+    expect(actions.parentElement?.className).not.toContain('flex-wrap');
+    const close = within(actions).getByRole('button', { name: 'Close' });
+    expect(close).toHaveAttribute('title', 'Close the capture');
+    expect(within(close).getByText('Close').className).toContain('max-2xl:sr-only');
+  });
+
   it('lists findings with where they are and their source, filtered by severity', async () => {
     const user = userEvent.setup();
     render(<App service={new MockService()} platform={platform()} />);

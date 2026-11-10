@@ -108,6 +108,9 @@ func TestControlNegativeTermination(t *testing.T) {
 	}
 	last := readAuditFiles(t, dir)
 	rec := last[len(last)-1]
+	if rec.Before != "off (01)" || rec.After != "off (01)" {
+		t.Errorf("audit Dbpos %q -> %q, want the names with the bits", rec.Before, rec.After)
+	}
 	if rec.Action != model.AuditControl || rec.Outcome != model.OutcomeFailed ||
 		!strings.Contains(rec.Error, "negative: blocked-by-interlocking") || !strings.Contains(rec.Detail, "termination blocked-by-interlocking") || !strings.Contains(rec.Detail, "interlock-check") {
 		t.Errorf("audit %+v", rec)
@@ -201,5 +204,23 @@ func TestControlCheckFlags(t *testing.T) {
 	res, err = e.Control(ctx, id, model.ControlRequest{Ref: simied.Domain + "/GGIO1.SPCSO1", Value: "true", SynchroCheck: true})
 	if err != nil || res.Outcome != model.ControlRefused || res.AddCause != "blocked-by-synchrocheck" || !res.SynchroCheck {
 		t.Errorf("operate with synchrocheck = %+v, %v", res, err)
+	}
+}
+
+func TestStateText(t *testing.T) {
+	for _, tc := range []struct {
+		v    *model.Value
+		want string
+	}{
+		{nil, ""},
+		{&model.Value{Type: model.TypeBitString, Bits: 2, Text: "00"}, "intermediate-state (00)"},
+		{&model.Value{Type: model.TypeBitString, Bits: 2, Text: "10"}, "on (10)"},
+		{&model.Value{Type: model.TypeBitString, Bits: 2, Text: "11"}, "bad-state (11)"},
+		{&model.Value{Type: model.TypeBitString, Bits: 3, Text: "100"}, "100"},
+		{&model.Value{Type: model.TypeInteger, Text: "10"}, "10"},
+	} {
+		if got := stateText(tc.v); got != tc.want {
+			t.Errorf("stateText(%+v) = %q, want %q", tc.v, got, tc.want)
+		}
 	}
 }

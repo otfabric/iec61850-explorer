@@ -14,7 +14,7 @@ import {
   type ControlResult,
 } from '../service/types';
 import type { ReportEntryView } from '../state/useExplorer';
-import { summarize } from './summary';
+import { stateText, summarize } from './summary';
 import { Button, Chip, Field, TextInput, Toggle } from './ui';
 
 /** The capabilities this version of the Explorer uses; the engine knows more. */
@@ -80,7 +80,6 @@ export function GrantDialog({ session, onGrant, onCancel }: GrantDialogProps) {
             {OFFERED_CAPABILITIES.map(({ cap, label }) => (
               <Toggle key={cap} label={label} checked={caps.includes(cap)} onChange={(on) => setCaps((c) => (on ? [...c, cap] : c.filter((x) => x !== cap)))} />
             ))}
-            <span className="text-[12px] text-muted">Controls are not offered yet: they need the library to confirm a command's termination.</span>
           </fieldset>
           <div className="flex justify-end gap-2">
             <Button onClick={onCancel}>Cancel</Button>
@@ -331,8 +330,8 @@ export function ControlOutcome({ result }: { result: ControlResult }) {
           </li>
         ))}
       </ol>
-      <p className="text-muted">
-        stVal {result.before?.text ?? '?'} → {result.after?.text ?? '?'}
+      <p className="text-muted" title={`stVal ${result.before?.text ?? '?'} → ${result.after?.text ?? '?'}`}>
+        stVal {stateText(result.before)} → {stateText(result.after)}
       </p>
     </div>
   );
@@ -392,6 +391,11 @@ export function AuditPanel({ records, label }: { records: AuditRecord[]; label: 
             {r.action === 'write' && (
               <span>
                 {r.before ?? '?'} → {r.written} {r.after !== undefined && `(read back ${r.after})`}
+              </span>
+            )}
+            {r.action === 'control' && (r.before !== undefined || r.after !== undefined) && (
+              <span>
+                stVal {r.before ?? '?'} → {r.after ?? '?'}
               </span>
             )}
             {r.reason && <span className="text-muted">“{r.reason}”</span>}

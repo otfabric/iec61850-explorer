@@ -12,10 +12,12 @@ interface SearchBoxProps {
   selected: ModelNode | null;
   /** Measured quantities to search for (from the engine's health). */
   quantities: string[];
+  /** The quantities in words; the identifier is shown where one is missing. */
+  quantityLabels?: Record<string, string>;
 }
 
 /** Searches the discovered model by reference text, LN class, FC and measured quantity. */
-export function SearchBox({ search, onSearch, onPick, selected, quantities }: SearchBoxProps) {
+export function SearchBox({ search, onSearch, onPick, selected, quantities, quantityLabels }: SearchBoxProps) {
   const [text, setText] = useState(search?.query.text ?? '');
   const [lnClass, setLnClass] = useState(search?.query.ln_class ?? '');
   const [fc, setFc] = useState(search?.query.fc ?? '');
@@ -53,7 +55,7 @@ export function SearchBox({ search, onSearch, onPick, selected, quantities }: Se
             <option value="">Any quantity</option>
             {quantities.map((q) => (
               <option key={q} value={q}>
-                {q}
+                {quantityLabels?.[q] ?? q}
               </option>
             ))}
           </select>

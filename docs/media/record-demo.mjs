@@ -244,7 +244,7 @@ await step('browse', async () => {
 });
 await step('search impedance', async () => {
   await highlight(10);
-  await caption('Search by quantity: the IEC 61850 namespace knows which data objects measure impedance, energy, voltage…');
+  await caption('Search by quantity: the IEC 61850 namespace knows which data objects measure <i>Impedance</i>, <i>Active energy</i>, <i>Voltage</i>…');
   await search({ quantity: 'impedance' });
   await pause(2700);
   await pickHit(/MMXU1\.Z \[/);
@@ -396,7 +396,7 @@ await step('grant', async () => {
   await click(bar('Commission…'));
   const dialog = page.getByRole('dialog', { name: 'Commission mode' });
   await dialog.waitFor();
-  await caption('Changes need Commission mode: a grant with a reason, a duration and capabilities, on a second, restricted association.');
+  await caption('Changes need Commission mode: a grant with a reason, a duration and capabilities (here reports and controls), on a second, restricted association.');
   await typeInto(dialog.getByLabel(/^Reason/), 'WO-1110 isolate feeder 1');
   await click(dialog.getByLabel(/^Subscribe to report control blocks/));
   await click(dialog.getByLabel(/^Operate controls/));
@@ -445,6 +445,9 @@ await step('operate', async () => {
   await pause(1000);
   await click(form.getByRole('group', { name: 'Confirm the control' }).getByRole('button', { name: 'Operate' }));
   await form.getByLabel('Control outcome').waitFor({ timeout: 30000 });
+  await form.getByLabel('Control outcome').evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+  await pause(1500);
+  await caption('Operated: select, operate and the CommandTermination all ok. The position went from <b>on</b> to <b>off</b>.');
   await pause(4000);
 });
 await shot('control-ok');
@@ -488,7 +491,10 @@ await step('reports 07', async () => {
   await highlight(9);
   await click(tab('reports'));
   await page.getByRole('region', { name: 'Captured reports' }).waitFor();
-  await caption('Feeder 1’s reports, decoded against the data set <code>dsTrip</code>: the starts, the operate and the trip, each with its reason.');
+  // The trace needs the height: the dock collapses to its tabs.
+  await click(page.getByRole('button', { name: 'Hide the dock' }));
+  await captionAt('top');
+  await caption('Feeder 1’s reports, decoded against <code>dsTrip</code>: starts, operate and trip, each with its reason;<br>the components named by the model: <code>general</code>, <code>phsA</code>…, the quality <code>q</code>, the time <code>t</code>.');
   await pause(800);
   await page.getByRole('region', { name: 'Captured reports' }).getByRole('listitem').filter({ hasText: '09:00:10.012' }).first()
     .evaluate((el) => el.scrollIntoView({ block: 'start', behavior: 'smooth' }));
@@ -498,6 +504,7 @@ await shot('trace-reports');
 await step('streams 07', async () => {
   await click(tab('streams'));
   await page.getByRole('region', { name: 'Streams' }).waitFor();
+  await captionAt('bottom');
   await caption('GOOSE: feeder 1’s trip, then the breaker failure 152 ms later. Sampled Values: 6000 frames, none lost.');
   await pause(2000);
   await page.getByRole('region', { name: 'Streams' }).getByText('Sampled Values', { exact: true }).evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));

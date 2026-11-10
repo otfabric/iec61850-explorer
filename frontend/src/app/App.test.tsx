@@ -318,7 +318,9 @@ describe('App', () => {
   it('checks conformance, searches by quantity and exports the point list', async () => {
     const user = userEvent.setup();
     const host = platform();
-    render(<App service={new MockService()} platform={host} />);
+    const service = new MockService();
+    const search = vi.spyOn(service, 'search');
+    render(<App service={service} platform={host} />);
     await connect(user);
     await screen.findByText(/OT Fabric · Mock IED/);
 
@@ -344,8 +346,13 @@ describe('App', () => {
     await waitFor(() => expect(within(defs).queryByRole('list', { name: 'Loaded packages' })).not.toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Model' }));
 
-    await user.selectOptions(screen.getByLabelText('Quantity'), 'frequency');
+    // The list shows the quantities in words and sends the identifier.
+    const quantity = screen.getByLabelText('Quantity');
+    expect(within(quantity).getByRole('option', { name: 'Active power' })).toHaveValue('active-power');
+    expect(within(quantity).queryByRole('option', { name: 'active-power' })).not.toBeInTheDocument();
+    await user.selectOptions(quantity, 'Frequency');
     await user.click(screen.getByRole('button', { name: 'Search' }));
+    expect(search).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ quantity: 'frequency' }));
     const hits = await screen.findByRole('list', { name: 'Search results' });
     expect(within(hits).getAllByRole('button')).toHaveLength(1);
 
@@ -465,8 +472,18 @@ describe('App', () => {
     expect(within(panel).getByText(/Grant Commission mode with the controls capability/)).toBeInTheDocument();
     expect(within(panel).queryByRole('form', { name: 'Control' })).not.toBeInTheDocument();
 
+    // The session bar's actions: one line, each with a name and a tooltip.
+    const actions = screen.getByRole('toolbar', { name: 'Session actions' });
+    for (const name of ['Check', 'Compare', 'Commission…', 'Files', 'Disconnect']) {
+      expect(within(actions).getByRole('button', { name })).toHaveAttribute('title');
+    }
+    expect(actions.parentElement?.className).not.toContain('flex-wrap');
+
     await user.click(await screen.findByRole('button', { name: 'Commission…' }));
     const dialog = screen.getByRole('dialog', { name: 'Commission mode' });
+    // Controls are offered; nothing in the dialog says otherwise.
+    expect(within(dialog).getByLabelText(/Operate controls/)).toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent(/not offered/i);
     await user.type(within(dialog).getByLabelText(/Reason/), 'WO-4713');
     await user.click(within(dialog).getByLabelText(/Operate controls/));
     await user.click(within(dialog).getByRole('button', { name: 'Grant' }));

@@ -52,6 +52,10 @@ type traceLink struct {
 	rcbsKnown     bool
 	gocbs         []gocbDef
 	gocbsKnown    bool
+	// sclTypes (an SCL session) or types (a live session's, by
+	// FC-qualified reference) name the components of captured values.
+	sclTypes *sclTypes
+	types    map[string]*mms.TypeSpec
 	// findings are what the model does not have.
 	findings []model.TraceFinding
 }
@@ -90,7 +94,7 @@ func (e *Engine) LinkTrace(ctx context.Context, id string, req model.LinkTraceRe
 		if m.trace != nil {
 			return model.SessionInfo{}, service.Errorf(service.CodeInvalidArgument, "session %s is a trace session: link a live, SCL or snapshot session", target)
 		}
-		if link, err = e.buildLink(ctx, m); err != nil {
+		if link, err = e.buildLink(ctx, m, ts.res); err != nil {
 			return model.SessionInfo{}, err
 		}
 		link.findings = linkFindings(ts.res, link)
@@ -106,7 +110,7 @@ func (e *Engine) LinkTrace(ctx context.Context, id string, req model.LinkTraceRe
 // buildLink copies what a model session knows: its model and, as far as
 // it can tell them, its data sets and control blocks. For a live session
 // that means reading them from the IED (Observe mode).
-func (e *Engine) buildLink(ctx context.Context, m *session) (*traceLink, error) {
+func (e *Engine) buildLink(ctx context.Context, m *session, res *trace.Result) (*traceLink, error) {
 	info := m.info()
 	l := &traceLink{
 		info:  model.TraceLink{SessionID: m.id, Kind: info.Kind, Label: linkLabel(info), LinkedAt: time.Now().UTC(), Notes: []string{}},
@@ -137,6 +141,7 @@ func (e *Engine) buildLink(ctx context.Context, m *session) (*traceLink, error) 
 		}
 	}
 	gocbs := slices.Clone(m.sclGoCBs)
+	sclT := m.sclTypes
 	m.mu.Unlock()
 	slices.Sort(lds)
 	slices.Sort(gocbNodes)
@@ -147,6 +152,7 @@ func (e *Engine) buildLink(ctx context.Context, m *session) (*traceLink, error) 
 	case model.SessionKindSCL:
 		l.collect(ctx, e, m.id, lds)
 		l.gocbs, l.gocbsKnown = gocbs, true
+		l.sclTypes = sclT
 		l.info.Notes = append(l.info.Notes, "data sets and control blocks come from the SCL file; indexed report control block instances are matched to their definition")
 	default:
 		if err := m.liveErr(); err != nil {
@@ -154,6 +160,7 @@ func (e *Engine) buildLink(ctx context.Context, m *session) (*traceLink, error) 
 		}
 		l.collect(ctx, e, m.id, lds)
 		l.gocbs = e.liveGoCBs(ctx, m.id, gocbNodes)
+		l.types = e.liveTypes(ctx, m.id, typedRefs(res, l))
 		l.gocbsKnown = len(l.gocbs) > 0
 		if !l.gocbsKnown {
 			l.info.Notes = append(l.info.Notes, "the IED's model lists no GOOSE control blocks")
@@ -562,7 +569,8 @@ func (e *Engine) TraceReports(_ context.Context, id string, q model.TraceReports
 // reportOf converts a captured InformationReport. An IEC 61850 report
 // (variable list RPT) is decoded against the data set of its report
 // control block when the link knows both; otherwise its values are shown
-// as captured. Entries are never named by anything but the data set.
+// as captured. Entries are never named by anything but the data set, and
+// their components only by the member's type in the linked model.
 func reportOf(index int, r *trace.Report, l *traceLink) model.TraceReport {
 	out := model.TraceReport{Index: index, Association: r.Association, At: nsTime(r.TimeNS), Frame: r.Frame}
 	p := r.PDU
@@ -650,7 +658,7 @@ func reportOf(index int, r *trace.Report, l *traceLink) model.TraceReport {
 		if mr, err := iec61850.ParseRef(m.Ref); err == nil && len(mr.Path) > 0 {
 			name = mr.Path[len(mr.Path)-1]
 		}
-		entry.Value = convertValue(rpt.Values[k].MMS(), nil, name)
+		entry.Value = l.valueOf(rpt.Values[k].MMS(), m.Ref, name)
 		out.Entries = append(out.Entries, entry)
 		k++
 	}

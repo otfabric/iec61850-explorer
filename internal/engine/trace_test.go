@@ -269,6 +269,11 @@ func TestTraceReportsDecoded(t *testing.T) {
 		if !dchg.Decoded || len(dchg.Entries) != 1 || dchg.Entries[0].Ref != wantRefs[2] || dchg.Entries[0].Value.Name != "Hz" {
 			t.Errorf("%s: data change report = %+v", m.Kind, dchg)
 		}
+		// The components are named by the model: mag.f, the quality, the time.
+		if hz := dchg.Entries[0].Value; !namedComponents(hz) || childNamed(hz, "q") == nil || childNamed(hz, "q").Quality == nil ||
+			childNamed(hz, "t") == nil || childNamed(hz, "t").Time == nil || childNamed(hz, "mag") == nil || childNamed(*childNamed(hz, "mag"), "f") == nil {
+			t.Errorf("%s: Hz components = %+v", m.Kind, hz)
+		}
 		// The Commission writes resolve to the RCB.
 		tl, _ := e.TraceTimeline(ctx, tr.ID, model.TimelineQuery{Service: "write", Limit: 5})
 		if tl.Total == 0 || tl.Transactions[0].Objects[0].Kind != objRCB || tl.Transactions[0].Objects[0].Model != model.ResolveFound {
@@ -688,5 +693,112 @@ func TestWireRing(t *testing.T) {
 	e := newEngine(t)
 	if v, err := e.Wire(t.Context(), "x", 0); err == nil {
 		t.Errorf("Wire = %+v", v)
+	}
+}
+
+// namedComponents says whether every component of a structure, at every
+// level, has a name.
+func namedComponents(v model.Value) bool {
+	if v.Type != model.TypeStructure || len(v.Children) == 0 {
+		return v.Type != model.TypeStructure
+	}
+	for _, c := range v.Children {
+		if c.Name == "" || !namedComponents(c) {
+			return false
+		}
+	}
+	return true
+}
+
+func childNamed(v model.Value, name string) *model.Value {
+	for i := range v.Children {
+		if v.Children[i].Name == name {
+			return &v.Children[i]
+		}
+	}
+	return nil
+}
+
+// TestTraceDemoReportComponents: the station fault capture of the demo set,
+// linked to feeder 1's CID, shows the captured reports' structures with the
+// names of the model, the quality and time decoded; reads of the linked
+// IED are named too, those of other IEDs are not.
+func TestTraceDemoReportComponents(t *testing.T) {
+	e := newEngine(t)
+	ctx := t.Context()
+	read := func(name string) []byte {
+		b, err := os.ReadFile(filepath.Join("..", "..", "demo", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+	tr := openTrace(t, e, model.File{Name: "07-station-fault.pcapng", Data: read("captures/07-station-fault.pcapng")})
+	cid, err := e.OpenSCL(ctx, model.OpenSCLRequest{File: model.File{Name: "AA1D1Q02A1.cid", Data: read("scl/AA1D1Q02A1.cid")}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.LinkTrace(ctx, tr.ID, model.LinkTraceRequest{Session: cid.ID}); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := e.TraceReports(ctx, tr.ID, model.TraceReportsQuery{Limit: model.MaxTracePage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	strs := 0
+	for _, r := range rep.Reports {
+		for _, en := range r.Entries {
+			if !namedComponents(en.Value) {
+				t.Errorf("%s: unnamed components %+v", en.Ref, en.Value)
+			}
+			if en.Ref != "AA1D1Q02A1PROT/PTOC1.Str[ST]" {
+				continue
+			}
+			strs++
+			var names []string
+			for _, c := range en.Value.Children {
+				names = append(names, c.Name)
+			}
+			want := []string{"general", "dirGeneral", "phsA", "dirPhsA", "phsB", "dirPhsB", "phsC", "dirPhsC", "q", "t"}
+			if !slices.Equal(names, want) {
+				t.Errorf("PTOC1.Str components %v, want %v", names, want)
+			}
+			if q := childNamed(en.Value, "q"); q == nil || q.Quality == nil || q.Text != "good" {
+				t.Errorf("PTOC1.Str q = %+v", q)
+			}
+			if ts := childNamed(en.Value, "t"); ts == nil || ts.Time == nil {
+				t.Errorf("PTOC1.Str t = %+v", ts)
+			}
+		}
+	}
+	if strs == 0 {
+		t.Fatal("no PTOC1.Str entry in the decoded reports")
+	}
+
+	tl, err := e.TraceTimeline(ctx, tr.ID, model.TimelineQuery{Service: "Read", Limit: model.MaxTracePage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	named, unnamed := 0, 0
+	for _, x := range tl.Transactions {
+		if x.Response == nil || len(x.Response.Values) == 0 || len(x.Objects) == 0 {
+			continue
+		}
+		v := x.Response.Values[0]
+		switch {
+		case strings.HasPrefix(x.Objects[0].Ref, "AA1D1Q02A1"):
+			if v.Type == model.TypeStructure && (!namedComponents(v) || childNamed(v, "q") == nil) {
+				t.Errorf("read of %s: %+v", x.Objects[0].Ref, v)
+			}
+			named++
+		case v.Type == model.TypeStructure:
+			if len(v.Children) > 0 && v.Children[0].Name != "" {
+				t.Errorf("read of %s, not in the linked model, is named: %+v", x.Objects[0].Ref, v)
+			}
+			unnamed++
+		}
+	}
+	if named == 0 || unnamed == 0 {
+		t.Errorf("reads named %d, unnamed %d", named, unnamed)
 	}
 }

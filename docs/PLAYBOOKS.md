@@ -39,10 +39,10 @@ bin/iec61850-explorerd url                                        # open this UR
 1. On the start view, under **Open without an IED**, choose **Open SCL file…** and pick the file.
 2. The dialog lists the file's IEDs with manufacturer, type, number of logical devices and IP address. For the transformer protection `AA1E1Q01A1`, choose **Browse offline**. (**Use address** instead fills in the connection form with the IED's address and ISO selectors.)
 3. The **Device tree** shows the logical devices (`AA1E1Q01A1CTRL`, `LD0`, `MEAS`, `PROT`). Expand them to logical nodes, data objects and attributes; select a node to see its functional constraints.
-4. In the search box above the tree, pick a quantity in the list that reads **Any quantity**, for example `impedance`, and press the search button. Combine it with text (**Search references**), an **LN class** and an **FC** if you like.
+4. In the search box above the tree, pick a quantity in the list that reads **Any quantity**, for example **Impedance**, and press the search button. Combine it with text (**Search references**), an **LN class** and an **FC** if you like.
 5. Pick a match. Below its functional constraints, the **Namespace** section says what the IEC 61850 namespace defines for it: the namespace declared, the releases it was checked against, the class, the data object, its CDC, presence, and the quantity with its phase and unit.
 
-**You should see:** `impedance` finds `MMXU1.Z` and `MMXU2.Z`; `active-energy` finds the meter's `MMTR1.TotWh`, `SupWh` and `DmdWh` (`BCR`, presence `O`, `active-energy · total · Wh`). Selecting a logical node lists the data objects of its class and which ones this node has, with mandatory ones it lacks marked `missing`.
+**You should see:** **Impedance** finds `MMXU1.Z` and `MMXU2.Z`; **Active energy** finds the meter's `MMTR1.TotWh`, `SupWh` and `DmdWh` (`BCR`, presence `O`, `active-energy · total · Wh`). Selecting a logical node lists the data objects of its class and which ones this node has, with mandatory ones it lacks marked `missing`.
 
 ![Search by quantity and the namespace of the selected data object](images/scl-search.png)
 
@@ -88,7 +88,7 @@ bin/iec61850-explorerd url                                        # open this UR
 **You need:** the IED's address. Here feeder 1, `AA1D1Q02A1`, on 127.0.0.1 port 10201 (`make demo-ieds`). With the daemon, the address must be in its allow-list (`--allow-target`).
 
 1. **+ New**, then under **Connect to an IED** enter **IED host** `127.0.0.1` and **Port** `10201`, and choose **Connect**. (ISO selectors, a proxy and saving the connection as a profile are under **Connection options**.) The session starts in **Observe** mode (the badge at the top right): the MMS client refuses every service that would change the IED, before it is sent.
-2. The session bar shows the address, `connected`, the MMS identity (`OT Fabric Demo · FPC-615 · 2.4.1`) and what discovery found (4 LD · 18 LN · 91 DO).
+2. The session bar shows the address, `connected`, the MMS identity (`OT Fabric Demo · FPC-615 · 2.4.1`) and what discovery found (4 LD · 18 LN · 91 DO). On a window narrower than 1536 px its buttons (**Check**, **Compare**, **Commission…**, **Files**, **Disconnect**) show their icon only; the tooltip names them.
 3. Search for `MMXU1.TotW` and pick the match. In the **FC MX** block choose **Read**: the value with its quality and time stamp, and below it the MMS domain and item ID it was read from. **CLI** copies the equivalent `iec61850ctl get object` command.
 4. Choose **Watch** to pin it; do the same for `MMXU1.Hz`. In the dock below, **Watch** lists the points of every open IED; pick an interval (**every 1 s**) and choose **Poll**. The engine polls, so a daemon keeps polling while the browser is closed. **Stop polling** ends it.
 5. Select the logical device `AA1D1Q02A1MEAS` in the tree. The panel has the tabs **Data sets**, **Report control blocks**, **Logs** and **Setting groups**. On `dsMeas` choose **Read** to read all members in one request, or **Watch all**.
@@ -164,7 +164,7 @@ bin/iec61850-explorerd url                                        # open this UR
 
 **Pitfalls:**
 
-- The position is shown as the Dbpos bit string: `10` is on (closed), `01` is off (open).
+- The position is shown by its Dbpos name (IEC 61850-7-2): `on` (closed), `off` (open), `intermediate-state` (moving) or `bad-state`; the tooltip and the audit trail add the bits (`on (10)`).
 - **Interlock check** and **Synchrocheck** set the Check bits of the command; they ask the IED to check, they do not check anything in the Explorer.
 - The grant ends when it expires, when you revoke it and when the session ends; a report control block you subscribed to is disabled and released then. Ask for the shortest duration that does the job.
 - Restart `make demo-ieds` to close QA1 again (the demo IEDs keep their state while they run). Closing QA1 with QB1 open is refused too.
@@ -181,7 +181,7 @@ bin/iec61850-explorerd url                                        # open this UR
 2. **summary**: the file (format, packets, time span, SHA-256), the content (3 associations, 12 transactions, 19 reports, 6 GOOSE streams, 1 SV stream), counts by status and service, findings and the decoder's counters.
 3. **Correlate with model**: pick `AA1D1Q02A1 (AA1D1Q02A1.cid) (scl)` and choose **Link**. The line next to it says what the model offers (data sets, report control blocks, GOOSE control blocks).
 4. **timeline**: every confirmed service with time, association, invoke ID, service, status, latency and the objects it named, resolved against the model (`found`, `not in the model`). Filter by **Association**, **Service**, **From (UTC)**, **To (UTC)** and status. Select a row to see the request and the response, decoded.
-5. **reports**: each captured InformationReport with its RptID, control block, data set and SqNum. Reports of feeder 1 are `decoded` against `dsTrip`: the entries `PTOC1.Str`, `PTOC2.Str`, `PTOC2.Op` and `PTRC1.Tr`, each with its reason for inclusion (`data-change`) and its value.
+5. **reports**: each captured InformationReport with its RptID, control block, data set and SqNum. Reports of feeder 1 are `decoded` against `dsTrip`: the entries `PTOC1.Str`, `PTOC2.Str`, `PTOC2.Op` and `PTRC1.Tr`, each with its reason for inclusion (`data-change`) and its value, the components named by the model (`general`, `dirGeneral`, `phsA`, ..., `q`, `t`).
 6. **streams**: the GOOSE streams with source and destination, APPID, VLAN, data set, goID, messages, state changes and the highest rate; the SV stream with samples, lost and repeated.
 7. **associations**: client, server, how each association opened and closed, transactions, unanswered requests and TCP gaps.
 
@@ -196,8 +196,9 @@ bin/iec61850-explorerd url                                        # open this UR
 **Pitfalls:**
 
 - A capture links to one IED's model. The busbar and transformer reports in capture 07 are shown as captured with "data set not in the linked model", and their GOOSE streams as `not in the model`: link the trace to `AA1D1W1A1` or `AA1E1Q01A1` (open them from the SCD) to decode those.
-- The components of a decoded entry (the `general`, `phsA` ... of a `Str` or `Op`) are listed in order with their types but without their names; read them against the data object's CDC (ACD: general, dirGeneral, phsA, dirPhsA, phsB, ...).
+- The components of a decoded entry (the `general`, `phsA` ... `q`, `t` of a `Str` or `Op`) are named from the linked model's types, the quality and time decoded. A value whose shape does not match the model's type exactly is shown with its components unnamed (`·`), as are the values of an IED the trace is not linked to.
 - A trace linked to an SCL session reports the setting group control block (`LLN0$SP$SGCB`) as not in the model: the engine builds no SGCB from SCL.
+- The dock below takes a fifth of the window in a trace; the chevron at its right collapses it to its tabs, and a tab opens it again.
 - MMS over TLS in captures is not analysed yet; MMS on another port than 102 only when the port is named under **MMS ports**.
 
 ---

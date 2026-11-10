@@ -75,6 +75,9 @@ func contract(t *testing.T, svc service.Service) {
 	if err != nil || h.Status != "ok" || h.APIVersion != model.APIVersion || h.Mode != model.ModeObserve {
 		t.Fatalf("Health = %+v, %v", h, err)
 	}
+	if len(h.Quantities) == 0 || len(h.QuantityLabels) != len(h.Quantities) || h.QuantityLabels["active-power"] != "Active power" {
+		t.Errorf("Health quantities %v, labels %v", h.Quantities, h.QuantityLabels)
+	}
 
 	sub, cancel := context.WithCancel(ctx)
 	defer cancel()

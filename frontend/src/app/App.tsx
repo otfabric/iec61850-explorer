@@ -16,12 +16,13 @@ import { SearchBox } from './components/SearchBox';
 import { SessionBar } from './components/SessionBar';
 import { SessionTabs, sessionLabel } from './components/SessionTabs';
 import { TracePanel } from './components/TracePanel';
-import { Button } from './components/ui';
+import { Button, IconButton } from './components/ui';
 import { WatchTable } from './components/WatchTable';
-import { ErrorIcon } from './icons';
+import { ChevronIcon, ErrorIcon } from './icons';
 import type { Platform } from './platform/platform';
 import type { Service } from './service/service';
 import type { ExportFormat, FileUpload, SCLInfo, TargetConfig } from './service/types';
+import { loadDockCollapsed, persistDockCollapsed } from './platform/dockStorage';
 import { isTrace, useExplorer, watchedRefs, watchKey, type SessionView } from './state/useExplorer';
 import { useTheme } from './state/useTheme';
 
@@ -40,6 +41,7 @@ export function App({ service, platform }: AppProps) {
   const [initialTarget, setInitialTarget] = useState<TargetConfig | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [bottom, setBottom] = useState<BottomTab>('watch');
+  const [dockCollapsed, setDockCollapsed] = useState(loadDockCollapsed);
   // The panel a session shows instead of the selected node: its files, a comparison or the conformance check.
   const [panel, setPanel] = useState<Record<string, 'files' | 'compare' | 'check' | undefined>>({});
   const togglePanel = (id: string, p: 'files' | 'compare' | 'check') => setPanel((all) => ({ ...all, [id]: all[id] === p ? undefined : p }));
@@ -101,6 +103,19 @@ export function App({ service, platform }: AppProps) {
   }
 
   const dock = views.length > 0 || state.watch.length > 0 || state.activity.length > 0;
+  // A trace's views are tables that need the height: its dock is smaller.
+  // Collapsed, the dock keeps its tabs only.
+  const dockRows = !dock
+    ? 'grid-rows-[1fr]'
+    : dockCollapsed
+      ? 'grid-rows-[1fr_auto]'
+      : view && isTrace(view.info)
+        ? 'grid-rows-[1fr_minmax(128px,20%)]'
+        : 'grid-rows-[1fr_minmax(160px,32%)]';
+  function collapseDock(collapsed: boolean) {
+    setDockCollapsed(collapsed);
+    persistDockCollapsed(collapsed);
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -116,7 +131,7 @@ export function App({ service, platform }: AppProps) {
       )}
 
       {/* The dock (watch, activity) appears once it has something to show: the start view uses the whole window. */}
-      <div className={`grid min-h-0 flex-1 ${dock ? 'grid-rows-[1fr_minmax(160px,32%)]' : 'grid-rows-[1fr]'}`}>
+      <div className={`grid min-h-0 flex-1 ${dockRows}`}>
         <div className="min-h-0 overflow-auto">
           {!view && (
             <>
@@ -178,6 +193,7 @@ export function App({ service, platform }: AppProps) {
                     onSearch={(q) => void explorer.search(view.info.id, q)}
                     onPick={(node) => explorer.select(view.info.id, node)}
                     quantities={state.health?.quantities ?? []}
+                    quantityLabels={state.health?.quantity_labels}
                   />
                   <div className="flex min-h-0 flex-1 flex-col">
                     <DeviceTree
@@ -245,8 +261,9 @@ export function App({ service, platform }: AppProps) {
         </div>
 
         {dock && (
-          <div className="flex min-h-0 flex-col border-t border-line">
-            <div role="tablist" className="flex shrink-0 gap-4 px-4 pt-2">
+          <div className="flex min-h-0 flex-col border-t border-line" role="region" aria-label="Dock">
+            <div className="flex shrink-0 items-start gap-4 px-4 pt-2">
+            <div role="tablist" className={`flex gap-4 ${dockCollapsed ? 'pb-1' : ''}`}>
             {(commission ? (['watch', 'activity', 'reports', 'audit'] as const) : (['watch', 'activity'] as const)).map((tab) => (
               <button
                 key={tab}
@@ -254,7 +271,12 @@ export function App({ service, platform }: AppProps) {
                 role="tab"
                 aria-selected={bottom === tab}
                 className={`ot-label cursor-pointer pb-1 ${bottom === tab ? 'border-b-2 border-accent text-accent' : ''}`}
-                onClick={() => setBottom(tab)}
+                onClick={() => {
+                  setBottom(tab);
+                  if (dockCollapsed) {
+                    collapseDock(false);
+                  }
+                }}
               >
                 {tab === 'watch'
                   ? `Watch (${state.watch.length})`
@@ -265,7 +287,17 @@ export function App({ service, platform }: AppProps) {
                       : `Audit (${state.audit.length})`}
               </button>
             ))}
+            </div>
+            <IconButton
+              label={dockCollapsed ? 'Show the dock' : 'Hide the dock'}
+              aria-expanded={!dockCollapsed}
+              className="ml-auto inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:text-accent"
+              onClick={() => collapseDock(!dockCollapsed)}
+            >
+              <ChevronIcon size={14} className={dockCollapsed ? '-rotate-90' : 'rotate-90'} />
+            </IconButton>
           </div>
+          {!dockCollapsed && (
           <div className="min-h-0 flex-1">
             {bottom === 'watch' ? (
               <WatchTable
@@ -289,6 +321,7 @@ export function App({ service, platform }: AppProps) {
               <AuditPanel records={state.audit} label={label} />
             )}
           </div>
+          )}
           </div>
         )}
       </div>

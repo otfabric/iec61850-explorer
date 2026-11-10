@@ -123,7 +123,7 @@ func (e *Engine) Control(ctx context.Context, id string, req model.ControlReques
 
 	rec := model.AuditRecord{
 		Action: model.AuditControl, Ref: res.Ref, Written: written.Text,
-		Before: textOf(res.Before), After: textOf(res.After), Outcome: model.OutcomeOK,
+		Before: stateText(res.Before), After: stateText(res.After), Outcome: model.OutcomeOK,
 		Detail: run.detail(),
 	}
 	var opErr *model.OpError
@@ -243,6 +243,21 @@ func (r *controlRun) add(name string, start time.Time, err error) {
 		}
 	}
 	r.res.Steps = append(r.res.Steps, st)
+}
+
+// dbposNames are the IEC 61850-7-2 names of a double point position.
+var dbposNames = map[string]string{"00": "intermediate-state", "01": "off", "10": "on", "11": "bad-state"}
+
+// stateText is a control's stVal for the audit trail. A two-bit bit string
+// is a Dbpos (IEC 61850-7-3: the only stVal of that type) and is recorded by
+// its name with the bits, "on (10)"; other values as they are shown.
+func stateText(v *model.Value) string {
+	if v != nil && v.Type == model.TypeBitString && v.Bits == 2 {
+		if name, ok := dbposNames[v.Text]; ok {
+			return name + " (" + v.Text + ")"
+		}
+	}
+	return textOf(v)
 }
 
 // detail summarizes the sequence for the audit trail.
