@@ -2,6 +2,25 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.11.0
+
+**Date:** 2026-11-10
+**Previous release:** v0.10.1
+
+### Added
+
+- **A demo set** (`demo/`, its own Go module): AA1 Northfield, a 110/20 kV substation of five IEDs (two feeders, one of them Edition 1, a transformer with a tap changer and a made-up vendor namespace, busbar protection with breaker failure, a 9-2LE merging unit) and an HMI. An SCD, a CID per IED and the vendor's NSD; eight pcapng captures of real traffic between go-iec61850 clients and servers built from those CIDs, with GOOSE and Sampled Values from go-iec61850's encoders: browse and poll, reports, SBO controls with an interlock refusal, settings, files and logs, GOOSE trip and breaker failure, SV around a fault, the whole fault across MMS, GOOSE and SV, and a capture of problems for the findings. `make demo-ieds` serves the IEDs live from their CIDs on 127.0.0.1:10201-10205. `demo/README.md` describes each file and a demo script. `make demo` regenerates the set byte for byte; `make demo-check` (also in CI) checks that and analyses every capture with go-mms-trace.
+
+### Changed
+
+- **Start view.** Connect to an IED, Open without an IED and Analyse a capture are side by side, each saying what it offers; proxy, ISO addressing, profile and the default proxy are under their options. The watch and activity dock appears once a session, a watched point or activity exists.
+
+### Fixed
+
+- **macOS: the desktop application is linked for macOS 13.0**, the minimum its webview code and `Info.plist` declare. It was linked for 11.0, Go's default, with a linker warning for every object file (`make build-gui`, `make bundle-macos`).
+
+---
+
 ## v0.10.1
 
 **Date:** 2026-11-10

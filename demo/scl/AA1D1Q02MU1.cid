@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="B" release="4">
+	<Header id="AA1D1Q02MU1" version="3" revision="B" toolID="OT Fabric demo generator 1.0" nameStructure="IEDName">
+		<History>
+			<Hitem version="3" revision="B" when="2026-11-03T09:50:00Z" who="m.okafor" what="CID from the system configuration" why="FAT findings"/>
+		</History>
+	</Header>
+	<Communication>
+		<SubNetwork name="AA1WA1" type="8-MMS" desc="Station bus (MMS, GOOSE and Sampled Values)">
+			<BitRate unit="b/s" multiplier="M">100</BitRate>
+			<ConnectedAP iedName="AA1D1Q02MU1" apName="S1">
+				<Address>
+					<P xsi:type="tP_IP" type="IP">10.20.1.51</P>
+					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
+					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
+					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
+					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
+					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
+					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
+					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+				</Address>
+				<GSE ldInst="MU01" cbName="gcbStatus">
+					<Address>
+						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-51</P>
+						<P xsi:type="tP_APPID" type="APPID">0501</P>
+						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
+						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+					</Address>
+					<MinTime unit="s" multiplier="m">4</MinTime>
+					<MaxTime unit="s" multiplier="m">1000</MaxTime>
+				</GSE>
+				<SMV ldInst="MU01" cbName="MSVCB01">
+					<Address>
+						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-04-00-01</P>
+						<P xsi:type="tP_APPID" type="APPID">4001</P>
+						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">014</P>
+						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+					</Address>
+				</SMV>
+				<PhysConn type="Connection">
+					<P xsi:type="tP_Type" type="Type">FOC</P>
+					<P xsi:type="tP_Plug" type="Plug">LC</P>
+				</PhysConn>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="AA1D1Q02MU1" desc="Merging unit feeder 1 (UCA 9-2LE)" type="MU-920" manufacturer="OT Fabric Demo" configVersion="1.1" originalSclVersion="2007" originalSclRevision="B" originalSclRelease="4">
+		<Services>
+			<GetDirectory/>
+			<GetDataObjectDefinition/>
+			<DataObjectDirectory/>
+			<GetDataSetValue/>
+			<DataSetDirectory/>
+			<ConfDataSet max="12" maxAttributes="64"/>
+			<ReadWrite/>
+			<GetCBValues/>
+			<GSESettings appID="Conf" dataLabel="Fix"/>
+			<SMVSettings svID="Conf" optFields="Fix" smpRate="Fix"><SmpRate>80</SmpRate></SMVSettings>
+			<GOOSE max="1"/>
+			<SMVsc max="1"/>
+		</Services>
+		<AccessPoint name="S1" desc="Station bus">
+			<Server>
+				<Authentication none="true"/>
+				<LDevice inst="MU01" desc="Merging unit">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_A">
+						<DataSet name="PhsMeas1" desc="UCA 9-2LE: 4 currents, 4 voltages">
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="1" doName="AmpSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="1" doName="AmpSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="2" doName="AmpSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="2" doName="AmpSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="3" doName="AmpSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="3" doName="AmpSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="4" doName="AmpSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="I" lnClass="TCTR" lnInst="4" doName="AmpSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="1" doName="VolSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="1" doName="VolSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="2" doName="VolSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="2" doName="VolSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="3" doName="VolSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="3" doName="VolSv" daName="q" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="4" doName="VolSv" daName="instMag.i" fc="MX"/>
+							<FCDA ldInst="MU01" prefix="U" lnClass="TVTR" lnInst="4" doName="VolSv" daName="q" fc="MX"/>
+						</DataSet>
+						<DataSet name="dsStatus" desc="Merging unit status for GOOSE">
+							<FCDA ldInst="MU01" lnClass="LPHD" lnInst="1" doName="PhyHealth" daName="stVal" fc="ST"/>
+							<FCDA ldInst="MU01" lnClass="LPHD" lnInst="1" doName="PhyHealth" daName="q" fc="ST"/>
+							<FCDA ldInst="MU01" lnClass="LLN0" doName="Beh" daName="stVal" fc="ST"/>
+						</DataSet>
+						<DOI name="NamPlt">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="d">
+								<Val>Merging unit</Val>
+							</DAI>
+							<DAI name="configRev">
+								<Val>AA1-2026-11-03</Val>
+							</DAI>
+						</DOI>
+						<GSEControl name="gcbStatus" desc="Merging unit health" datSet="dsStatus" confRev="1" appID="AA1D1Q02MU1_Status" type="GOOSE"/>
+						<SampledValueControl name="MSVCB01" desc="Feeder 1 currents and voltages" datSet="PhsMeas1" confRev="1" smvID="AA1D1Q02MU1MU01" smpRate="80" nofASDU="1" multicast="true" smpMod="SmpPerPeriod">
+							<SmvOpts sampleSynchronized="true"/>
+						</SampledValueControl>
+					</LN0>
+					<LN lnClass="LPHD" inst="1" lnType="LPHD_A">
+						<DOI name="PhyNam">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="hwRev">
+								<Val>C</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="serNum">
+								<Val>MU920-260142</Val>
+							</DAI>
+							<DAI name="model">
+								<Val>MU-920</Val>
+							</DAI>
+							<DAI name="location">
+								<Val>AA1 Northfield, relay room</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN prefix="I" lnClass="TCTR" inst="1" lnType="TCTR_LE" desc="Current phase A">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="ARtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>600</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="I" lnClass="TCTR" inst="2" lnType="TCTR_LE" desc="Current phase B">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="ARtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>600</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="I" lnClass="TCTR" inst="3" lnType="TCTR_LE" desc="Current phase C">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="ARtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>600</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="I" lnClass="TCTR" inst="4" lnType="TCTR_LE" desc="Current phase N">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="ARtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>600</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="U" lnClass="TVTR" inst="1" lnType="TVTR_LE" desc="Voltage phase A">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="VRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>11547</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="U" lnClass="TVTR" inst="2" lnType="TVTR_LE" desc="Voltage phase B">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="VRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>11547</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="U" lnClass="TVTR" inst="3" lnType="TVTR_LE" desc="Voltage phase C">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="VRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>11547</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+					<LN prefix="U" lnClass="TVTR" inst="4" lnType="TVTR_LE" desc="Voltage phase N">
+						<DOI name="HzRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="VRtg">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val>11547</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_A" lnClass="LLN0" desc="Logical device root, Edition 2">
+			<DO name="Mod" type="ENC_Mod"/>
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Health" type="ENS_Health"/>
+			<DO name="NamPlt" type="LPL_LD"/>
+		</LNodeType>
+		<LNodeType id="LPHD_A" lnClass="LPHD">
+			<DO name="PhyNam" type="DPL_A"/>
+			<DO name="PhyHealth" type="ENS_Health"/>
+			<DO name="Proxy" type="SPS_A"/>
+		</LNodeType>
+		<LNodeType id="TCTR_LE" lnClass="TCTR" desc="Current transformer, UCA 9-2LE">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="HzRtg" type="ASG_SP"/>
+			<DO name="ARtg" type="ASG_SP"/>
+			<DO name="AmpSv" type="SAV_A"/>
+		</LNodeType>
+		<LNodeType id="TVTR_LE" lnClass="TVTR" desc="Voltage transformer, UCA 9-2LE">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="HzRtg" type="ASG_SP"/>
+			<DO name="VRtg" type="ASG_SP"/>
+			<DO name="VolSv" type="SAV_A"/>
+		</LNodeType>
+		<DOType id="ENC_Mod" cdc="ENC">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind">
+				<Val>status-only</Val>
+			</DA>
+		</DOType>
+		<DOType id="ENS_Beh" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ENS_Health" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="HealthKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="LPL_LD" cdc="LPL">
+			<DA name="vendor" fc="DC" bType="VisString255"/>
+			<DA name="swRev" fc="DC" bType="VisString255"/>
+			<DA name="d" fc="DC" bType="VisString255"/>
+			<DA name="configRev" fc="DC" bType="VisString255"/>
+			<DA name="ldNs" fc="EX" bType="VisString255">
+				<Val>IEC 61850-7-4:2007B</Val>
+			</DA>
+		</DOType>
+		<DOType id="DPL_A" cdc="DPL">
+			<DA name="vendor" fc="DC" bType="VisString255"/>
+			<DA name="hwRev" fc="DC" bType="VisString255"/>
+			<DA name="swRev" fc="DC" bType="VisString255"/>
+			<DA name="serNum" fc="DC" bType="VisString255"/>
+			<DA name="model" fc="DC" bType="VisString255"/>
+			<DA name="location" fc="DC" bType="VisString255"/>
+		</DOType>
+		<DOType id="SPS_A" cdc="SPS">
+			<DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ASG_SP" cdc="ASG">
+			<DA name="setMag" fc="SP" bType="Struct" type="AnalogueValue"/>
+		</DOType>
+		<DOType id="SAV_A" cdc="SAV">
+			<DA name="instMag" fc="MX" bType="Struct" type="AnalogueValue_I"/>
+			<DA name="q" fc="MX" bType="Quality" qchg="true"/>
+		</DOType>
+		<DAType id="AnalogueValue">
+			<BDA name="f" bType="FLOAT32"/>
+		</DAType>
+		<DAType id="AnalogueValue_I">
+			<BDA name="i" bType="INT32"/>
+		</DAType>
+		<EnumType id="BehaviourModeKind">
+			<EnumVal ord="1">on</EnumVal>
+			<EnumVal ord="2">on-blocked</EnumVal>
+			<EnumVal ord="3">test</EnumVal>
+			<EnumVal ord="4">test/blocked</EnumVal>
+			<EnumVal ord="5">off</EnumVal>
+		</EnumType>
+		<EnumType id="HealthKind">
+			<EnumVal ord="1">Ok</EnumVal>
+			<EnumVal ord="2">Warning</EnumVal>
+			<EnumVal ord="3">Alarm</EnumVal>
+		</EnumType>
+		<EnumType id="CtlModelKind">
+			<EnumVal ord="0">status-only</EnumVal>
+			<EnumVal ord="1">direct-with-normal-security</EnumVal>
+			<EnumVal ord="2">sbo-with-normal-security</EnumVal>
+			<EnumVal ord="3">direct-with-enhanced-security</EnumVal>
+			<EnumVal ord="4">sbo-with-enhanced-security</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

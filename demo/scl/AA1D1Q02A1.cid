@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="B" release="4">
+	<Header id="AA1D1Q02A1" version="3" revision="B" toolID="OT Fabric demo generator 1.0" nameStructure="IEDName">
+		<History>
+			<Hitem version="1" revision="A" when="2026-10-02T15:10:00Z" who="j.devries" what="CID from the system configuration" why="Detailed design"/>
+			<Hitem version="3" revision="B" when="2026-11-03T09:20:00Z" who="m.okafor" what="GOOSE addresses updated" why="FAT findings"/>
+		</History>
+	</Header>
+	<Communication>
+		<SubNetwork name="AA1WA1" type="8-MMS" desc="Station bus (MMS, GOOSE and Sampled Values)">
+			<BitRate unit="b/s" multiplier="M">100</BitRate>
+			<ConnectedAP iedName="AA1D1Q02A1" apName="S1">
+				<Address>
+					<P xsi:type="tP_IP" type="IP">10.20.1.31</P>
+					<P xsi:type="tP_IP-SUBNET" type="IP-SUBNET">255.255.255.0</P>
+					<P xsi:type="tP_IP-GATEWAY" type="IP-GATEWAY">10.20.1.1</P>
+					<P xsi:type="tP_OSI-AP-Title" type="OSI-AP-Title">1,3,9999,33</P>
+					<P xsi:type="tP_OSI-AE-Qualifier" type="OSI-AE-Qualifier">33</P>
+					<P xsi:type="tP_OSI-PSEL" type="OSI-PSEL">00000001</P>
+					<P xsi:type="tP_OSI-SSEL" type="OSI-SSEL">0001</P>
+					<P xsi:type="tP_OSI-TSEL" type="OSI-TSEL">0001</P>
+				</Address>
+				<GSE ldInst="PROT" cbName="gcbTrip">
+					<Address>
+						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-11</P>
+						<P xsi:type="tP_APPID" type="APPID">0101</P>
+						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
+						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+					</Address>
+					<MinTime unit="s" multiplier="m">4</MinTime>
+					<MaxTime unit="s" multiplier="m">1000</MaxTime>
+				</GSE>
+				<GSE ldInst="CTRL" cbName="gcbPos">
+					<Address>
+						<P xsi:type="tP_MAC-Address" type="MAC-Address">01-0C-CD-01-00-12</P>
+						<P xsi:type="tP_APPID" type="APPID">0102</P>
+						<P xsi:type="tP_VLAN-ID" type="VLAN-ID">00A</P>
+						<P xsi:type="tP_VLAN-PRIORITY" type="VLAN-PRIORITY">4</P>
+					</Address>
+					<MinTime unit="s" multiplier="m">4</MinTime>
+					<MaxTime unit="s" multiplier="m">1000</MaxTime>
+				</GSE>
+				<PhysConn type="Connection">
+					<P xsi:type="tP_Type" type="Type">FOC</P>
+					<P xsi:type="tP_Plug" type="Plug">LC</P>
+				</PhysConn>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="AA1D1Q02A1" desc="Feeder 1 protection and control (Riverside)" type="FPC-615" manufacturer="OT Fabric Demo" configVersion="3.1" originalSclVersion="2007" originalSclRevision="B" originalSclRelease="4">
+		<Services>
+			<DynAssociation max="4"/>
+			<SettingGroups><SGEdit/><ConfSG/></SettingGroups>
+			<GetDirectory/>
+			<GetDataObjectDefinition/>
+			<DataObjectDirectory/>
+			<GetDataSetValue/>
+			<DataSetDirectory/>
+			<ConfDataSet max="12" maxAttributes="64"/>
+			<ReadWrite/>
+			<ConfReportControl max="12"/>
+			<GetCBValues/>
+			<ReportSettings rptID="Dyn" optFields="Dyn" bufTime="Dyn" trgOps="Dyn" intgPd="Dyn"/>
+			<GSESettings appID="Conf" dataLabel="Fix"/>
+			<GOOSE max="4"/>
+			<ConfLogControl max="2"/>
+			<FileHandling/>
+			<ConfLNs fixPrefix="true" fixLnInst="true"/>
+		</Services>
+		<AccessPoint name="S1" desc="Station bus">
+			<Server>
+				<Authentication none="true"/>
+				<LDevice inst="LD0" desc="Device">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_A">
+						<DOI name="NamPlt">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="d">
+								<Val>Feeder 1 protection and control</Val>
+							</DAI>
+							<DAI name="configRev">
+								<Val>AA1-2026-11-03</Val>
+							</DAI>
+						</DOI>
+					</LN0>
+					<LN lnClass="LPHD" inst="1" lnType="LPHD_A">
+						<DOI name="PhyNam">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="hwRev">
+								<Val>C</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="serNum">
+								<Val>FPC-615-264411</Val>
+							</DAI>
+							<DAI name="model">
+								<Val>FPC-615</Val>
+							</DAI>
+							<DAI name="location">
+								<Val>AA1 Northfield, relay room</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_IND3" desc="Breaker supervision inputs"/>
+				</LDevice>
+				<LDevice inst="PROT" desc="Protection">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_A">
+						<DataSet name="dsTrip" desc="Protection starts and trips">
+							<FCDA ldInst="PROT" lnClass="PTOC" lnInst="1" doName="Str" fc="ST"/>
+							<FCDA ldInst="PROT" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/>
+							<FCDA ldInst="PROT" lnClass="PTOC" lnInst="2" doName="Str" fc="ST"/>
+							<FCDA ldInst="PROT" lnClass="PTOC" lnInst="2" doName="Op" fc="ST"/>
+							<FCDA ldInst="PROT" lnClass="PTRC" lnInst="1" doName="Tr" fc="ST"/>
+						</DataSet>
+						<DataSet name="dsGoTrip" desc="Trip for GOOSE">
+							<FCDA ldInst="PROT" lnClass="PTRC" lnInst="1" doName="Tr" daName="general" fc="ST"/>
+							<FCDA ldInst="PROT" lnClass="PTRC" lnInst="1" doName="Tr" daName="q" fc="ST"/>
+						</DataSet>
+						<ReportControl name="brcbTrip" desc="Protection events to the station HMI" datSet="dsTrip" rptID="AA1D1Q02A1PROT/LLN0.brcbTrip" confRev="1" buffered="true" bufTime="50" indexed="false">
+							<TrgOps dchg="true" qchg="true" gi="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" dataRef="true" entryID="true" configRef="true"/>
+							<RptEnabled max="2">
+								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
+							</RptEnabled>
+						</ReportControl>
+						<DOI name="NamPlt">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="d">
+								<Val>Protection</Val>
+							</DAI>
+							<DAI name="configRev">
+								<Val>AA1-2026-11-03</Val>
+							</DAI>
+						</DOI>
+						<GSEControl name="gcbTrip" desc="Trip to busbar and transformer protection" datSet="dsGoTrip" confRev="1" appID="AA1D1Q02A1_Trip" type="GOOSE"/>
+						<SettingControl numOfSGs="2" actSG="1"/>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_A" desc="Overcurrent I&gt; (51)">
+						<DOI name="StrVal">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val sGroup="1">600</Val>
+									<Val sGroup="2">800</Val>
+								</DAI>
+							</SDI>
+							<SDI name="minVal">
+								<DAI name="f">
+									<Val>50</Val>
+								</DAI>
+							</SDI>
+							<SDI name="maxVal">
+								<DAI name="f">
+									<Val>5000</Val>
+								</DAI>
+							</SDI>
+							<SDI name="stepSize">
+								<DAI name="f">
+									<Val>10</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="OpDlTmms">
+							<DAI name="setVal">
+								<Val sGroup="1">300</Val>
+								<Val sGroup="2">500</Val>
+							</DAI>
+							<DAI name="minVal">
+								<Val>0</Val>
+							</DAI>
+							<DAI name="maxVal">
+								<Val>60000</Val>
+							</DAI>
+							<DAI name="stepSize">
+								<Val>10</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="PTOC" inst="2" lnType="PTOC_A" desc="Overcurrent I&gt;&gt; (50)">
+						<DOI name="StrVal">
+							<SDI name="setMag">
+								<DAI name="f">
+									<Val sGroup="1">4000</Val>
+									<Val sGroup="2">5000</Val>
+								</DAI>
+							</SDI>
+							<SDI name="minVal">
+								<DAI name="f">
+									<Val>100</Val>
+								</DAI>
+							</SDI>
+							<SDI name="maxVal">
+								<DAI name="f">
+									<Val>20000</Val>
+								</DAI>
+							</SDI>
+							<SDI name="stepSize">
+								<DAI name="f">
+									<Val>10</Val>
+								</DAI>
+							</SDI>
+						</DOI>
+						<DOI name="OpDlTmms">
+							<DAI name="setVal">
+								<Val sGroup="1">50</Val>
+								<Val sGroup="2">50</Val>
+							</DAI>
+							<DAI name="minVal">
+								<Val>0</Val>
+							</DAI>
+							<DAI name="maxVal">
+								<Val>60000</Val>
+							</DAI>
+							<DAI name="stepSize">
+								<Val>10</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="PTRC" inst="1" lnType="PTRC_A" desc="Trip conditioning"/>
+				</LDevice>
+				<LDevice inst="CTRL" desc="Control">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_A">
+						<DataSet name="dsPos" desc="Switch positions and interlocking">
+							<FCDA ldInst="CTRL" lnClass="CSWI" lnInst="1" doName="Pos" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="CSWI" lnInst="2" doName="Pos" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="XCBR" lnInst="1" doName="Pos" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="XSWI" lnInst="1" doName="Pos" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="XCBR" lnInst="1" doName="OpCnt" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="CILO" lnInst="2" doName="EnaOpn" daName="stVal" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="CILO" lnInst="2" doName="EnaCls" daName="stVal" fc="ST"/>
+						</DataSet>
+						<DataSet name="dsGoPos" desc="Breaker position for GOOSE">
+							<FCDA ldInst="CTRL" lnClass="XCBR" lnInst="1" doName="Pos" daName="stVal" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="XCBR" lnInst="1" doName="Pos" daName="q" fc="ST"/>
+							<FCDA ldInst="CTRL" lnClass="XCBR" lnInst="1" doName="Pos" daName="t" fc="ST"/>
+						</DataSet>
+						<ReportControl name="brcbPos" desc="Switch positions to the station HMI" datSet="dsPos" rptID="AA1D1Q02A1CTRL/LLN0.brcbPos" confRev="1" buffered="true" bufTime="50" indexed="false">
+							<TrgOps dchg="true" qchg="true" gi="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" entryID="true" configRef="true"/>
+							<RptEnabled max="2">
+								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
+							</RptEnabled>
+						</ReportControl>
+						<LogControl name="lcbEvents" desc="Switching events" datSet="dsPos" logName="EventLog" logEna="true" reasonCode="true">
+							<TrgOps dchg="true" qchg="true"/>
+						</LogControl>
+						<DOI name="NamPlt">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="d">
+								<Val>Control</Val>
+							</DAI>
+							<DAI name="configRev">
+								<Val>AA1-2026-11-03</Val>
+							</DAI>
+						</DOI>
+						<Log name="EventLog"/>
+						<GSEControl name="gcbPos" desc="Breaker position to the busbar protection" datSet="dsGoPos" confRev="1" appID="AA1D1Q02A1_Pos" type="GOOSE"/>
+					</LN0>
+					<LN lnClass="CSWI" inst="1" lnType="CSWI_SBOE" desc="Circuit breaker QA1 control"/>
+					<LN lnClass="CSWI" inst="2" lnType="CSWI_SBOE" desc="Disconnector QB1 control"/>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_A" desc="Circuit breaker QA1"/>
+					<LN lnClass="XSWI" inst="1" lnType="XSWI_A" desc="Disconnector QB1">
+						<DOI name="SwTyp">
+							<DAI name="stVal">
+								<Val>Disconnector</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="CILO" inst="1" lnType="CILO_A" desc="Interlocking QA1"/>
+					<LN lnClass="CILO" inst="2" lnType="CILO_A" desc="Interlocking QB1 (open QA1 first)"/>
+				</LDevice>
+				<LDevice inst="MEAS" desc="Measurements">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_A">
+						<DataSet name="dsMeas" desc="Feeder measurements">
+							<FCDA ldInst="MEAS" lnClass="MMXU" lnInst="1" doName="TotW" fc="MX"/>
+							<FCDA ldInst="MEAS" lnClass="MMXU" lnInst="1" doName="TotVAr" fc="MX"/>
+							<FCDA ldInst="MEAS" lnClass="MMXU" lnInst="1" doName="Hz" fc="MX"/>
+							<FCDA ldInst="MEAS" lnClass="MMXU" lnInst="1" doName="A" fc="MX"/>
+							<FCDA ldInst="MEAS" lnClass="MMXU" lnInst="1" doName="PhV" fc="MX"/>
+							<FCDA ldInst="MEAS" lnClass="MSQI" lnInst="1" doName="SeqA" fc="MX"/>
+						</DataSet>
+						<ReportControl name="urcbMeas" desc="Measurements to the station HMI" datSet="dsMeas" intgPd="10000" rptID="AA1D1Q02A1MEAS/LLN0.urcbMeas" confRev="1" buffered="false" bufTime="100" indexed="false">
+							<TrgOps dchg="true" qchg="true" period="true" gi="true"/>
+							<OptFields seqNum="true" dataSet="true" reasonCode="true" configRef="true"/>
+							<RptEnabled max="2">
+								<ClientLN iedName="AA1KA1" ldInst="LD0" lnClass="IHMI" lnInst="1" apRef="S1"/>
+							</RptEnabled>
+						</ReportControl>
+						<DOI name="NamPlt">
+							<DAI name="vendor">
+								<Val>OT Fabric Demo</Val>
+							</DAI>
+							<DAI name="swRev">
+								<Val>2.4.0</Val>
+							</DAI>
+							<DAI name="d">
+								<Val>Measurements</Val>
+							</DAI>
+							<DAI name="configRev">
+								<Val>AA1-2026-11-03</Val>
+							</DAI>
+						</DOI>
+					</LN0>
+					<LN lnClass="MMXU" inst="1" lnType="MMXU_A" desc="Feeder measurement">
+						<DOI name="TotW">
+							<DAI name="db">
+								<Val>2000</Val>
+							</DAI>
+						</DOI>
+						<DOI name="TotVAr">
+							<DAI name="db">
+								<Val>2000</Val>
+							</DAI>
+						</DOI>
+						<DOI name="Hz">
+							<DAI name="db">
+								<Val>100</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="MSQI" inst="1" lnType="MSQI_A" desc="Sequence currents"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_A" lnClass="LLN0" desc="Logical device root, Edition 2">
+			<DO name="Mod" type="ENC_Mod"/>
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Health" type="ENS_Health"/>
+			<DO name="NamPlt" type="LPL_LD"/>
+		</LNodeType>
+		<LNodeType id="LPHD_A" lnClass="LPHD">
+			<DO name="PhyNam" type="DPL_A"/>
+			<DO name="PhyHealth" type="ENS_Health"/>
+			<DO name="Proxy" type="SPS_A"/>
+		</LNodeType>
+		<LNodeType id="GGIO_IND3" lnClass="GGIO" desc="Three binary inputs">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Ind1" type="SPS_A" desc="SF6 pressure low"/>
+			<DO name="Ind2" type="SPS_A" desc="Spring charged"/>
+			<DO name="Ind3" type="SPS_A" desc="Trip circuit supervision"/>
+		</LNodeType>
+		<LNodeType id="PTOC_A" lnClass="PTOC">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Str" type="ACD_A"/>
+			<DO name="Op" type="ACT_A"/>
+			<DO name="StrVal" type="ASG_SG"/>
+			<DO name="OpDlTmms" type="ING_SG"/>
+		</LNodeType>
+		<LNodeType id="PTRC_A" lnClass="PTRC">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Str" type="ACD_A"/>
+			<DO name="Op" type="ACT_A"/>
+			<DO name="Tr" type="ACT_G"/>
+		</LNodeType>
+		<LNodeType id="CSWI_SBOE" lnClass="CSWI" desc="Switch controller, SBO with enhanced security">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Pos" type="DPC_SBOE"/>
+		</LNodeType>
+		<LNodeType id="XCBR_A" lnClass="XCBR">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Loc" type="SPS_A"/>
+			<DO name="OpCnt" type="INS_A"/>
+			<DO name="Pos" type="DPC_ST"/>
+			<DO name="BlkOpn" type="SPC_ST"/>
+			<DO name="BlkCls" type="SPC_ST"/>
+		</LNodeType>
+		<LNodeType id="XSWI_A" lnClass="XSWI">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="Loc" type="SPS_A"/>
+			<DO name="OpCnt" type="INS_A"/>
+			<DO name="Pos" type="DPC_ST"/>
+			<DO name="BlkOpn" type="SPC_ST"/>
+			<DO name="BlkCls" type="SPC_ST"/>
+			<DO name="SwTyp" type="ENS_SwTyp"/>
+		</LNodeType>
+		<LNodeType id="CILO_A" lnClass="CILO">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="EnaOpn" type="SPS_A"/>
+			<DO name="EnaCls" type="SPS_A"/>
+		</LNodeType>
+		<LNodeType id="MMXU_A" lnClass="MMXU">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="TotW" type="MV_A"/>
+			<DO name="TotVAr" type="MV_A"/>
+			<DO name="Hz" type="MV_A"/>
+			<DO name="PhV" type="WYE_A"/>
+			<DO name="A" type="WYE_A"/>
+		</LNodeType>
+		<LNodeType id="MSQI_A" lnClass="MSQI">
+			<DO name="Beh" type="ENS_Beh"/>
+			<DO name="SeqA" type="SEQ_A"/>
+		</LNodeType>
+		<DOType id="ENC_Mod" cdc="ENC">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind">
+				<Val>status-only</Val>
+			</DA>
+		</DOType>
+		<DOType id="ENS_Beh" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="BehaviourModeKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ENS_Health" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="HealthKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ENS_SwTyp" cdc="ENS">
+			<DA name="stVal" fc="ST" bType="Enum" type="SwitchFunctionKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="LPL_LD" cdc="LPL">
+			<DA name="vendor" fc="DC" bType="VisString255"/>
+			<DA name="swRev" fc="DC" bType="VisString255"/>
+			<DA name="d" fc="DC" bType="VisString255"/>
+			<DA name="configRev" fc="DC" bType="VisString255"/>
+			<DA name="ldNs" fc="EX" bType="VisString255">
+				<Val>IEC 61850-7-4:2007B</Val>
+			</DA>
+		</DOType>
+		<DOType id="DPL_A" cdc="DPL">
+			<DA name="vendor" fc="DC" bType="VisString255"/>
+			<DA name="hwRev" fc="DC" bType="VisString255"/>
+			<DA name="swRev" fc="DC" bType="VisString255"/>
+			<DA name="serNum" fc="DC" bType="VisString255"/>
+			<DA name="model" fc="DC" bType="VisString255"/>
+			<DA name="location" fc="DC" bType="VisString255"/>
+		</DOType>
+		<DOType id="SPS_A" cdc="SPS">
+			<DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="INS_A" cdc="INS">
+			<DA name="stVal" fc="ST" bType="INT32" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ACD_A" cdc="ACD">
+			<DA name="general" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="dirGeneral" fc="ST" bType="Enum" type="FaultDirectionKind" dchg="true"/>
+			<DA name="phsA" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="dirPhsA" fc="ST" bType="Enum" type="PhaseFaultDirectionKind" dchg="true"/>
+			<DA name="phsB" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="dirPhsB" fc="ST" bType="Enum" type="PhaseFaultDirectionKind" dchg="true"/>
+			<DA name="phsC" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="dirPhsC" fc="ST" bType="Enum" type="PhaseFaultDirectionKind" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ACT_A" cdc="ACT">
+			<DA name="general" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="phsA" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="phsB" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="phsC" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="ACT_G" cdc="ACT">
+			<DA name="general" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+		</DOType>
+		<DOType id="MV_A" cdc="MV">
+			<DA name="mag" fc="MX" bType="Struct" type="AnalogueValue" dchg="true"/>
+			<DA name="q" fc="MX" bType="Quality" qchg="true"/>
+			<DA name="t" fc="MX" bType="Timestamp"/>
+			<DA name="db" fc="CF" bType="INT32U"/>
+		</DOType>
+		<DOType id="CMV_A" cdc="CMV">
+			<DA name="cVal" fc="MX" bType="Struct" type="Vector" dchg="true"/>
+			<DA name="q" fc="MX" bType="Quality" qchg="true"/>
+			<DA name="t" fc="MX" bType="Timestamp"/>
+		</DOType>
+		<DOType id="WYE_A" cdc="WYE">
+			<SDO name="phsA" type="CMV_A"/>
+			<SDO name="phsB" type="CMV_A"/>
+			<SDO name="phsC" type="CMV_A"/>
+		</DOType>
+		<DOType id="SEQ_A" cdc="SEQ">
+			<SDO name="c1" type="CMV_A"/>
+			<SDO name="c2" type="CMV_A"/>
+			<SDO name="c3" type="CMV_A"/>
+			<DA name="seqT" fc="MX" bType="Enum" type="SequenceKind">
+				<Val>pos-neg-zero</Val>
+			</DA>
+		</DOType>
+		<DOType id="DPC_SBOE" cdc="DPC">
+			<DA name="stVal" fc="ST" bType="Dbpos" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind">
+				<Val>sbo-with-enhanced-security</Val>
+			</DA>
+			<DA name="sboTimeout" fc="CF" bType="INT32U">
+				<Val>30000</Val>
+			</DA>
+			<DA name="SBOw" fc="CO" bType="Struct" type="DPCOperate"/>
+			<DA name="Oper" fc="CO" bType="Struct" type="DPCOperate"/>
+			<DA name="Cancel" fc="CO" bType="Struct" type="DPCCancel"/>
+		</DOType>
+		<DOType id="DPC_ST" cdc="DPC">
+			<DA name="stVal" fc="ST" bType="Dbpos" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind">
+				<Val>status-only</Val>
+			</DA>
+		</DOType>
+		<DOType id="SPC_ST" cdc="SPC">
+			<DA name="stVal" fc="ST" bType="BOOLEAN" dchg="true"/>
+			<DA name="q" fc="ST" bType="Quality" qchg="true"/>
+			<DA name="t" fc="ST" bType="Timestamp"/>
+			<DA name="ctlModel" fc="CF" bType="Enum" type="CtlModelKind">
+				<Val>status-only</Val>
+			</DA>
+		</DOType>
+		<DOType id="ASG_SG" cdc="ASG">
+			<DA name="setMag" fc="SG" bType="Struct" type="AnalogueValue"/>
+			<DA name="minVal" fc="CF" bType="Struct" type="AnalogueValue"/>
+			<DA name="maxVal" fc="CF" bType="Struct" type="AnalogueValue"/>
+			<DA name="stepSize" fc="CF" bType="Struct" type="AnalogueValue"/>
+		</DOType>
+		<DOType id="ING_SG" cdc="ING">
+			<DA name="setVal" fc="SG" bType="INT32"/>
+			<DA name="minVal" fc="CF" bType="INT32"/>
+			<DA name="maxVal" fc="CF" bType="INT32"/>
+			<DA name="stepSize" fc="CF" bType="INT32U"/>
+		</DOType>
+		<DAType id="AnalogueValue">
+			<BDA name="f" bType="FLOAT32"/>
+		</DAType>
+		<DAType id="Vector">
+			<BDA name="mag" bType="Struct" type="AnalogueValue"/>
+			<BDA name="ang" bType="Struct" type="AnalogueValue"/>
+		</DAType>
+		<DAType id="Originator">
+			<BDA name="orCat" bType="Enum" type="OriginatorCategoryKind"/>
+			<BDA name="orIdent" bType="Octet64"/>
+		</DAType>
+		<DAType id="DPCOperate">
+			<BDA name="ctlVal" bType="BOOLEAN"/>
+			<BDA name="origin" bType="Struct" type="Originator"/>
+			<BDA name="ctlNum" bType="INT8U"/>
+			<BDA name="T" bType="Timestamp"/>
+			<BDA name="Test" bType="BOOLEAN"/>
+			<BDA name="Check" bType="Check"/>
+		</DAType>
+		<DAType id="DPCCancel">
+			<BDA name="ctlVal" bType="BOOLEAN"/>
+			<BDA name="origin" bType="Struct" type="Originator"/>
+			<BDA name="ctlNum" bType="INT8U"/>
+			<BDA name="T" bType="Timestamp"/>
+			<BDA name="Test" bType="BOOLEAN"/>
+		</DAType>
+		<EnumType id="BehaviourModeKind">
+			<EnumVal ord="1">on</EnumVal>
+			<EnumVal ord="2">on-blocked</EnumVal>
+			<EnumVal ord="3">test</EnumVal>
+			<EnumVal ord="4">test/blocked</EnumVal>
+			<EnumVal ord="5">off</EnumVal>
+		</EnumType>
+		<EnumType id="HealthKind">
+			<EnumVal ord="1">Ok</EnumVal>
+			<EnumVal ord="2">Warning</EnumVal>
+			<EnumVal ord="3">Alarm</EnumVal>
+		</EnumType>
+		<EnumType id="CtlModelKind">
+			<EnumVal ord="0">status-only</EnumVal>
+			<EnumVal ord="1">direct-with-normal-security</EnumVal>
+			<EnumVal ord="2">sbo-with-normal-security</EnumVal>
+			<EnumVal ord="3">direct-with-enhanced-security</EnumVal>
+			<EnumVal ord="4">sbo-with-enhanced-security</EnumVal>
+		</EnumType>
+		<EnumType id="OriginatorCategoryKind">
+			<EnumVal ord="0">not-supported</EnumVal>
+			<EnumVal ord="1">bay-control</EnumVal>
+			<EnumVal ord="2">station-control</EnumVal>
+			<EnumVal ord="3">remote-control</EnumVal>
+			<EnumVal ord="4">automatic-bay</EnumVal>
+			<EnumVal ord="5">automatic-station</EnumVal>
+			<EnumVal ord="6">automatic-remote</EnumVal>
+			<EnumVal ord="7">maintenance</EnumVal>
+			<EnumVal ord="8">process</EnumVal>
+		</EnumType>
+		<EnumType id="FaultDirectionKind">
+			<EnumVal ord="0">unknown</EnumVal>
+			<EnumVal ord="1">forward</EnumVal>
+			<EnumVal ord="2">backward</EnumVal>
+			<EnumVal ord="3">both</EnumVal>
+		</EnumType>
+		<EnumType id="PhaseFaultDirectionKind">
+			<EnumVal ord="0">unknown</EnumVal>
+			<EnumVal ord="1">forward</EnumVal>
+			<EnumVal ord="2">backward</EnumVal>
+		</EnumType>
+		<EnumType id="SwitchFunctionKind">
+			<EnumVal ord="1">Load Break Switch</EnumVal>
+			<EnumVal ord="2">Disconnector</EnumVal>
+			<EnumVal ord="3">Earthing Switch</EnumVal>
+			<EnumVal ord="4">High Speed Earthing Switch</EnumVal>
+		</EnumType>
+		<EnumType id="SequenceKind">
+			<EnumVal ord="0">pos-neg-zero</EnumVal>
+			<EnumVal ord="1">dir-quad-zero</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

@@ -100,6 +100,8 @@ export function App({ service, platform }: AppProps) {
     }
   }
 
+  const dock = views.length > 0 || state.watch.length > 0 || state.activity.length > 0;
+
   return (
     <div className="flex h-full flex-col">
       <Header mode={platform.mode} theme={theme} commission={view?.info.mode === 'commission'} onToggleTheme={toggleTheme} />
@@ -113,7 +115,8 @@ export function App({ service, platform }: AppProps) {
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-rows-[1fr_minmax(160px,32%)]">
+      {/* The dock (watch, activity) appears once it has something to show: the start view uses the whole window. */}
+      <div className={`grid min-h-0 flex-1 ${dock ? 'grid-rows-[1fr_minmax(160px,32%)]' : 'grid-rows-[1fr]'}`}>
         <div className="min-h-0 overflow-auto">
           {!view && (
             <>
@@ -241,8 +244,9 @@ export function App({ service, platform }: AppProps) {
           )}
         </div>
 
-        <div className="flex min-h-0 flex-col border-t border-line">
-          <div role="tablist" className="flex shrink-0 gap-4 px-4 pt-2">
+        {dock && (
+          <div className="flex min-h-0 flex-col border-t border-line">
+            <div role="tablist" className="flex shrink-0 gap-4 px-4 pt-2">
             {(commission ? (['watch', 'activity', 'reports', 'audit'] as const) : (['watch', 'activity'] as const)).map((tab) => (
               <button
                 key={tab}
@@ -285,7 +289,8 @@ export function App({ service, platform }: AppProps) {
               <AuditPanel records={state.audit} label={label} />
             )}
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
       {granting && state.sessions[granting] && (

@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: MIT
+
+package site
+
+// VendorNSD is the namespace definition (IEC 61850-7-7 NSD) of the
+// made-up vendor's extension: YLTC extended with two motor drive data
+// objects. Written for the demo; not IEC content and not a real vendor's.
+func VendorNSD() []byte {
+	return []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Demo extension namespace of the fictitious vendor Corvane Energy,
+     written for the OT Fabric IEC 61850 Explorer demo. It is not IEC
+     content and describes no real product. -->
+<NS xmlns="http://www.iec.ch/61850/2016/NSD" id="CORVANE 7-4X" version="2026" revision="A" release="1" publicationStage="IS">
+	<DependsOn id="IEC 61850-7-4" version="2007" revision="B"/>
+	<LNClasses>
+		<LNClass name="YLTC" isExtension="true">
+			<DataObject name="MotDrvTmp" type="MV" presCond="O"/>
+			<DataObject name="MotDrvA" type="MV" presCond="O"/>
+		</LNClass>
+	</LNClasses>
+</NS>
+`)
+}

@@ -1,0 +1,32 @@
+version: "2"
+
+# The demo module (generator, live IEDs) serves MMS and sends controls on
+# purpose: the app module's Observe-mode ban (forbidigo) does not apply
+# here. Everything else is the app module's set.
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - misspell
+    - godot
+    - nilerr
+    - exhaustive
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m
+  tests: true

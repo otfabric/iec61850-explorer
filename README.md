@@ -62,6 +62,8 @@ bin/iec61850-explorerd --allow-target 127.0.0.1
 
 and open the URL that `bin/iec61850-explorerd url` prints.
 
+The [demo set](demo/README.md) is a whole (made-up) 110/20 kV substation to try every view with: an SCD and five CIDs (one of them Edition 1, one with a vendor namespace), packet captures of MMS, GOOSE and Sampled Values (discovery, reports, controls, settings, files and logs, a fault, and a capture full of problems), and its five IEDs served live by `make demo-ieds` on 127.0.0.1:10201 to 10205.
+
 ## Remote use
 
 On the gateway:
