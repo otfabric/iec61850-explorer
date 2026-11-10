@@ -2,8 +2,8 @@ github.com/otfabric/go-cotp v1.3.0 h1:IXfqzdt86GPg6+il9g2GIWLFFmtNuVBMiE2ceLrXJp
 github.com/otfabric/go-cotp v1.3.0/go.mod h1:0XVoeSHnOPj8XWI484tUC2U6dbaKCtVk0z18MipM37s=
 github.com/otfabric/go-iec61850 v1.16.1 h1:ieGOWx2ByuhRgqVlcCcVn/LrMZxYi64Gv/Rv74rSjAU=
 github.com/otfabric/go-iec61850 v1.16.1/go.mod h1:5yMecWO7sX3Rmlw8yiZPdzIcEv1HQau5IvKbDxWjkdQ=
-github.com/otfabric/go-mms v1.7.1 h1:YwqxCavFofDW/MXVsqm+7sClqKC74HVCMIVNZiyC8SE=
-github.com/otfabric/go-mms v1.7.1/go.mod h1:jnTh0K95bqNCQtdTBkBG/rMmGPeooYoABQa9Sqq3Zio=
+github.com/otfabric/go-mms v1.7.2 h1:fpvn9+5GIFA3+a+NQMSLigHmxqPiu0BbB/xmPiTvoNo=
+github.com/otfabric/go-mms v1.7.2/go.mod h1:jnTh0K95bqNCQtdTBkBG/rMmGPeooYoABQa9Sqq3Zio=
 github.com/otfabric/go-mms-trace v0.1.1 h1:uk5O8EEFdTg4997V9xhZ5/hHBU6sMLwBXBpwEBDcgOw=
 github.com/otfabric/go-mms-trace v0.1.1/go.mod h1:Bc2X808TMhHqQvkDsii9T2s6LTRy0wEJlRw8/mz5Yog=
 github.com/otfabric/go-tpkt v1.1.0 h1:KTCQePVqqnvDB0A3O4ReRqfa5jJ3jnsEYNUdS91vD4o=
