@@ -91,8 +91,8 @@ func TestCompareSCLWithIED(t *testing.T) {
 		"model only_a " + ld + "/LPHD9 ",
 		"datasets changed " + ld + "/LLN0.Meas members",
 		"datasets only_a " + ld + "/LLN0.Extra ",
-		"reports changed " + ld + "/LLN0.RP.urcbMeas conf_rev",
-		"reports changed " + ld + "/LLN0.RP.urcbMeas intg_pd_ms",
+		"reports changed " + ld + "/LLN0.RP.urcbMeas01 conf_rev",
+		"reports changed " + ld + "/LLN0.RP.urcbMeas01 intg_pd_ms",
 	}
 	for _, k := range want {
 		if _, ok := got[k]; !ok {
@@ -105,7 +105,7 @@ func TestCompareSCLWithIED(t *testing.T) {
 	if d := got["datasets changed "+ld+"/LLN0.Meas members"]; d.Note != "1 members / 2 members" || !strings.Contains(d.B, "TotW") {
 		t.Errorf("members difference = %+v", d)
 	}
-	if d := got["reports changed "+ld+"/LLN0.RP.urcbMeas conf_rev"]; d.A != "7" || d.B != "1" {
+	if d := got["reports changed "+ld+"/LLN0.RP.urcbMeas01 conf_rev"]; d.A != "7" || d.B != "1" {
 		t.Errorf("conf_rev difference = %+v", d)
 	}
 	if cat := category(t, c, model.CompareModel); cat.OnlyA != 1 || cat.OnlyB != 0 {

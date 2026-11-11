@@ -119,14 +119,14 @@ func TestReportsLiveMatchSCL(t *testing.T) {
 			t.Errorf("live %s: Resv %v, ResvTms %v", l.Ref, l.Resv, l.ResvTms)
 		}
 		if l.Ref != s.Ref || l.MMS != s.MMS || l.Buffered != s.Buffered || l.RptID != s.RptID || l.DatSet != s.DatSet || l.ConfRev != s.ConfRev ||
-			l.BufTmMS != s.BufTmMS || !slices.Equal(l.TrgOps, s.TrgOps) || !slices.Equal(l.OptFlds, s.OptFlds) {
+			l.BufTmMS != s.BufTmMS || !slices.Equal(l.TrgOps, s.TrgOps) || !slices.Equal(comparedOptFlds(l), comparedOptFlds(s)) {
 			t.Errorf("live %+v\nscl  %+v", l, s)
 		}
 		if s.RptEna != nil || s.Source != model.SourceSCL {
 			t.Errorf("SCL RCB claims IED state: %+v", s)
 		}
 	}
-	if a[0].Ref != simied.Domain+"/LLN0.BR.brcbEvents" || !a[0].Buffered || a[2].Ref != simied.Domain+"/LLN0.RP.urcbMeas" {
+	if a[0].Ref != simied.Domain+"/LLN0.BR.brcbEvents01" || !a[0].Buffered || a[2].Ref != simied.Domain+"/LLN0.RP.urcbMeas01" {
 		t.Errorf("RCBs = %s, %s, %s", a[0].Ref, a[1].Ref, a[2].Ref)
 	}
 }

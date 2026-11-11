@@ -167,7 +167,7 @@ func m2b2Contract(t *testing.T, svc service.Service) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = svc.CloseSession(ctx, info.ID) })
-	rcb := simied.Domain + "/LLN0.RP.urcbEvents"
+	rcb := simied.Domain + "/LLN0.RP.urcbEvents01"
 	if _, err := svc.SubscribeReport(ctx, info.ID, model.SubscribeRequest{RCB: rcb}); service.CodeOf(err) != service.CodeNotAllowed {
 		t.Fatalf("subscribe without grant = %v", err)
 	}

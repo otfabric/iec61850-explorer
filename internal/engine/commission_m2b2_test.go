@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	urcb = simied.Domain + "/LLN0.RP.urcbEvents"
-	brcb = simied.Domain + "/LLN0.BR.brcbEvents"
+	urcb = simied.Domain + "/LLN0.RP.urcbEvents01"
+	brcb = simied.Domain + "/LLN0.BR.brcbEvents01"
 )
 
 func grantOn(t *testing.T, e *Engine, id string, caps ...string) {
@@ -167,13 +167,13 @@ func TestReportSubscriptionRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = other.Close(context.Background()) }()
-	if err := other.ReserveURCB(ctx, simied.Domain, "LLN0$RP$urcbEvents"); err != nil {
+	if err := other.ReserveURCB(ctx, simied.Domain, "LLN0$RP$urcbEvents01"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.SubscribeReport(ctx, info.ID, model.SubscribeRequest{RCB: urcb}); service.CodeOf(err) != service.CodeNotAllowed || !strings.Contains(err.Error(), "reserved") {
 		t.Errorf("reserved URCB = %v", err)
 	}
-	if err := other.SetReportControlBlock(ctx, simied.Domain, "LLN0$BR$brcbEvents", iec61850.RCBUpdate{Fields: iec61850.RCBFieldRptEna, RptEna: true}); err != nil {
+	if err := other.SetReportControlBlock(ctx, simied.Domain, "LLN0$BR$brcbEvents01", iec61850.RCBUpdate{Fields: iec61850.RCBFieldRptEna, RptEna: true}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.SubscribeReport(ctx, info.ID, model.SubscribeRequest{RCB: brcb}); service.CodeOf(err) != service.CodeNotAllowed || !strings.Contains(err.Error(), "enabled") {

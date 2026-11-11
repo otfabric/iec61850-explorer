@@ -86,14 +86,14 @@ The Explorer's search by quantity (frequency, voltage, current, active, reactive
 | `scl/AA1D1W1A1.cid` | 14 KB | Busbar protection (Ed2) |
 | `scl/AA1D1Q02MU1.cid` | 13 KB | Merging unit (Ed2) |
 | `nsd/corvane-7-4x-2026a.nsd` | 1 KB | The vendor extension namespace `CORVANE 7-4X:2026A` (YLTC + MotDrvTmp, MotDrvA), an NSD package for the Explorer's namespace view |
-| `captures/01-hmi-browse-and-poll.pcapng` | 78 KB | MMS: the HMI discovers and polls three IEDs |
+| `captures/01-hmi-browse-and-poll.pcapng` | 79 KB | MMS: the HMI discovers and polls three IEDs |
 | `captures/02-reports.pcapng` | 12 KB | MMS: report subscription with GI, data change, quality change, integrity |
-| `captures/03-control-sbo.pcapng` | 12 KB | MMS: SBO with enhanced security, an interlocked switch refuses |
+| `captures/03-control-sbo.pcapng` | 11 KB | MMS: SBO with enhanced security, an interlocked switch refuses |
 | `captures/04-settings-files-logs.pcapng` | 37 KB | MMS: setting groups, a COMTRADE download, the journal |
 | `captures/05-goose.pcapng` | 15 KB | GOOSE: heartbeats, the trip, the breaker failure |
 | `captures/06-sampled-values.pcapng` | 329 KB | Sampled Values through the fault |
 | `captures/07-station-fault.pcapng` | 1.0 MB | The hero: SV, GOOSE and MMS of the fault together |
-| `captures/08-problems.pcapng` | 251 KB | Everything the findings view knows to complain about |
+| `captures/08-problems.pcapng` | 252 KB | Everything the findings view knows to complain about |
 
 Captures in total 1.7 MB. The SCL files are CIDs as an engineering tool would write them from the SCD: each holds its IED, its ConnectedAP (with GSE and SMV) and the templates it uses, and SCD and CID agree (compared in the Explorer, values included: no differences). Addresses are written `<P type="IP" xsi:type="tP_IP">`, the attribute order of ABB's tools; `bufOvfl` of OptFields is written either way, since its default is true in the 2007 schemas and false in the 2003 schema.
 
@@ -105,29 +105,29 @@ Counts below are go-mms-trace v0.1.1's (`internal/scenario/captures_test.go` che
 
 ### 01-hmi-browse-and-poll.pcapng (08:55)
 
-The HMI associates with feeder 1, the transformer and the busbar protection in turn: Identify, GetNameList (domains, then the variables of every logical device), GetNamedVariableListAttributes of every data set, GetVariableAccessAttributes of what it displays, a first read, then three poll cycles 2 s apart (Read of several variables at once), and concludes all three.
-245 frames; 3 associations (associate/conclude); 69 transactions, all ok: GetNameList 29, GetNamedVariableListAttributes 10, GetVariableAccessAttributes 15, Identify 3, Read 12.
+The HMI associates with feeder 1, the transformer and the busbar protection in turn: Identify, GetNameList (domains, then the variables of every logical device), GetNamedVariableListAttributes of every data set, GetVariableAccessAttributes of what it displays, a first read, then three poll cycles 2 s apart (Read of several variables at once), and closes all three (Conclude, then release).
+251 frames; 3 associations (associate/release); 69 transactions, all ok: GetNameList 29, GetNamedVariableListAttributes 10, GetVariableAccessAttributes 15, Identify 3, Read 12.
 
 *Demo:* open the SCD, choose AA1D1Q02A1 (an SCL session); open the capture; link it to that session. Associations and the timeline show the discovery; the objects of feeder 1 resolve to IEC 61850 references, the 20 objects of the transformer and the busbar protection are `not-in-model` warnings (a trace links to one IED's model: link it to AA1E1Q01A1 to see the others resolve).
 
 ### 02-reports.pcapng (08:57)
 
 Feeder 1: the HMI reads `urcbMeas`, reserves it (Resv), sets IntgPd 2000 ms, enables it, asks for a GI; a load change follows (TotW, TotVAr, Hz, A, SeqA: one data-change report each, see *Gaps*), then an integrity report 2 s after enabling. Then `brcbPos`: read, PurgeBuf, enable, GI; the disconnector's position supervision goes invalid|inconsistent and back (two quality-change reports). Both RCBs are disabled and the URCB released.
-67 frames; 1 association; 15 transactions ok (Write 10, Read 2, GetNamedVariableListAttributes 2, Identify 1); 10 reports.
+69 frames; 1 association; 15 transactions ok (Write 10, Read 2, GetNamedVariableListAttributes 2, Identify 1); 10 reports.
 
 *Demo:* link to AA1D1Q02A1 from the SCD (or its CID): all 10 reports are decoded against `dsMeas` and `dsPos`, with data references and reasons (GI, data-change, quality-change, integrity).
 
 ### 03-control-sbo.pcapng (09:20)
 
-The operator isolates feeder 1. The HMI enables `brcbPos` with a GI and reads the interlocking (CILO2.EnaOpn/EnaCls false) and CSWI2's ctlModel and sboTimeout. 1. Open QB1 (CSWI2): SBOw accepted, Oper refused: **LastApplError** (AddCause blocked-by-interlocking) before the negative Write response; the HMI cancels. 2. Open QA1 (CSWI1): SBOw, Oper, the position reports (OpCnt, XCBR1.Pos, CSWI1.Pos, CILO2 EnaOpn and EnaCls) and the **CommandTermination**. 3. Open QB1, now released: SBOw, Oper, reports, CommandTermination. Reads in between; RCB disabled; conclude.
-76 frames; 14 transactions ok (Write 10, Read 4); 11 unconfirmed PDUs: 1 GI report, 1 LastApplError, 5 + 2 position reports, 2 CommandTerminations.
+The operator isolates feeder 1. The HMI enables `brcbPos` with a GI and reads the interlocking (CILO2.EnaOpn/EnaCls false) and CSWI2's ctlModel and sboTimeout. 1. Open QB1 (CSWI2): SBOw accepted, Oper refused: **LastApplError** (AddCause blocked-by-interlocking) before the negative Write response; the HMI cancels. 2. Open QA1 (CSWI1): SBOw, Oper, the position reports (OpCnt, XCBR1.Pos, CSWI1.Pos, CILO2 EnaOpn and EnaCls) and the **CommandTermination**. 3. Open QB1, now released: SBOw, Oper, reports, CommandTermination. Reads in between; RCB disabled; Conclude and release.
+72 frames; 14 transactions ok (Write 10, Read 4); 8 unconfirmed PDUs: 1 GI report, 1 LastApplError, 3 + 1 position reports, 2 CommandTerminations. The 7 position changes travel in 4 reports: go-iec61850 v1.17 puts the members that change at the same moment into one report.
 
 *Demo:* link to AA1D1Q02A1: the 8 reports of `brcbPos` are decoded; the LastApplError and the CommandTerminations are shown as captured (they are not RPT reports). The timeline shows each Oper as a Write; the refused one carries the failure in its result. Live, do the same in Commission mode (below).
 
 ### 04-settings-files-logs.pcapng (09:30)
 
 Feeder 1 (QA1 and QB1 open since 09:20): the engineer reads the SGCB of PROT and the four overcurrent settings, activates **setting group 2** (Write of SGCB.ActSG), reads both again (800 A / 500 ms now); lists the file store (FileDirectory: the CID and the COMTRADE record) and downloads `COMTRADE/AA1D1Q02A1_20261110_090010.cfg` and `.dat` (FileOpen, FileRead, FileClose); lists the journals and reads `CTRL/EventLog` since yesterday (6 entries: last night's maintenance switching and the two operations of 09:20).
-97 frames; 15 transactions ok: Identify, Read 4, Write 1, FileDirectory 1, FileOpen 2, FileRead 2, FileClose 2, GetNameList 1, ReadJournal 1.
+99 frames; 15 transactions ok: Identify, Read 4, Write 1, FileDirectory 1, FileOpen 2, FileRead 2, FileClose 2, GetNameList 1, ReadJournal 1.
 
 *Demo:* link to AA1D1Q02A1: one `not-in-model` warning, the SGCB (the Explorer builds no setting group control block from SCL, see *Gaps*). Live: the setting groups, files (download the COMTRADE record) and the journal of feeder 1.
 
@@ -152,8 +152,8 @@ The merging unit's 9-2LE stream (svID AA1D1Q02MU1MU01, smpCnt 0 to 3999 per seco
 
 ### 07-station-fault.pcapng, the hero (09:00:04 to 09:00:13)
 
-From 09:00:04 the HMI associates with feeder 1, the busbar protection and the transformer, enables `brcbTrip` of each and the transformer's `urcbTap` (reserved), with a GI each. Then the fault, as it is on the wire: SV (09:00:09.5 to 09:00:11.0), the trip GOOSE, the breaker failure GOOSE, and the reports in time stamp order: feeder 1 PTOC1.Str and PTOC2.Str (09:00:10.012), PTOC2.Op (.062), PTRC1.Tr (.064); busbar RBRF1.OpEx and PTRC1.Tr (.216); transformer PTRC1.Tr (.218) and XCBR2.Pos open (.268, urcbTap); the starts, trips and breaker failure resetting (.285 to .340). At 09:00:11.2 the HMI reads feeder 1 (XCBR1.Pos still closed, PTRC1.Tr, MMXU1.A zero), the transformer (XCBR2.Pos open) and the busbar protection, and concludes at 09:00:12.5.
-6190 frames; 3 associations; 12 transactions ok (Write 9, Read 3); 19 reports (feeder 1: 9, busbar: 5, transformer: 5); 6 GOOSE streams (gcbTrip and gcbBF 23 messages, 2 changes each); 6000 SV frames, no loss.
+From 09:00:04 the HMI associates with feeder 1, the busbar protection and the transformer, enables `brcbTrip` of each and the transformer's `urcbTap` (reserved), with a GI each. Then the fault, as it is on the wire: SV (09:00:09.5 to 09:00:11.0), the trip GOOSE, the breaker failure GOOSE, and the reports in time stamp order: feeder 1 PTOC1.Str and PTOC2.Str (09:00:10.012), PTOC2.Op (.062), PTRC1.Tr (.064); busbar RBRF1.OpEx and PTRC1.Tr (.216); transformer PTRC1.Tr (.218) and XCBR2.Pos open (.268, urcbTap); the starts, trips and breaker failure resetting (.285 to .340). At 09:00:11.2 the HMI reads feeder 1 (XCBR1.Pos still closed, PTRC1.Tr, MMXU1.A zero), the transformer (XCBR2.Pos open) and the busbar protection, and closes them (Conclude, then release) at 09:00:12.5.
+6196 frames; 3 associations; 12 transactions ok (Write 9, Read 3); 19 reports (feeder 1: 9, busbar: 5, transformer: 5); 6 GOOSE streams (gcbTrip and gcbBF 23 messages, 2 changes each); 6000 SV frames, no loss.
 
 *Demo script:* open the SCD as AA1D1Q02A1, open the capture, link. Summary: three associations, 19 reports, six GOOSE streams, one SV stream, no errors. Timeline around 09:00:10: the reports of feeder 1 decoded against `dsTrip` (PTOC Str with phases B and C, Op, Tr); the busbar and transformer reports are shown as captured with "data set not in the linked model": link to AA1D1W1A1 or AA1E1Q01A1 to decode them. Streams: the trip and breaker failure bursts 152 ms apart, gcbPos unchanged. Then open feeder 1 live and download the COMTRADE record of the same fault.
 
@@ -169,13 +169,13 @@ A bad morning on the station bus; each problem is deliberate:
 | Confirmed error | feeder 2 (association 2) | The HMI asks for data set `MEAS/LLN0$dsMeas01`, which feeder 2 does not have | GetNamedVariableListAttributes `error` (class 7, code 2) |
 | Lost TCP segment, request unanswered | feeder 2 (association 2) | The capture left out the response of the second poll (it was delivered: the HMI got it) | `tcp-gap` (Gaps 1), Read `unanswered`, Wireshark: "Previous segment not captured", "ACKed unseen segment" |
 | IED stops answering, association aborted | transformer (association 3) | The relay stops forwarding the IED's units; the HMI's read times out (3 s) and it aborts | Read `unanswered`, Close `abort`, finding `association-abort` |
-| Reject | merging unit (association 4) | The relay changes the invoke ID of one request from INTEGER to OCTET STRING (a malformed request); go-mms's server rejects it | `tsdu-errors` 1 (the malformed request), an `orphan` reject (invoke ID 0, see *Gaps*); the HMI times out and reads again successfully |
+| Reject | merging unit (association 4) | The relay changes the invoke ID of one request from INTEGER to OCTET STRING (a malformed request); go-mms's server rejects it | `tsdu-errors` 1 (the malformed request); the Reject (pdu-error invalid-pdu) carries no invoke ID, since the request's could not be read (ISO 9506-2 §8.6), so it pairs with no request; the HMI's read fails with it and the next read succeeds |
 | GOOSE sequence loss | AA1D1Q03A1CTRL/LLN0$GO$gcbPos | Two heartbeats left out | `sqNum gap` |
 | GOOSE publisher restart | AA1D1Q02MU1MU01/LLN0$GO$gcbStatus | The merging unit is silent for 18 s and restarts with stNum 1, sqNum 0 at 10:00:25.3 | `stNum decreased` |
 | Duplicated frame | AA1D1Q02A1PROT/LLN0$GO$gcbTrip | One heartbeat sent twice | `repeated (stNum, sqNum)` |
 | SV sample loss, repeated sample | MSVCB01, 10:00:30.0 to 10:00:30.3 | smpCnt 400 to 411 left out, smpCnt 800 sent twice | Lost 12, Repeated 1 (`sv-lost`, `sv-repeated`) |
 
-1504 frames; 4 associations; 16 transactions: Read 11 ok, 2 unanswered, GetNamedVariableListAttributes 1 error, Identify 1 ok, 1 orphan. Linked to AA1D1Q03A1 (feeder 2), the Explorer lists 28 findings (errors: tcp-gap, unanswered x2, tsdu-errors, goose-sqnum-gap, sv-lost; warnings: midstream, association-abort, error, orphan, goose-stnum-decreased, goose-repeated, sv-repeated and the not-in-model objects of the other IEDs). Wireshark marks the midstream association's presentation PDUs as undecodable (no AARQ, so no presentation context) and the malformed request.
+1510 frames; 4 associations; 15 transactions: Read 11 ok, 2 unanswered, GetNamedVariableListAttributes 1 error, Identify 1 ok. Linked to AA1D1Q03A1 (feeder 2), the Explorer lists 27 findings (errors: tcp-gap, unanswered x2, tsdu-errors, goose-sqnum-gap, sv-lost; warnings: midstream, association-abort, error, goose-stnum-decreased, goose-repeated, sv-repeated and the not-in-model objects of the other IEDs). Wireshark marks the midstream association's presentation PDUs as undecodable (no AARQ, so no presentation context) and the malformed request.
 
 ## Live IEDs
 
@@ -208,20 +208,18 @@ The tests (`go test ./...` here) parse and validate the SCD and every CID with g
 
 ## How the captures are made
 
-- **MMS** is real traffic: the IEDs are go-iec61850 v1.16.0 servers built from the CIDs (`NewServerModelFromSCL`), the HMI is a go-iec61850 client (go-mms v1.7.1), on TCP over loopback through a relay that records each TPKT in both directions before it forwards it. The recorded units are framed again as Ethernet/IPv4/TCP between the SCD's addresses (port 102, the HMI on ephemeral ports from 49732), with a handshake, consistent sequence and acknowledgement numbers, delayed ACKs, checksums and a FIN close. Times come from the scenario's clock: a response 1.2 to 4.8 ms after its request, the next request 0.3 to 1.1 ms after the response, and the scenario's own pauses.
+- **MMS** is real traffic: the IEDs are go-iec61850 v1.17.1 servers built from the CIDs (`NewServerModelFromSCL`), the HMI is a go-iec61850 client (go-mms v1.8.0), on TCP over loopback through a relay that records each TPKT in both directions before it forwards it. The recorded units are framed again as Ethernet/IPv4/TCP between the SCD's addresses (port 102, the HMI on ephemeral ports from 49732), with a handshake, consistent sequence and acknowledgement numbers, delayed ACKs, checksums and a FIN close. Times come from the scenario's clock: a response 1.2 to 4.8 ms after its request, the next request 0.3 to 1.1 ms after the response, and the scenario's own pauses.
 - **GOOSE and SV** frames are encoded by go-iec61850's `goose` and `sv` packages from the control blocks `goose.ControlBlocksFromSCL` and `sv.ControlBlocksFromSCL` read from the SCD (destination, APPID, VLAN, gocbRef, datSet, goID, confRev, MinTime, MaxTime, svID, smpRate, the 9-2LE layout), with the source MACs above, on the scenario's clock: the GOOSE timing is go-iec61850's publisher's (first retransmission after MinTime, doubling to MaxTime), SV every 250 us.
 - The **problems** of capture 08 are made by the capture point and the relay (left-out frames, a muted start, a relay that stops forwarding, one corrupted request), never by editing captured bytes otherwise.
 - Workarounds, each because of a gap below: the HMI builds the `Oper`/`SBOw`/`Cancel` structures itself (IEC 61850-8-1 layout, T from the scenario clock) and writes them with go-iec61850's `Client.Write`; the IEDs set the parts of a data object together and notify once; changes that each cause a report are made one at a time (paced by 30 ms in the IED when they come from a control); the SGCB's LActTm is stamped again with the IED's clock after a change; the order of the two TCP closes is fixed (client first). The live IEDs use go-iec61850's `OperateWait` path through the Explorer and need none of this.
 
 ## Gaps found (reported, not patched)
 
-1. **go-iec61850 v1.16.1 server: BufTm is not applied.** Every change of a data set member is reported at once (after a fixed 100 ms), one report per changed member; several members changed within BufTm are not combined. For an FCD member the change test compares the whole structure: a time stamp written alone already triggers a data-change report.
-2. **go-iec61850 v1.16.1 server: reports can leave out of order.** Each report is sent from its own goroutine after a 100 ms pause, so reports of changes made at the same moment reach the client in any order (sequence numbers out of order on the wire). Reproducer: enable an RCB on `dsMeas` and set TotW, TotVAr and Hz in one go: the order of the three reports varies between runs.
-3. **go-iec61850 v1.16.1: host clock in protocol values.** The control client stamps `Oper.T` (and Cancel's T) with `time.Now`, with no parameter; the server stamps the SGCB's LActTm, a BRCB's TimeOfEntry (and the report's timeStamp field) and journal entries of `EnableJournals` with `time.Now`, with no clock option. Deterministic or replayed scenarios cannot use these paths (the demo's RCBs therefore have no timeStamp optional field).
-4. **go-mms v1.7.1 server: rejects without the invoke ID.** A confirmed request it cannot decode is rejected with invoke ID 0 (`MarshalRejectPDU(0, ...)`) even when the invoke ID could be read, and the client does not end the pending request; an unsupported service gets a ConfirmedError, not a Reject. No go-mms peer produces a Reject a capture can pair with its request: capture 08's reject is an orphan.
-5. **Explorer (this repository): no SGCB from SCL.** A trace linked to an SCL session reports the SGCB (`LLN0$SP$SGCB`) as `not-in-model` although the SCL's LLN0 has a SettingControl (the engine builds no setting group control block from SCL). Also, a trace links to one IED's model: captures with several IEDs show the others' objects as `not-in-model`.
+1. **go-iec61850 v1.16.1 server: BufTm is not applied.** Every change of a data set member is reported at once (after a fixed 100 ms), one report per change; several members changed within BufTm are not combined (since v1.17, members that change at the same moment share a report). For an FCD member the change test compares the whole structure: a time stamp written alone already triggers a data-change report.
+2. **go-iec61850 v1.16.1: host clock in protocol values.** The control client stamps `Oper.T` (and Cancel's T) with `time.Now`, with no parameter; the server stamps the SGCB's LActTm, a BRCB's TimeOfEntry (and the report's timeStamp field) and journal entries of `EnableJournals` with `time.Now`, with no clock option. Deterministic or replayed scenarios cannot use these paths (the demo's RCBs therefore have no timeStamp optional field).
+3. **Explorer (this repository): no SGCB from SCL.** A trace linked to an SCL session reports the SGCB (`LLN0$SP$SGCB`) as `not-in-model` although the SCL's LLN0 has a SettingControl (the engine builds no setting group control block from SCL). Also, a trace links to one IED's model: captures with several IEDs show the others' objects as `not-in-model`.
 
-Fixed since the demo was made: go-iec61850 v1.16.1 reads `type` before `xsi:type` (it took the address type from `xsi:type`, losing IP and MAC addresses) and applies the schema default of optional booleans such as TrgOps `gi` and OptFields `bufOvfl` (an absent `gi` read false, and an Edition 1 file never had GI).
+Fixed since the demo was made: go-iec61850 v1.17 sends the reports of an association in order, through one queue per association (they left from a goroutine each, in any order); go-mms v1.8.0 rejects a request it cannot decode with its invoke ID when that can be read and without one otherwise, its client hands a Reject without an invoke ID to the only outstanding request instead of leaving it to time out, and an unsupported service gets a Reject (with v1.7.1 the Reject carried invoke ID 0 and capture 08 had an `orphan`). Also: go-iec61850 v1.16.1 reads `type` before `xsi:type` (it took the address type from `xsi:type`, losing IP and MAC addresses) and applies the schema default of optional booleans such as TrgOps `gi` and OptFields `bufOvfl` (an absent `gi` read false, and an Edition 1 file never had GI).
 
 ## Licence
 
