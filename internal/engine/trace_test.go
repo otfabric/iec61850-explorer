@@ -117,7 +117,7 @@ func TestTraceGapsOfSimIED(t *testing.T) {
 	if err != nil || len(assocs) != 1 {
 		t.Fatalf("associations = %+v, %v", assocs, err)
 	}
-	if a := assocs[0]; a.Open != "associate" || a.Close != "conclude" || a.Accepted == nil || !*a.Accepted || a.Gaps < 1 ||
+	if a := assocs[0]; a.Open != "associate" || a.Close != "release" || a.Accepted == nil || !*a.Accepted || a.Gaps < 1 ||
 		a.Authentication != "none" || a.Initiate == nil || a.CalledTSAP != "0001" || a.Server != "10.0.0.2:102" {
 		t.Errorf("association = %+v", a)
 	}

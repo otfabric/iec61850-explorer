@@ -428,9 +428,26 @@ func (c *comparer) rcbFields(ref string, a, b model.RCB) bool {
 	}
 	field("dat_set", a.DatSet, b.DatSet)
 	field("conf_rev", strconv.FormatUint(uint64(a.ConfRev), 10), strconv.FormatUint(uint64(b.ConfRev), 10))
-	field("opt_flds", strings.Join(a.OptFlds, ","), strings.Join(b.OptFlds, ","))
+	field("opt_flds", strings.Join(comparedOptFlds(a), ","), strings.Join(comparedOptFlds(b), ","))
 	field("trg_ops", strings.Join(a.TrgOps, ","), strings.Join(b.TrgOps, ","))
 	field("buf_tm_ms", strconv.FormatUint(uint64(a.BufTmMS), 10), strconv.FormatUint(uint64(b.BufTmMS), 10))
 	field("intg_pd_ms", strconv.FormatUint(uint64(a.IntgPdMS), 10), strconv.FormatUint(uint64(b.IntgPdMS), 10))
 	return changed
+}
+
+// comparedOptFlds returns the optional fields of r that are configuration.
+// An unbuffered RCB reads buffer-overflow and entry-id back as false
+// whatever was configured (IEC 61850-8-1 Table 63), so they are left out
+// of the comparison of a URCB.
+func comparedOptFlds(r model.RCB) []string {
+	if r.Buffered {
+		return r.OptFlds
+	}
+	out := make([]string, 0, len(r.OptFlds))
+	for _, f := range r.OptFlds {
+		if f != "buf-ovfl" && f != "entry-id" {
+			out = append(out, f)
+		}
+	}
+	return out
 }

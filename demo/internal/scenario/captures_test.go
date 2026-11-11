@@ -29,23 +29,23 @@ type want struct {
 
 var expectations = map[string]want{
 	"01-hmi-browse-and-poll.pcapng": {
-		packets: 245,
-		assocs:  []string{"10.20.1.31:102 associate/conclude", "10.20.1.21:102 associate/conclude", "10.20.1.41:102 associate/conclude"},
+		packets: 251,
+		assocs:  []string{"10.20.1.31:102 associate/release", "10.20.1.21:102 associate/release", "10.20.1.41:102 associate/release"},
 		statuses: map[string]int{"GetNameList/ok": 29, "GetNamedVariableListAttributes/ok": 10, "GetVariableAccessAttributes/ok": 15,
 			"Identify/ok": 3, "Read/ok": 12},
 	},
 	"02-reports.pcapng": {
-		packets: 67, assocs: []string{"10.20.1.31:102 associate/conclude"},
+		packets: 69, assocs: []string{"10.20.1.31:102 associate/release"},
 		statuses: map[string]int{"GetNamedVariableListAttributes/ok": 2, "Identify/ok": 1, "Read/ok": 2, "Write/ok": 10},
 		reports:  10,
 	},
 	"03-control-sbo.pcapng": {
-		packets: 76, assocs: []string{"10.20.1.31:102 associate/conclude"},
+		packets: 72, assocs: []string{"10.20.1.31:102 associate/release"},
 		statuses: map[string]int{"Read/ok": 4, "Write/ok": 10},
-		reports:  11, // 1 GI, LastApplError, 6 for QA1 and its termination, 3 for QB1 and its termination
+		reports:  8, // 1 GI, LastApplError, 4 for QA1 and its termination, 2 for QB1 and its termination
 	},
 	"04-settings-files-logs.pcapng": {
-		packets: 97, assocs: []string{"10.20.1.31:102 associate/conclude"},
+		packets: 99, assocs: []string{"10.20.1.31:102 associate/release"},
 		statuses: map[string]int{"FileClose/ok": 2, "FileDirectory/ok": 1, "FileOpen/ok": 2, "FileRead/ok": 2, "GetNameList/ok": 1,
 			"Identify/ok": 1, "Read/ok": 4, "ReadJournal/ok": 1, "Write/ok": 1},
 	},
@@ -58,8 +58,8 @@ var expectations = map[string]want{
 		packets: 2001, goose: map[string]string{"D1Q02MU1MU01/LLN0$GO$gcbStatus": "1/0/"}, sv: "2000/0/0",
 	},
 	"07-station-fault.pcapng": {
-		packets:  6190,
-		assocs:   []string{"10.20.1.31:102 associate/conclude", "10.20.1.41:102 associate/conclude", "10.20.1.21:102 associate/conclude"},
+		packets:  6196,
+		assocs:   []string{"10.20.1.31:102 associate/release", "10.20.1.41:102 associate/release", "10.20.1.21:102 associate/release"},
 		statuses: map[string]int{"Read/ok": 3, "Write/ok": 9},
 		reports:  19,
 		goose: map[string]string{"D1Q02MU1MU01/LLN0$GO$gcbStatus": "9/0/", "D1Q02A1PROT/LLN0$GO$gcbTrip": "23/2/", "D1W1A1PROT/LLN0$GO$gcbBF": "23/2/",
@@ -67,10 +67,10 @@ var expectations = map[string]want{
 		sv: "6000/0/0",
 	},
 	"08-problems.pcapng": {
-		packets: 1504,
-		assocs: []string{"10.20.1.41:102 midstream/conclude", "10.20.1.32:102 associate/conclude", "10.20.1.21:102 associate/abort",
-			"10.20.1.51:102 associate/conclude"},
-		statuses: map[string]int{"/orphan": 1, "GetNamedVariableListAttributes/error": 1, "Identify/ok": 1, "Read/ok": 11, "Read/unanswered": 2},
+		packets: 1510,
+		assocs: []string{"10.20.1.41:102 midstream/release", "10.20.1.32:102 associate/release", "10.20.1.21:102 associate/abort",
+			"10.20.1.51:102 associate/release"},
+		statuses: map[string]int{"GetNamedVariableListAttributes/error": 1, "Identify/ok": 1, "Read/ok": 11, "Read/unanswered": 2},
 		goose: map[string]string{"D1Q02MU1MU01/LLN0$GO$gcbStatus": "28/0/stNum decreased", "D1Q02A1PROT/LLN0$GO$gcbTrip": "41/0/repeated (stNum, sqNum)",
 			"D1W1A1PROT/LLN0$GO$gcbBF": "40/0/", "D1Q02A1CTRL/LLN0$GO$gcbPos": "40/0/", "D1Q03A1PROT/LLN0$GO$gcbTrip": "40/0/",
 			"D1Q03A1CTRL/LLN0$GO$gcbPos": "38/0/sqNum gap"},

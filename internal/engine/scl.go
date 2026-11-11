@@ -351,16 +351,18 @@ func sclControls(ied *scl.IED, ap *scl.AccessPoint) (map[string][]model.DataSet,
 				if rc.Buffered {
 					fc = "BR"
 				}
-				item := l.name + "$" + fc + "$" + rc.Name
 				datSet := ""
 				if rc.DatSet != "" {
 					datSet = domain + "/" + l.name + "$" + rc.DatSet
 				}
-				reports[domain] = append(reports[domain], model.RCB{
-					Ref: dataSetRef(domain, item), MMS: model.MMSName{Domain: domain, ItemID: item}, Source: model.SourceSCL,
-					Buffered: rc.Buffered, RptID: rc.RptID, DatSet: datSet, ConfRev: rc.ConfRev,
-					BufTmMS: rc.BufTime, IntgPdMS: rc.IntgPd, OptFlds: sclOptFields(rc.OptFields), TrgOps: sclTrgOps(rc.TrgOps),
-				})
+				for _, name := range rcbInstanceNames(rc) {
+					item := l.name + "$" + fc + "$" + name
+					reports[domain] = append(reports[domain], model.RCB{
+						Ref: dataSetRef(domain, item), MMS: model.MMSName{Domain: domain, ItemID: item}, Source: model.SourceSCL,
+						Buffered: rc.Buffered, RptID: rc.RptID, DatSet: datSet, ConfRev: rc.ConfRev,
+						BufTmMS: rc.BufTime, IntgPdMS: rc.IntgPd, OptFlds: sclOptFields(rc.OptFields), TrgOps: sclTrgOps(rc.TrgOps),
+					})
+				}
 			}
 		}
 	}
@@ -397,6 +399,23 @@ func sclTrgOps(t scl.TrgOps) []string {
 		if f.on {
 			out = append(out, f.name)
 		}
+	}
+	return out
+}
+
+// rcbInstanceNames returns the names an IED serves an SCL ReportControl
+// under: with indexed (the IEC 61850-6 default) the name plus a two-digit
+// instance number for each of the RptEnabled max instances, "urcb01" to
+// "urcbNN" (IEC 61850-6 §9.3.8, IEC 61850-8-1 §17.1.2, at most 99);
+// otherwise the name itself.
+func rcbInstanceNames(rc scl.ReportControl) []string {
+	if !rc.Indexed {
+		return []string{rc.Name}
+	}
+	n := min(max(rc.MaxInstances, 1), 99)
+	out := make([]string, 0, n)
+	for i := uint32(1); i <= n; i++ {
+		out = append(out, fmt.Sprintf("%s%02d", rc.Name, i))
 	}
 	return out
 }

@@ -2,6 +2,22 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.12.0
+
+**Date:** 2026-11-11
+**Previous release:** v0.11.3
+
+### Changed
+
+- **Built on go-mms v1.8.0, go-iec61850 v1.17.1, go-iec61850-model v0.9.1 and go-mms-trace v0.2.1** (were v1.7.2, v1.16.2, v0.8.2 and v0.1.4), in the Explorer and its demo. These are the ISO 9506 and IEC 61850 spec-review releases. What changes in the Explorer:
+- SCL sessions list each report control block under the names an IED serves it by. A ReportControl is indexed by default (IEC 61850-6 §9.3.8), so `<ReportControl name="urcbMeas">` with `max="2"` becomes `urcbMeas01` and `urcbMeas02`, and `indexed="false"` keeps the name as written. A SCL-to-IED comparison then matches the instances by name. go-iec61850 v1.17 servers, including the simulated IED and the demo's live IEDs, serve indexed instances this way.
+- Comparing report control blocks leaves out the OptFlds buffer-overflow and entryID of an unbuffered RCB: an IED reads them back as false whatever was configured (IEC 61850-8-1 Table 63).
+- Closing a session ends its associations in order (Conclude, then A-RELEASE) instead of only closing the connection.
+- Traces: go-mms-trace v0.2 reports a go-mms v1.8.0 association's close as `release`, a Reject as the `reject` status, and a confirmed-service CHOICE that is not context-specific as a decode error.
+- Demo: the captures are regenerated with these versions. Each association now ends in Conclude and release, which adds 2 frames each. Capture 03 carries its 7 position changes in 4 reports, because members that change at the same moment share a report. In capture 08, the server's Reject has no invoke ID, because the request's could not be read (ISO 9506-2 §8.6), and the client ends the read at once: there is no `orphan` any more, and the Explorer lists 27 findings (was 28). `demo/README.md` records the new counts and moves the out-of-order reports and the invoke-ID-0 Reject to the gaps fixed since the demo was made.
+
+---
+
 ## v0.11.3
 
 **Date:** 2026-11-10
