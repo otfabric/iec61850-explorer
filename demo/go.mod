@@ -3,9 +3,9 @@ module github.com/otfabric/iec61850-explorer/demo
 go 1.26.0
 
 require (
-	github.com/otfabric/go-iec61850 v1.17.1
-	github.com/otfabric/go-mms v1.8.0
-	github.com/otfabric/go-mms-trace v0.2.1
+	github.com/otfabric/go-iec61850 v1.19.0
+	github.com/otfabric/go-mms v1.9.0
+	github.com/otfabric/go-mms-trace v0.3.0
 )
 
 require (
