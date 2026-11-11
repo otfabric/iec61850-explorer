@@ -67,9 +67,8 @@ func runS02(ctx context.Context, e *Env) error {
 		return fmt.Errorf("GI urcbMeas: %w", err)
 	}
 
-	// A load change: TotW, TotVAr, Hz, A and SeqA change; go-iec61850's
-	// server sends one report per changed member (it does not apply
-	// BufTm), each about 100 ms later.
+	// A load change: TotW, TotVAr, Hz, A and SeqA change one at a time;
+	// the scenario waits for each one's data-change report.
 	e.Think(700 * time.Millisecond)
 	change := e.Clock.Now()
 	for _, step := range f1.LoadSteps(change, 1.04, 0.006) {

@@ -2,6 +2,23 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.0
+
+**Date:** 2026-11-11
+**Previous release:** v0.12.0
+
+### Changed
+
+- **Built on go-mms v1.9.0, go-iec61850 v1.19.0, go-iec61850-model v0.10.1 and go-mms-trace v0.3.0** (were v1.8.0, v1.17.1, v0.9.1 and v0.2.1), in the Explorer and its demo. What changes in the Explorer:
+- Controls: the T of Operate, SelectWithValue and Cancel carries the TimeQuality "clock not synchronised" (0x2a; was 0x0a, synchronised), go-iec61850's honest default for a host clock whose synchronisation is unknown. The time is the same host time.
+- The simulated IED and the demo's live IEDs apply BufTm (IEC 61850-7-2 §17.2.2.9): changes of different members within BufTm share a report, and reports leave without the fixed 100 ms delay. The times their server stamps carry TimeQuality 0x2a (no `Clock` is set).
+- The client enforces the outstanding-request and nesting limits negotiated at Initiate (go-mms v1.9.0).
+- The semantic mapping covers the measurement, supervision, process and DER classes of go-iec61850-model v0.10 (was MMXU, MMXN and MMTR).
+- Report subscriptions already register the subscription before RptEna is written, as go-iec61850 v1.18 requires for buffered entries sent right after the RptEna response.
+- Demo: the captures regenerate byte-identical (the scenario sets its own times and qualities and waits for each report). `demo/README.md` moves BufTm and the host clock to the gaps fixed since the demo was made and names the new versions.
+
+---
+
 ## v0.12.0
 
 **Date:** 2026-11-11
