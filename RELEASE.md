@@ -2,6 +2,21 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.1
+
+**Date:** 2026-11-12
+**Previous release:** v0.13.0
+
+### Changed
+
+- **Built on go-mms v1.9.1, go-iec61850 v1.19.1 and go-mms-trace v0.3.2** (were v1.9.0, v1.19.0 and v0.3.0), in the Explorer and its demo; go-iec61850-model stays at v0.10.1. These are fix releases with no API change:
+- go-mms and go-iec61850 range-check their integer conversions.
+- go-iec61850: closing a server no longer races with a request in flight, which covers the simulated IED and the demo's live IEDs; a Send on a closed session returns `ErrClosed`.
+- Traces: go-mms-trace v0.3.2 decodes as v0.3.0 did.
+- Demo: the captures regenerate byte-identical, and the counts are unchanged. `demo/README.md` names the new versions.
+
+---
+
 ## v0.13.0
 
 **Date:** 2026-11-11
