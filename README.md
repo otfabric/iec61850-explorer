@@ -7,7 +7,7 @@
 
 A cross-platform workbench for IEC 61850 over MMS, built by OT Fabric on [go-iec61850](https://github.com/otfabric/go-iec61850) and [go-mms](https://github.com/otfabric/go-mms). MIT licensed.
 
-**Status: M4, trace analysis** (v0.10.0). Earlier milestones: the read-only browser (M1), inspection (M2a), Commission mode (M2b), comparison, semantics and point lists (M3). Release notes are in [RELEASE.md](RELEASE.md); what comes next (M5, the laboratory) is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
+**Status: M4, trace analysis** (since v0.10.0; current release v0.13.2). Earlier milestones: the read-only browser (M1), inspection (M2a), Commission mode (M2b), comparison, semantics and point lists (M3). Release notes are in [RELEASE.md](RELEASE.md); what comes next (M5, the laboratory) is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), section 9.
 
 ![A highlight cut of the demo: an SCD searched by quantity, an IED compared with its CID, a control refused by interlocking, a station fault capture](docs/media/demo.gif)
 
