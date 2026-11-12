@@ -2,6 +2,19 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.2
+
+**Date:** 2026-11-12
+**Previous release:** v0.13.1
+
+No change to the application's behaviour.
+
+### Changed
+
+- go-iec61850 v1.19.4, go-mms v1.9.2 and go-mms-trace v0.3.4 (were v1.19.1, v1.9.1 and v0.3.2), in the application and the demo module.
+
+---
+
 ## v0.13.1
 
 **Date:** 2026-11-12
