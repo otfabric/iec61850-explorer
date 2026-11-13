@@ -2,6 +2,17 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.3
+
+**Date:** 2026-11-12
+**Previous release:** v0.13.2
+
+### Fixed
+
+- API: a path under `/api/v1` with an encoded slash in its first segment, such as `/api/v1%2f`, got Go's plain-text `404 page not found`; it now gets the API's JSON `not_found` error, as every other unknown endpoint does. Found by the nightly fuzzing of `FuzzRequest`; the input is kept in its corpus.
+
+---
+
 ## v0.13.2
 
 **Date:** 2026-11-12

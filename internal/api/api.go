@@ -136,7 +136,10 @@ func New(svc service.Service, opts Options) http.Handler {
 	api.HandleFunc("GET "+prefix+"/settings", s.settings)
 	api.HandleFunc("PUT "+prefix+"/settings", s.saveSettings)
 	api.HandleFunc("GET "+prefix+"/events", s.events)
-	api.HandleFunc(prefix+"/", func(w http.ResponseWriter, r *http.Request) {
+	// Only API paths reach this mux, but it matches on the escaped path: in
+	// /api/v1%2f, "v1%2f" is one segment, which a prefix+"/" pattern would
+	// not match. Catch everything, so that every miss is the API's error.
+	api.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, service.Errorf(service.CodeNotFound, "no such endpoint: %s %s", r.Method, r.URL.Path))
 	})
 
