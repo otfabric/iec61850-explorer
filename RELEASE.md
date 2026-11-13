@@ -4,7 +4,7 @@ Release notes, newest first. Each release has a section headed `## vX.Y.Z` with 
 
 ## v0.13.3
 
-**Date:** 2026-11-12
+**Date:** 2026-11-13
 **Previous release:** v0.13.2
 
 ### Fixed
