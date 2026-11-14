@@ -2,6 +2,20 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.4
+
+**Date:** 2026-11-14
+**Previous release:** v0.13.3
+
+No change to the application.
+
+### Changed
+
+- Built on go-iec61850 v1.20.1 (was v1.19.4) and go-mms-trace v0.3.5 (was v0.3.4). go-iec61850 v1.20.0 added the sender address of R-GOOSE and R-SV frames to the library; the application does not use it yet.
+- CI: otfabric/engineering policy 1.6, the shared actions v3.8.0, and one pull request workflow with a single required check.
+
+---
+
 ## v0.13.3
 
 **Date:** 2026-11-13

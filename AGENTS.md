@@ -4,7 +4,7 @@ Status (2026-11-10): **M4 (trace analysis) is implemented** (v0.10.0, ADR 0005):
 
 ## Organisation standards
 
-This repository follows **otfabric/engineering policy 1.5**, profile **application** (`.otfabric/policy.yaml`); local exceptions are in `.otfabric/exceptions.yaml`. Where this file and the organisation standards disagree, this file wins for this repository; say so in your report.
+This repository follows **otfabric/engineering policy 1.6**, profile **application** (`.otfabric/policy.yaml`); local exceptions are in `.otfabric/exceptions.yaml`. Where this file and the organisation standards disagree, this file wins for this repository; say so in your report.
 
 ## What this is
 
