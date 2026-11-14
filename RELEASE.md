@@ -2,6 +2,19 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.6
+
+**Date:** 2026-11-14
+**Previous release:** v0.13.5
+
+No change to the application.
+
+### Changed
+
+- Built on go-iec61850 v1.22.0 (was v1.20.2), go-mms v1.10.0 (was v1.9.3), go-cotp v1.4.1 (was v1.3.0) and go-tpkt v1.2.1 (was v1.1.0). go-iec61850 v1.21.0 and v1.22.0 add default limits for file reads, SCL documents (size, nesting, type depth, expanded nodes) and journal reads of all pages, and `Tree` returns the context's error when it ends while it builds; go-mms v1.10.0 bounds server writes and peer-defined lists (go-iec61850 and go-mms RELEASE.md). The Explorer reads one journal page per request and already reports a discovery that runs out of time as a timeout, so its errors are unchanged; an SCL file beyond the new limits is refused on import.
+
+---
+
 ## v0.13.5
 
 **Date:** 2026-11-14
