@@ -2,6 +2,19 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.7
+
+**Date:** 2026-11-14
+**Previous release:** v0.13.6
+
+No change to the application.
+
+### Changed
+
+- Built on go-iec61850 v1.23.0 (was v1.22.0), go-mms v1.11.0 (was v1.10.0) and go-mms-trace v0.3.7 (was v0.3.6) (go-iec61850 RELEASE.md, v1.23.0; go-mms RELEASE.md, v1.11.0). An MMS connection carries TSDUs of up to the MMS PDU size and its framing (65,539 octets at the least); a longer one ends the connection, where up to 4 MiB were taken before. A device that keeps to the negotiated PDU size is not affected. The simulated server of the demo holds at most 1024 associations at once.
+
+---
+
 ## v0.13.6
 
 **Date:** 2026-11-14
