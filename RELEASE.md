@@ -2,6 +2,19 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.13.5
+
+**Date:** 2026-11-14
+**Previous release:** v0.13.4
+
+No change to the application.
+
+### Changed
+
+- Built on go-mms v1.9.3 (was v1.9.2), go-iec61850 v1.20.2 (was v1.20.1) and go-mms-trace v0.3.6 (was v0.3.5). go-mms v1.9.3 bounds counts, indexes and REAL exponents when they are decoded (go-mms RELEASE.md, v1.9.3); the go-iec61850 and go-mms-trace library code is unchanged.
+
+---
+
 ## v0.13.4
 
 **Date:** 2026-11-14
