@@ -163,7 +163,10 @@ func TestSCLValuesTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	ied := &res.Document.IEDs[0]
-	m := sclValues(res.Document, ied, &ied.AccessPoints[0])
+	m, err := sclValues(res.Document, ied, &ied.AccessPoints[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	vals, act, cdcs := m.values, m.actSG, m.cdcs
 	if cdcs["IL/GGIO1.W"] != "WYE" || cdcs["IL/GGIO1.X"] != "" {
 		t.Errorf("CDCs = %v", cdcs)

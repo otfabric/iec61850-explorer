@@ -26,6 +26,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -244,17 +245,12 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	// shutdown waiting.
 	reqCtx, cancelRequests := context.WithCancel(context.Background())
 	defer cancelRequests()
-	srv := &http.Server{
-		Handler: api.New(eng, api.Options{
-			Token:  tokens.Token,
-			Hosts:  daemon.Hosts(bound, allowHosts),
-			UI:     ui,
-			Logger: log,
-		}),
-		ReadHeaderTimeout: 10 * time.Second,
-		BaseContext:       func(net.Listener) context.Context { return reqCtx },
-		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
-	}
+	srv := newServer(reqCtx, api.New(eng, api.Options{
+		Token:  tokens.Token,
+		Hosts:  daemon.Hosts(bound, allowHosts),
+		UI:     ui,
+		Logger: log,
+	}), log)
 
 	log.Info("iec61850-explorerd started", "version", buildinfo.Version, "listen", bound,
 		"data_dir", p.dataDir, "new_token", created, "ui", ui != nil)
@@ -268,7 +264,44 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	if ready != nil {
 		ready <- bound
 	}
+	return serve(ctx, srv, listener, cancelRequests, log)
+}
 
+// The bounds of the HTTP server. Variables so that the tests can shorten
+// them.
+var (
+	// readHeaderTimeout bounds the reading of a request's headers.
+	readHeaderTimeout = 10 * time.Second
+	// idleTimeout bounds how long a connection waits for its next request;
+	// then the server closes it. A request that is running, such as the
+	// event stream, is not cut by it.
+	idleTimeout = 2 * time.Minute
+	// shutdownTimeout bounds the wait for running requests when the daemon
+	// stops.
+	shutdownTimeout = 5 * time.Second
+)
+
+// newServer returns the daemon's HTTP server for h; reqCtx is the base of
+// every request's context.
+func newServer(reqCtx context.Context, h http.Handler, log *slog.Logger) *http.Server {
+	return &http.Server{
+		Handler:           h,
+		ReadHeaderTimeout: readHeaderTimeout,
+		IdleTimeout:       idleTimeout,
+		BaseContext:       func(net.Listener) context.Context { return reqCtx },
+		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
+	}
+}
+
+// serve serves srv on listener until ctx ends. Then it cancels the requests
+// and waits for them up to shutdownTimeout; requests still running after
+// that are cut, and serve returns an error, so that the daemon exits with a
+// non-zero status. A connection that has not sent a request when the wait
+// ends (a client may open one in advance) is closed without an error:
+// nothing was cut.
+func serve(ctx context.Context, srv *http.Server, listener net.Listener, cancelRequests context.CancelFunc, log *slog.Logger) error {
+	var conns connStates
+	srv.ConnState = conns.set
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(listener) }()
 	select {
@@ -278,12 +311,52 @@ func runServe(ctx context.Context, args []string, stderr io.Writer, ready chan<-
 	}
 	log.Info("shutting down")
 	cancelRequests()
-	shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdown); err != nil {
+		running := conns.active()
 		_ = srv.Close()
+		if running > 0 {
+			return fmt.Errorf("shutdown: %d requests still running after %v were cut: %w", running, shutdownTimeout, err)
+		}
 	}
 	return nil
+}
+
+// connStates keeps the state of each connection of a server, so that a
+// shutdown tells a request it cut from a connection that never sent one.
+type connStates struct {
+	mu sync.Mutex
+	m  map[net.Conn]http.ConnState
+}
+
+// set is the server's ConnState hook.
+func (c *connStates) set(conn net.Conn, state http.ConnState) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	switch state {
+	case http.StateClosed, http.StateHijacked:
+		delete(c.m, conn)
+	default:
+		if c.m == nil {
+			c.m = map[net.Conn]http.ConnState{}
+		}
+		c.m[conn] = state
+	}
+}
+
+// active returns the number of connections that are reading or serving a
+// request.
+func (c *connStates) active() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, state := range c.m {
+		if state == http.StateActive {
+			n++
+		}
+	}
+	return n
 }
 
 // announce tells how to open the daemon. The URL carries the token, so it is
