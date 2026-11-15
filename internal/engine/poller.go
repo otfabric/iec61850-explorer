@@ -54,16 +54,34 @@ func (e *Engine) StartPolling(_ context.Context, id string, cfg model.PollConfig
 	if err := s.liveErr(); err != nil {
 		return err
 	}
-	e.stopPoller(s)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &poller{cancel: cancel, done: make(chan struct{}), state: model.PollState{
 		Refs: refs, IntervalMS: cfg.IntervalMS, StartedAt: time.Now().UTC(),
 	}}
+	// The new poller replaces the old one in one step: of calls at the same
+	// time, the last one's poller is the session's, and every other one is
+	// stopped here, so StopPolling and CloseSession stop what runs. A session
+	// that is closing or lost gets none.
 	s.stateMu.Lock()
+	if s.state != model.SessionConnected || s.closing {
+		st := s.state
+		s.stateMu.Unlock()
+		cancel()
+		return service.Errorf(service.CodeSessionLost, "the session is %s", st)
+	}
+	old := s.poller
 	s.poller = p
+	e.wg.Add(1)
 	s.stateMu.Unlock()
-	go e.poll(ctx, s, p)
+	if old != nil {
+		old.cancel()
+		<-old.done
+	}
+	go func() {
+		defer e.wg.Done()
+		e.poll(ctx, s, p)
+	}()
 	e.publishSession(s)
 	return nil
 }
@@ -109,6 +127,9 @@ func (e *Engine) poll(ctx context.Context, s *session, p *poller) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+		}
+		if ctx.Err() != nil {
+			return
 		}
 		e.cycle(ctx, s, p)
 		next = next.Add(interval)

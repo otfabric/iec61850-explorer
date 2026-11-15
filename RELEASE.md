@@ -2,6 +2,42 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.14.1
+
+**Date:** 2026-11-15
+**Previous release:** v0.14.0
+
+Fixes for concurrent requests (polling, the session limit, Commission grants), bounds on SCL files and on the daemon's idle connections, and the daemon's exit status after a stop that had to cut requests. Moves to go-iec61850-model v0.10.3. No change to the API.
+
+### Fixed
+
+- **Polling.** A `StartPolling` that arrives while another one for the same session is still running (the web UI starts polling again each time a point is pinned or unpinned, and two tabs can do it at once) replaces the session's poller in one step, so one poller remains, and `StopPolling` or closing the session stops it. Before, a poller could be left that kept reading the IED and publishing samples after the session was stopped or closed.
+- **Session limit.** `--max-sessions` (the engine's `MaxSessions`) also holds for sessions opened at the same time: an open reserves its place before it connects and gives it back when it fails. Before, opens that started together could all pass the check.
+- **Commission grants.** A grant's expiry and the end of its association end that grant only: a grant made after an earlier one was revoked is no longer ended by the earlier grant's timer, and is not audited as expired. The expiry timer is set before the grant is in force.
+- **SCL files.** An access point whose data types expand to more than 1,048,576 data objects and attributes, or nest more than 64 type references deep (go-iec61850's `DefaultMaxTypeDepth`), is refused with `limit_exceeded`, naming the IED, the access point and where the expansion stopped. Before, the engine used go-iec61850's `scl.Flatten`, which stops at its own bound (33,554,432 rows, which takes long and much memory to reach) or at the type depth and leaves the rest out without a message; such a file opened in part. Correction to the v0.13.6 notes: an SCL file beyond the expansion limits was not refused on import, it is from this release. The walk for the configured values (compare, point lists) and the types the engine names for a trace link have the same bound. The largest real file measured so far expands to 34,465 nodes (TESTING.md). Opening an SCL file now ends when its request is cancelled.
+- **Daemon: idle connections.** The daemon closes an HTTP connection that waits more than 2 minutes for its next request. A running request, such as the event stream, is not affected. Before, a connection was kept open without limit between requests.
+- **Daemon: exit status.** When a stop has to cut requests that are still running after 5 seconds, the daemon says so and exits with status 1, so that systemd and scripts record an unclean stop (docs/REMOTE-USE.md). It exited with status 0. A connection a client opened in advance and on which it sent no request is closed without counting as cut.
+- **Engine shutdown.** `Engine.Close` waits, within its 5-second bound, for the goroutines it started for its sessions (association watchers, pollers, grant watchers, report delivery) before it returns.
+
+### Changed
+
+- Built on go-iec61850-model v0.10.3 (was v0.10.1), go-cotp v1.4.2 (was v1.4.1) and go-tpkt v1.2.2 (was v1.2.1), go-cotp and go-tpkt also in the demo module (go-iec61850-model RELEASE.md, v0.10.2 and v0.10.3; go-cotp RELEASE.md, v1.4.2; go-tpkt RELEASE.md, v1.2.2). For the application this means:
+  - Loading a namespace package takes time and memory in proportion to its size.
+  - A namespace package is refused when a document has more than 10,000 findings or the package more than 100,000; when a name, abbreviation or variant, or a namespace's ID, version or revision, holds a control character or a Unicode line or paragraph separator; when a `literalVal` is outside a 32-bit integer; when an XSD schema or a manifest is larger than the document limit, or a manifest has more than 10,000 elements; and when an archive entry declares a compressed size larger than the archive. A package in the data directory that is refused at start is logged and skipped, as any package that does not load.
+  - go-cotp and go-tpkt reuse their write buffers; what goes on the wire is unchanged.
+
+### Tests
+
+- The lifecycle matrix L1 to L16 in TESTING.md, with tests for closing twice, concurrent closes, a close during a blocked read and during an open, a cancelled read, concurrent `StartPolling`, concurrent `OpenSession` and concurrent grants and revokes (`internal/engine/lifecycle_test.go`).
+- A goroutine leak check in `TestMain` of `internal/engine` and `internal/api`.
+- Fuzz targets `FuzzOpenSnapshot` and `FuzzOpenSCL` with invariants and allocation budgets; boundary tables for the SCL bounds; tests of the daemon's idle timeout and of a stop that cuts a request; a test that the binary carries go-iec61850-model v0.10.3 or later.
+
+### Documentation
+
+- SECURITY.md states the SCL bounds and the daemon's connection timeouts, and no longer says that there is no release. docs/ARCHITECTURE.md describes batched reads, the report decoder of go-iec61850 and the current go-mms-trace version; the `api` package comment says which endpoints accept values to write; README.md names the current release.
+
+---
+
 ## v0.14.0
 
 **Date:** 2026-11-15

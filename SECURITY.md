@@ -66,6 +66,7 @@ Commission mode lets a user change an IED. It is off unless asked for, per sessi
   - with `socks5h://` and `http://` the proxy resolves the name, so the daemon cannot check where it leads: the IED must then be given as an IP address, and a host name is refused.
 
   The desktop application has no allow-list.
+- **Connections.** The daemon closes a connection that waits more than 2 minutes for its next request, authenticated or not, and one that takes more than 10 seconds to send a request's headers. A running request, such as the event stream, is not cut by these bounds.
 - **Other addresses.** Binding anything but loopback needs `--allow-remote-bind`. The listener is plain HTTP: on such an address the token is readable on the network. Use the SSH port forward instead.
 - **Data directory.** Created with mode 0700; a symbolic link, another owner or wider permissions are refused.
 
@@ -78,7 +79,7 @@ IEC 61850 MMS as most IEDs run it carries no authentication and no encryption: a
 
 ### Files Are Untrusted Input
 
-SCL files and snapshots come from users and other tools. The engine never opens a path a client names: the user interface reads the file the user chose and hands over its bytes, at most 64 MiB. SCL is parsed by go-iec61850's parser (Go's `encoding/xml`, which resolves no external entities); a snapshot is checked for its schema and for a consistent tree before it is used. Strings from either are rendered as text, never as markup; CSV exports prefix text a spreadsheet would take for a formula.
+SCL files and snapshots come from users and other tools. The engine never opens a path a client names: the user interface reads the file the user chose and hands over its bytes, at most 64 MiB. SCL is parsed by go-iec61850's parser (Go's `encoding/xml`, which resolves no external entities); an access point whose data types expand to more than 1,048,576 data objects and attributes, or nest more than 64 type references deep, is refused (`limit_exceeded`), so a small file cannot make the engine build an unbounded model; a snapshot is checked for its schema and for a consistent tree before it is used. Strings from either are rendered as text, never as markup; CSV exports prefix text a spreadsheet would take for a formula.
 
 ### Captures Are Untrusted Input
 
@@ -102,7 +103,7 @@ Names, types and values come from the IED. The model tree is built from the name
 
 ### Verifying Downloads
 
-There is no release yet. When there is, releases will not be code-signed or notarized at first: macOS Gatekeeper and Windows SmartScreen will warn before the first start. Each release is published with a SHA-256 checksum file, and every file and the container image carry a build provenance attestation, which proves that the release workflow of this repository built them:
+Releases are not code-signed or notarized: macOS Gatekeeper and Windows SmartScreen warn before the first start. Each release is published with a SHA-256 checksum file, and every file and the container image carry a build provenance attestation, which proves that the release workflow of this repository built them:
 
 ```sh
 sha256sum -c --ignore-missing iec61850-explorer-<version>-checksums.txt

@@ -95,6 +95,15 @@ type Engine struct {
 	sessions map[string]*session
 	order    []string // session IDs, oldest first
 	closed   bool
+	// opening counts the live sessions being opened: they hold a place of
+	// MaxSessions from the check until they are added or fail.
+	opening int
+
+	// wg counts the goroutines the engine starts for its sessions (the
+	// association watchers, pollers, grant watchers and report deliveries);
+	// Close waits for them. Add is called with e.mu or the session's stateMu
+	// held, while the engine or the session is still open.
+	wg sync.WaitGroup
 }
 
 var _ service.Service = (*Engine)(nil)
@@ -127,7 +136,9 @@ func New(opts Options) *Engine {
 	return e
 }
 
-// Close closes every session. The engine refuses new sessions afterwards.
+// Close closes every session and waits for the goroutines the engine started
+// for them, within 5 seconds in all. The engine refuses new sessions
+// afterwards. Calling it again does nothing more.
 func (e *Engine) Close() {
 	e.mu.Lock()
 	e.closed = true
@@ -140,6 +151,16 @@ func (e *Engine) Close() {
 	defer cancel()
 	for _, s := range sessions {
 		_ = e.closeSession(ctx, s)
+	}
+	done := make(chan struct{})
+	go func() {
+		e.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		e.log.Warn("the engine closed with session goroutines still running")
 	}
 }
 
@@ -207,16 +228,28 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	if err := e.allowTarget(ctx, cfg.Host, via); err != nil {
 		return model.SessionInfo{}, err
 	}
+	// The place is taken with the check, so that opens at the same time stay
+	// within MaxSessions; it is given back on every path that adds no
+	// session.
 	e.mu.Lock()
 	switch {
 	case e.closed:
 		e.mu.Unlock()
 		return model.SessionInfo{}, service.Errorf(service.CodeNotAllowed, "the engine is shutting down")
-	case e.openCount() >= e.opts.MaxSessions:
+	case e.openCount()+e.opening >= e.opts.MaxSessions:
 		e.mu.Unlock()
 		return model.SessionInfo{}, service.Errorf(service.CodeLimitExceeded, "at most %d sessions may be open", e.opts.MaxSessions)
 	}
+	e.opening++
 	e.mu.Unlock()
+	reserved := true
+	defer func() {
+		if reserved {
+			e.mu.Lock()
+			e.opening--
+			e.mu.Unlock()
+		}
+	}()
 
 	s := &session{
 		id: newID(), target: cfg, timeout: timeout, openedAt: time.Now().UTC(),
@@ -266,6 +299,8 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	e.publishOperation(s.rec, s.id, "discover", addr, start, nil)
 
 	e.mu.Lock()
+	e.opening--
+	reserved = false
 	if e.closed {
 		e.mu.Unlock()
 		_ = client.Abort(context.Background())
@@ -273,9 +308,13 @@ func (e *Engine) OpenSession(ctx context.Context, cfg model.TargetConfig) (model
 	}
 	e.sessions[s.id] = s
 	e.order = append(e.order, s.id)
+	e.wg.Add(1)
 	e.mu.Unlock()
 
-	go e.watch(s)
+	go func() {
+		defer e.wg.Done()
+		e.watch(s)
+	}()
 	info := s.info()
 	e.hub.publish(model.Event{Kind: model.EventSession, SessionID: s.id, Session: &info})
 	e.log.Info("session opened", "session", s.id, "addr", addr, "proxy", info.Proxy,
@@ -395,12 +434,14 @@ func (e *Engine) CloseSession(ctx context.Context, id string) error {
 }
 
 func (e *Engine) closeSession(ctx context.Context, s *session) error {
-	e.stopPoller(s)
-	e.endGrant(ctx, s, model.AuditEnd, "the session was closed")
+	// Closing first: from here on the session gets no poller and no grant,
+	// so the ones stopped below are the last.
 	s.stateMu.Lock()
 	wasConnected := s.state == model.SessionConnected
 	s.closing, s.state = true, model.SessionClosed
 	s.stateMu.Unlock()
+	e.stopPoller(s)
+	e.endGrant(ctx, s, model.AuditEnd, "the session was closed")
 
 	if wasConnected {
 		s.mu.Lock()

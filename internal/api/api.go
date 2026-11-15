@@ -8,8 +8,9 @@
 // request must carry the bearer token, also on loopback: other local users
 // and other pages in the user's browser can reach a loopback port too.
 //
-// No endpoint accepts a file path, an MMS PDU, a service name or a value to
-// write.
+// No endpoint accepts a file path, an MMS PDU or a service name. Values to
+// write are accepted only by /write and /control, and only for a session in
+// Commission mode.
 package api
 
 import (

@@ -166,7 +166,11 @@ func (e *Engine) SubscribeReport(ctx context.Context, id string, req model.Subsc
 		g.subs[sub.info.ID] = sub
 		g.mu.Unlock()
 		g.cleanup = append(g.cleanup, cleanupStep{id: sub.info.ID, what: "unsubscribe " + req.RCB, undo: sub.stop})
-		go e.deliver(s, sub)
+		e.wg.Add(1)
+		go func() {
+			defer e.wg.Done()
+			e.deliver(s, sub)
+		}()
 		audit.Outcome = model.OutcomeOK
 		e.appendAudit(s, audit)
 		out = sub.snapshot()

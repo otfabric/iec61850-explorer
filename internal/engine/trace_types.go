@@ -103,8 +103,9 @@ type attr struct {
 
 // typeOf is the MMS type of an FC-qualified reference to a data object or
 // attribute, nil when the templates do not tell it exactly: an unknown type
-// or basic type, or a data object with both attributes and sub-data
-// objects under the FC (the parsed templates do not keep their order).
+// or basic type, a data object with both attributes and sub-data objects
+// under the FC (the parsed templates do not keep their order), or a type of
+// more than maxSCLNodes components.
 func (t *sclTypes) typeOf(ref iec61850.Ref) *mms.TypeSpec {
 	if t == nil || len(ref.Path) == 0 || ref.FC == "" {
 		return nil
@@ -132,10 +133,11 @@ func (t *sclTypes) typeOf(ref iec61850.Ref) *mms.TypeSpec {
 		dot, cur = next.dot, next.attr
 	}
 	var ts *mms.TypeSpec
+	left := maxSCLNodes
 	if cur != nil {
-		ts = t.attrSpec(*cur, 0)
+		ts = t.attrSpec(*cur, 0, &left)
 	} else {
-		ts, _ = t.doSpec(dot, fc, 0)
+		ts, _ = t.doSpec(dot, fc, 0, &left)
 	}
 	if ts == nil || (ts.Type == mms.ValueTypeStructure && len(ts.Elements) == 0) {
 		return nil
@@ -180,9 +182,10 @@ func (t *sclTypes) step(dot *scl.DOType, cur *attr, name, fc string) (position, 
 }
 
 // doSpec is the structure of a data object under an FC; ok is false when
-// it cannot be told exactly.
-func (t *sclTypes) doSpec(dot *scl.DOType, fc string, depth int) (*mms.TypeSpec, bool) {
-	if depth >= maxValueDepth {
+// it cannot be told exactly. Each data object and attribute it visits takes
+// one of *left; when none is left the type is not told.
+func (t *sclTypes) doSpec(dot *scl.DOType, fc string, depth int, left *int) (*mms.TypeSpec, bool) {
+	if depth >= maxValueDepth || !takeNode(left) {
 		return nil, false
 	}
 	out := &mms.TypeSpec{Type: mms.ValueTypeStructure}
@@ -191,7 +194,7 @@ func (t *sclTypes) doSpec(dot *scl.DOType, fc string, depth int) (*mms.TypeSpec,
 		if da.FC != fc {
 			continue
 		}
-		ts := t.attrSpec(attr{bType: da.BType, typ: da.Type, count: da.Count}, depth+1)
+		ts := t.attrSpec(attr{bType: da.BType, typ: da.Type, count: da.Count}, depth+1, left)
 		if ts == nil {
 			return nil, false
 		}
@@ -203,7 +206,7 @@ func (t *sclTypes) doSpec(dot *scl.DOType, fc string, depth int) (*mms.TypeSpec,
 		if sub == nil {
 			return nil, false
 		}
-		ts, ok := t.doSpec(sub, fc, depth+1)
+		ts, ok := t.doSpec(sub, fc, depth+1, left)
 		if !ok {
 			return nil, false
 		}
@@ -218,9 +221,10 @@ func (t *sclTypes) doSpec(dot *scl.DOType, fc string, depth int) (*mms.TypeSpec,
 	return out, true
 }
 
-// attrSpec is the type of an attribute, nil when it cannot be told.
-func (t *sclTypes) attrSpec(a attr, depth int) *mms.TypeSpec {
-	if depth >= maxValueDepth {
+// attrSpec is the type of an attribute, nil when it cannot be told. Like
+// doSpec it takes one of *left for each attribute it visits.
+func (t *sclTypes) attrSpec(a attr, depth int, left *int) *mms.TypeSpec {
+	if depth >= maxValueDepth || !takeNode(left) {
 		return nil
 	}
 	var elem *mms.TypeSpec
@@ -232,7 +236,7 @@ func (t *sclTypes) attrSpec(a attr, depth int) *mms.TypeSpec {
 		}
 		elem = &mms.TypeSpec{Type: mms.ValueTypeStructure}
 		for _, b := range dat.BDAs {
-			ts := t.attrSpec(attr{bType: b.BType, typ: b.Type, count: b.Count}, depth+1)
+			ts := t.attrSpec(attr{bType: b.BType, typ: b.Type, count: b.Count}, depth+1, left)
 			if ts == nil {
 				return nil
 			}
@@ -249,6 +253,15 @@ func (t *sclTypes) attrSpec(a attr, depth int) *mms.TypeSpec {
 		return &mms.TypeSpec{Type: mms.ValueTypeArray, Count: a.count, Element: elem}
 	}
 	return elem
+}
+
+// takeNode takes one of *left and reports whether there was one.
+func takeNode(left *int) bool {
+	if *left <= 0 {
+		return false
+	}
+	*left--
+	return true
 }
 
 // fits says whether a value has exactly the shape of a type: the same kind

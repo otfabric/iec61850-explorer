@@ -169,14 +169,15 @@ func (e *Engine) GrantCommission(ctx context.Context, id string, req model.Grant
 		e.auditEnd(s, g, model.AuditEnd, "the session ended while the grant was opened", nil)
 		return model.SessionInfo{}, service.Errorf(service.CodeSessionLost, "the session is %s", s.state)
 	}
+	// The timer is set before the grant can be seen, so an end that comes at
+	// once still stops it.
+	g.timer = time.NewTimer(time.Until(g.info.ExpiresAt))
 	s.grant = g
+	e.wg.Add(1)
 	s.stateMu.Unlock()
-	g.timer = time.AfterFunc(time.Until(g.info.ExpiresAt), func() {
-		e.endGrant(context.Background(), s, model.AuditExpire, "the grant expired")
-	})
 	go func() {
-		<-client.MMS().Done()
-		e.endGrant(context.Background(), s, model.AuditEnd, "the Commission association ended")
+		defer e.wg.Done()
+		e.watchGrant(s, g)
 	}()
 
 	e.publishOperation(s.rec, s.id, "grant", strings.Join(req.Capabilities, ", "), start, nil)
@@ -202,20 +203,38 @@ func (s *session) currentGrant() *grant {
 	return s.grant
 }
 
+// watchGrant ends grant g at its expiry or when its association ends,
+// whichever comes first. It ends no other grant: one granted after g was
+// revoked is left alone.
+func (e *Engine) watchGrant(s *session, g *grant) {
+	defer g.timer.Stop()
+	select {
+	case <-g.timer.C:
+		e.endGrantOf(context.Background(), s, g, model.AuditExpire, "the grant expired")
+	case <-g.client.MMS().Done():
+		e.endGrantOf(context.Background(), s, g, model.AuditEnd, "the Commission association ended")
+	}
+}
+
 // endGrant ends the session's grant, if any: it runs the cleanup steps,
 // concludes the Commission association and records the end. It is safe to
 // call more than once and from any goroutine; only the first call acts.
 func (e *Engine) endGrant(ctx context.Context, s *session, action, why string) {
+	e.endGrantOf(ctx, s, nil, action, why)
+}
+
+// endGrantOf is endGrant for grant want only: when the session holds
+// another grant, or none, it does nothing. A nil want ends any grant.
+func (e *Engine) endGrantOf(ctx context.Context, s *session, want *grant, action, why string) {
 	s.stateMu.Lock()
 	g := s.grant
-	s.grant = nil
-	s.stateMu.Unlock()
-	if g == nil {
+	if g == nil || want != nil && g != want {
+		s.stateMu.Unlock()
 		return
 	}
-	if g.timer != nil {
-		g.timer.Stop()
-	}
+	s.grant = nil
+	s.stateMu.Unlock()
+	g.timer.Stop()
 
 	s.mu.Lock()
 	s.rec.start()

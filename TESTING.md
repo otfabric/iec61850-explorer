@@ -28,6 +28,10 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 - `TestSessionLost`: an IED that goes away makes the session `lost`; reads are refused, the tree stays browsable.
 - `TestReadBatched` (`internal/engine`): several references go out as one MMS Read per batch of 32; a logical-node read is not batched.
 - `TestPollingLifecycle`, `TestPollingOverruns`: polling replaces, counts failures and missed starts, and stops with a lost session.
+- `internal/engine/lifecycle_test.go`: the lifecycle contract below (L1 to L16), with concurrent callers through the engine's public methods: one poller after concurrent `StartPolling` and none after `StopPolling`, `MaxSessions` held by concurrent opens, a grant ended only by its own expiry and association, and `Engine.Close` returning after the goroutines of its sessions.
+- `TestSCLNodeBound`, `TestSCLTypeDepthRefused`, `TestSCLValuesBound`, `TestSCLTypeOfBound`, `TestOpenSCLCancelled` (`internal/engine`): an access point that expands beyond the node bound or the type depth is refused with `limit_exceeded` (tables one above, at and one below each bound), for the tree, the configured values and the type of a trace member; a cancelled `OpenSCL` opens nothing.
+- `TestNamespaceImporterVersion` (`internal/engine`): the binary carries go-iec61850-model v0.10.3 or later, whose NSD import grows in proportion to the package (skipped when the module is not a release, as in a workspace).
+- `TestIdleConnectionClosed`, `TestShutdownCutShort`, `TestShutdownUnusedConnection` (`cmd/iec61850-explorerd`): the daemon closes an idle connection after its idle timeout; a stop that has to cut a running request returns an error, so the daemon exits with status 1, and a connection that never sent a request is not counted as cut.
 - `TestOpenSCLMatchesDiscovery`: the data model built from the simulated IED's SCL file equals its live discovery, node for node, with the same FCs.
 - `TestSnapshotRoundTrip`, `TestExportCSV`: a snapshot reopens with the same tree and answers reads from its values; CSV has one row per leaf value and no spreadsheet formulas.
 - `TestDataSetsLiveMatchSCL`, `TestReportsLiveMatchSCL`: the data sets and report control blocks the simulated IED reports are those its SCL defines; the SCL ones claim no IED state.
@@ -58,8 +62,39 @@ No hardware: Go tests run against `internal/simied`, a simulated IED that serves
 | `internal/daemon` | `FuzzReadToken`, `FuzzReadState` | The token file and the state file |
 | | `FuzzListenAddress`, `FuzzTargetAllowList` | The flags `--listen`, `--allow-target` |
 | `internal/web` | `FuzzHandlerPath` | A path asked of the web UI |
+| `internal/proxy` | `FuzzSOCKSReply`, `FuzzHTTPResponse` | A proxy's answer to SOCKS5 CONNECT and to HTTP CONNECT: accepted only when complete and well formed, the HTTP header within its bound |
+| | `FuzzParse` | A proxy URL: its redacted form parses back to the same proxy |
+| `internal/engine` | `FuzzOpenSnapshot` | A snapshot file: it opens with each of its nodes in the tree once and exports to a snapshot that opens to the same tree, or is refused as `invalid_argument` or `limit_exceeded`; it allocates at most 64 bytes per byte of input plus 1 MiB |
+| | `FuzzOpenSCL` | An SCL file, with the node bound lowered to 4,096: it opens within the bound and browses, or is refused as `invalid_argument`, `limit_exceeded` or `not_found`; it allocates at most 512 bytes per byte of input, 4 KiB per node of the bound and 8 MiB |
 
 go-mms, go-iec61850 and go-mms-trace fuzz their own decoders (go-iec61850: `FuzzDecodeReport`; go-mms-trace: the capture reader and the pipeline). A failing input lands in `testdata/fuzz/<target>/` of its package: commit it with the fix.
+
+## Goroutine leak check
+
+`TestMain` of `internal/engine` and of `internal/api` (`leakcheck_test.go`) records the goroutines before the tests and fails the package when, after every test has ended and cleaned up, a goroutine whose stack holds code of `github.com/otfabric/` is left that was not there before. Goroutines are compared by ID and stack, not counted; one that is ending is waited for, at most 5 seconds. `checkGoroutines` does the same within one test for one function, such as `engine.(*Engine).poll` after `StopPolling`.
+
+## Lifecycle contract (L1 to L16)
+
+The engine is the client side (go-mms associations to IEDs, pollers, grants, report subscriptions); the daemon is the server side (HTTP and server-sent events). The transport below the engine (L4, L7, L8) is go-mms's and is covered by its own tests. Tests named `TestL..` are in `internal/engine/lifecycle_test.go`; each ends with no goroutine of the function it exercises left.
+
+| Row | Covered by | Notes |
+|---|---|---|
+| L1 Close twice | `TestL01CloseTwice` | the second `CloseSession` is `not_found`; a second `Engine.Close` does nothing more; the engine refuses sessions afterwards |
+| L2 Concurrent Close | `TestL02ConcurrentClose` | 8 concurrent `CloseSession` close the association once (one `close` operation); `CloseSession` racing `Engine.Close` |
+| L3 Close during a blocked read | `TestL03CloseDuringBlockedRead` | `CloseSession` waits for the read, which ends at its request timeout; the IED's answers are held back by a test relay |
+| L4 Close during a write | n/a in the engine (go-mms) | a Commission write and the end of its grant are serialised by the session's lock; not tested separately |
+| L5 Close during handshake | `TestL05CloseDuringOpen` | `Engine.Close` while `OpenSession` waits for the IED: the open is refused with `not_allowed` and its association ended |
+| L6 Cancel a pending request | `TestL06CancelPendingRead`; `internal/engine/compare_internal_test.go` (a cancelled compare); `TestOpenSCLCancelled`; the daemon cancels its requests when it stops | a cancelled read ends at once, the late answer is dropped, the session reads again |
+| L7 Late response | n/a: go-mms | |
+| L8 Response after reconnect | n/a: a lost session stays lost, there is no reconnect | |
+| L9 Callback calls a public method | n/a: no user callbacks; the `RawHook` recorder only takes its own lock | |
+| L10 Callback calls Close | n/a: no user callbacks | |
+| L11 Slow callback | `TestHubSlowSubscriber` (`internal/engine/events_test.go`), `TestEventsResume` (`internal/api/stream_test.go`) | a slow event subscriber resyncs, it does not block the engine |
+| L12 Queue at capacity | hub replay and resync (`TestEventsResume`) | the report subscription queue (256 reports, `commission_reports.go`) counts what it drops; its overflow count is not tested |
+| L13 Concurrent sessions | `TestL13ConcurrentStartPolling`, `TestL13ConcurrentOpenSession`, `TestConcurrentGrantRevoke`, `TestGrantEndsOnlyItself`; the contract suite (sessions one after another) | one poller after concurrent `StartPolling`, no sample after `StopPolling`; at most `MaxSessions` from concurrent opens, a failed open gives its place back; every grant ends once |
+| L14 Failure during startup | `TestConnectRefused`, `TestConnectNotMMS`, `TestCommissionRefused` (`internal/engine`); daemon `TestBindRules`, `TestStaleStateFile` | |
+| L15 Shutdown(ctx) | `TestCloseWaitsForGoroutines`; the daemon's `start`/`stop` helper (`cmd/iec61850-explorerd/main_test.go`), `TestShutdownCutShort` and `TestShutdownUnusedConnection` | `Engine.Close` waits for its goroutines within 5 s; the daemon waits 5 s for its requests and then exits with status 1 |
+| L16 Close racing reconnect | n/a: no reconnect | |
 
 ## Coverage policy
 

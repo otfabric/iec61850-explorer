@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/otfabric/go-iec61850/scl"
+
+	"github.com/otfabric/iec61850-explorer/internal/service"
 )
 
 // valueFCs are the functional constraints whose values a configuration
@@ -42,7 +44,10 @@ type sclModel struct {
 	decls  map[string]string
 }
 
-func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) sclModel {
+// sclValues returns the sclModel of an access point. Its walk over the type
+// templates visits at most maxSCLNodes data objects and attributes; a file
+// that needs more is refused.
+func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (sclModel, error) {
 	t := doc.DataTypeTemplates
 	lnTypes := map[string]scl.LNodeType{}
 	for _, x := range t.LNodeTypes {
@@ -68,7 +73,7 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) sclModel {
 	out := map[string]sclValue{}
 	actSG := map[string]uint8{}
 	cdcs := map[string]string{}
-	r := &valueResolver{doTypes: doTypes, daTypes: daTypes, enums: enums, out: out, decls: map[string]string{}}
+	r := &valueResolver{doTypes: doTypes, daTypes: daTypes, enums: enums, out: out, decls: map[string]string{}, left: maxSCLNodes}
 	for _, ld := range ap.Server.LDevices {
 		domain := ldDomain(ied, ld)
 		lns := ld.LNs
@@ -100,7 +105,11 @@ func sclValues(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) sclModel {
 			}
 		}
 	}
-	return sclModel{values: out, actSG: actSG, cdcs: cdcs, decls: r.decls}
+	if r.left < 0 {
+		return sclModel{}, service.Errorf(service.CodeLimitExceeded,
+			"the configured values of IED %s, access point %s expand to more than %d data objects and attributes", ied.Name, ap.Name, maxSCLNodes)
+	}
+	return sclModel{values: out, actSG: actSG, cdcs: cdcs, decls: r.decls}, nil
 }
 
 // override is the instance part of a data object or structure: its DAI
@@ -134,6 +143,16 @@ type valueResolver struct {
 	enums   map[string]map[string]int
 	out     map[string]sclValue
 	decls   map[string]string
+	// left is what remains of the walk's budget; below zero the walk has
+	// stopped.
+	left int
+}
+
+// take counts one data object or attribute of the walk and reports
+// whether the walk may go on.
+func (r *valueResolver) take() bool {
+	r.left--
+	return r.left >= 0
 }
 
 // nsAttributes are the attributes that declare a namespace (FC EX).
@@ -144,7 +163,7 @@ const maxTypeDepth = 16
 
 func (r *valueResolver) dataObject(path, typeID string, o override, depth int) {
 	dot, ok := r.doTypes[typeID]
-	if !ok || depth > maxTypeDepth {
+	if !ok || depth > maxTypeDepth || !r.take() {
 		return
 	}
 	for _, da := range dot.DAs {
@@ -162,6 +181,9 @@ func (r *valueResolver) dataObject(path, typeID string, o override, depth int) {
 // The parser fills Vals whenever an element has a value (go-iec61850
 // v1.14.0); Val is only the first of them.
 func (r *valueResolver) attribute(path, fc, bType, typeID string, vals []scl.Value, o override, name string, depth int) {
+	if !r.take() {
+		return
+	}
 	if bType == "Struct" {
 		dat, ok := r.daTypes[typeID]
 		if !ok || depth > maxTypeDepth {

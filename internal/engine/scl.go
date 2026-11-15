@@ -138,10 +138,21 @@ func targetFromSCL(doc *scl.SCL, iedName, apName string) *model.TargetConfig {
 	return nil
 }
 
+// maxSCLNodes bounds what the data type templates of an SCL file expand to
+// for the access point a session opens: the data objects and attributes of
+// its model, each counted once per place (go-iec61850 scl.FlattenOptions),
+// and the same for the walks over the templates for the configured values
+// and the type of one reference. The largest IED the Explorer was measured
+// with has about 34,500 (TESTING.md). A variable so that tests can lower it.
+var maxSCLNodes = 1 << 20
+
 // OpenSCL implements service.Service.
-func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.SessionInfo, error) {
+func (e *Engine) OpenSCL(ctx context.Context, req model.OpenSCLRequest) (model.SessionInfo, error) {
 	res, err := parseSCL(req.File)
 	if err != nil {
+		return model.SessionInfo{}, err
+	}
+	if err := ctx.Err(); err != nil {
 		return model.SessionInfo{}, err
 	}
 	doc := res.Document
@@ -150,7 +161,18 @@ func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.Ses
 		return model.SessionInfo{}, err
 	}
 	start := time.Now()
-	root := sclTree(doc, ied, ap)
+	root, err := sclTree(doc, ied, ap)
+	if err != nil {
+		return model.SessionInfo{}, err
+	}
+	took := time.Since(start)
+	if err := ctx.Err(); err != nil {
+		return model.SessionInfo{}, err
+	}
+	m, err := sclValues(doc, ied, ap)
+	if err != nil {
+		return model.SessionInfo{}, err
+	}
 
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -167,11 +189,10 @@ func (e *Engine) OpenSCL(_ context.Context, req model.OpenSCLRequest) (model.Ses
 	if t := targetFromSCL(doc, ied.Name, ap.Name); t != nil {
 		s.target = *t
 	}
-	s.setTree(root, time.Since(start))
+	s.setTree(root, took)
 	s.sclDataSets, s.sclReports = sclControls(ied, ap)
 	s.sclGoCBs = sclGoCBs(ied, ap)
 	s.sclTypes = newSCLTypes(doc, ied, ap)
-	m := sclValues(doc, ied, ap)
 	s.sclValues, s.sclActSG, s.sclCDC, s.sclDecls, s.sclSchema = m.values, m.actSG, m.cdcs, m.decls, string(res.Version.Schema)
 	e.sessions[s.id] = s
 	e.order = append(e.order, s.id)
@@ -220,8 +241,20 @@ func pickAccessPoint(doc *scl.SCL, iedName, apName string) (*scl.IED, *scl.Acces
 // discovered tree: logical devices by their MMS domain names (LDevice@ldName
 // or IED name + inst, IEC 61850-8-1), logical nodes, then the data objects
 // and attributes the data type templates give, each with its functional
-// constraints.
-func sclTree(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) *iec61850.ModelNode {
+// constraints. Only that access point is expanded, at most maxSCLNodes; a
+// model that the expansion cannot complete is refused rather than cut.
+func sclTree(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) (*iec61850.ModelNode, error) {
+	one := *ied
+	one.AccessPoints = []scl.AccessPoint{*ap}
+	only := *doc
+	only.IEDs = []scl.IED{one}
+	rows, diags := scl.FlattenWithOptions(&only, scl.FlattenOptions{MaxExpandedNodes: maxSCLNodes})
+	if len(diags) > 0 {
+		return nil, service.Errorf(service.CodeLimitExceeded,
+			"the data types of IED %s, access point %s expand beyond the limit at %s: at most %d data objects and attributes, %d type references deep",
+			ied.Name, ap.Name, diags[0].Path, maxSCLNodes, scl.DefaultMaxTypeDepth)
+	}
+
 	root := &iec61850.ModelNode{Name: "root"}
 	nodes := map[string]*iec61850.ModelNode{}
 	child := func(parent *iec61850.ModelNode, ref iec61850.Ref, name string) *iec61850.ModelNode {
@@ -257,7 +290,7 @@ func sclTree(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) *iec61850.ModelNod
 			child(ldNode, iec61850.Ref{LD: domain, LN: name}, name)
 		}
 	}
-	for _, row := range scl.Flatten(doc) {
+	for _, row := range rows {
 		domain, ok := domains[row.LD]
 		if row.IED != ied.Name || row.AccessPoint != ap.Name || !ok || row.Path == "" {
 			continue
@@ -281,7 +314,7 @@ func sclTree(doc *scl.SCL, ied *scl.IED, ap *scl.AccessPoint) *iec61850.ModelNod
 		}
 	}
 	sortTree(root)
-	return root
+	return root, nil
 }
 
 // ldDomain is the MMS domain of a logical device (IEC 61850-8-1): its

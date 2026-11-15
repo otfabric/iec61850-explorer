@@ -43,6 +43,8 @@ In the page, connect to the IED with an address **as the gateway sees it** (for 
 - **Through a proxy.** When the gateway reaches the IEDs only through a proxy, start the daemon with `--proxy socks5://host:1080` (or `socks5h://`, `http://`, with an optional `user:password@`); without the flag it takes `ALL_PROXY` or `all_proxy` from its environment. That proxy is the default for every connection and users cannot change it; a connection can still name its own proxy, which must then be inside the allow-list, or `direct`. With `socks5h://` and `http://` the proxy resolves host names, so give the IEDs as IP addresses. See the README's "Connecting through a proxy".
 - **Observe mode.** The daemon sends discovery and read services only; see [`SECURITY.md`](../SECURITY.md).
 - **Commission mode.** Writes to IEDs are possible only when the daemon is started with `--allow-commission`; each session then needs an explicit grant, and every change is recorded in `<data dir>/audit/`. Anyone with the token can then change the IEDs the daemon reaches.
+- **Idle connections.** The daemon closes an HTTP connection that waits more than 2 minutes for its next request. A running request, such as the page's event stream, is not affected; the browser opens a new connection when it needs one.
+- **Stopping.** On SIGINT or SIGTERM the daemon cancels the running requests, waits up to 5 seconds for them to end, then closes its sessions. It exits with status 0; if a request was still running and had to be cut, it says so and exits with status 1, so that a service manager records an unclean stop.
 
 ## Where the daemon keeps its files
 
