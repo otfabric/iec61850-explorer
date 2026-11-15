@@ -2,6 +2,22 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.14.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.13.7
+
+Moves to go-mms-trace v0.4.1 (was v0.3.7). Some results of a capture analysis change; the application's own functions do not.
+
+### Changed
+
+- Built on go-mms-trace v0.4.1 (go-mms-trace RELEASE.md, v0.4.0 and v0.4.1). For the application this means:
+  - A response is shown as answered only when the capture holds everything both sides sent between the request and the response; otherwise the pairing is marked uncertain.
+  - A stream whose start is not in the capture, or that follows a hole, is framed again only at a TPKT header that fits, so one lost packet no longer loses the PDUs after it.
+  - A capture is read up to 16 GiB after decompression, with at most 65,536 interfaces and 65,536 sections; past a limit the analysis ends with what it has and says so.
+
+---
+
 ## v0.13.7
 
 **Date:** 2026-11-14
