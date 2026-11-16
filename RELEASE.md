@@ -2,6 +2,19 @@
 
 Release notes, newest first. Each release has a section headed `## vX.Y.Z` with `**Date:**` and `**Previous release:**` lines, ending with a line `---`; the Release workflow publishes that section.
 
+## v0.14.2
+
+**Date:** 2026-11-16
+**Previous release:** v0.14.1
+
+No feature is added or changed.
+
+### Changed
+
+- Built on go-iec61850 v1.23.1 (was v1.23.0), go-mms v1.11.1 (was v1.11.0) and go-mms-trace v0.4.2 (was v0.4.1) (go-iec61850 RELEASE.md, v1.23.1; go-mms RELEASE.md, v1.11.1; go-mms-trace RELEASE.md, v0.4.2).
+
+---
+
 ## v0.14.1
 
 **Date:** 2026-11-15
